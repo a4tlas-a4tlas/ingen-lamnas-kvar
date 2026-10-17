@@ -1,8 +1,12 @@
 import { DEATH_CAUSE, INJURY_LINES, LEAVE_CAUSE, intentLine } from '../data/text.sv';
+import { place, pathsFrom } from '../data/journey';
+import { TRAITS } from '../data/traits';
 import { VERSES } from '../data/verses';
+import { closestTo, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone } from './campfire';
+import { planRoad } from './encounters/road';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, oathVerse } from './setup';
-import { encounterOf, zoneDef } from './encounters';
+import { ENCOUNTERS, encounterOf, zoneDef } from './encounters';
 import {
   animal,
   backZone,
@@ -74,6 +78,8 @@ export function step(prev: GameState, action: Action): { state: GameState; event
       case 'lead': lead(c, action.target, action.zone); endIfAllAcross(c); break;
       case 'endTurn': endTurn(c); break;
       case 'lastMoment': resolveLastMoment(c, action); break;
+      case 'travel': travel(c, action.to); break;
+      case 'restAtFire': restAtFire(c, action); break;
     }
   } catch (e) {
     if (e instanceof RuleError) return { state: prev, events: [{ kind: 'error', text: e.message }] };
@@ -121,15 +127,152 @@ function swear(c: Ctx, verses: VerseId[]) {
   const unique = [...new Set(verses)];
   if (unique.length !== OATH_VERSES || unique.some((v) => !VERSES[v])) fail('Välj ett löfte.');
   s.verses = unique.map(oathVerse);
-  shuffle(s, s.draw);
   narrate(c, 'I dalens sista natt svor vi eden:');
   for (const v of s.verses) narrate(c, `”${v.text}”`);
-  narrate(c, 'Bakom oss tystnade maskinerna för natten. Framför oss låg vägen.');
+  narrate(c, 'Bakom oss tystnade maskinerna för natten. Kvarn mindes vägen, nästan.');
   const swarm = s.animals.find((a) => a.count !== undefined);
   narrate(c, `Vi var ${num(s.animals.length)}${swarm ? `, och ${swarm.name} var ${num(swarm.count!)}` : ''}.`);
-  s.phase = 'play';
+  s.phase = 'map';
+}
+
+// ---------------------------------------------------------------- the journey
+
+function travel(c: Ctx, to: string) {
+  const s = c.s;
+  if (s.phase !== 'map') fail('Vi kan inte gå vidare nu.');
+  if (!pathsFrom(s.journey.at).some((p) => p.to === to)) fail('Dit leder ingen väg härifrån.');
+  const p = place(to);
+  s.journey.at = to;
+  if (!s.journey.visited.includes(to)) s.journey.visited.push(to);
+  log(c, { kind: 'turn', text: p.name });
+  narrate(c, p.arrive);
+  if (p.kind === 'encounter') startEncounter(c, p.encounter!);
+  else if (p.kind === 'campfire') s.phase = 'campfire';
+  else if (p.kind === 'end') endRun(c);
+}
+
+/** Everyone still with us starts the next danger at its start, with the whole deck shuffled. */
+function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
+  const s = c.s;
+  const def = ENCOUNTERS[id];
+  s.encounterId = id;
   s.turn = 1;
+  s.maxTurn = def.maxTurn;
+  s.revealed = [];
+  s.peekNext = false;
+  s.darkRevealed = false;
+  s.hitQueue = [];
+  s.pending = undefined;
+  const plan = id === 'road' ? planRoad(s, def.maxTurn) : { trafficPlan: [], moonPlan: [] };
+  s.trafficPlan = plan.trafficPlan;
+  s.moonPlan = plan.moonPlan;
+  const start = def.zones.find((z) => z.start)!.id;
+  for (const a of s.animals.filter(isPresent)) {
+    a.status = 'active';
+    a.zone = start;
+    a.slowTime = 0;
+    a.intent = { kind: 'follow' };
+  }
+  s.draw = shuffle(s, [...s.draw, ...s.hand, ...s.discard]);
+  s.hand = [];
+  s.discard = [];
+  s.phase = 'play';
   startTurn(c);
+}
+
+function endRun(c: Ctx) {
+  const s = c.s;
+  const ids = (st: Animal['status'][]) => s.animals.filter((a) => st.includes(a.status)).map((a) => a.id);
+  const alive = ids(['active', 'safe']);
+  s.phase = 'over';
+  s.outcome = { safe: alive, dead: ids(['dead']), left: ids(['left']), fallen: alive.length === 0 };
+  narrate(c, `Vi var ${num(s.animals.length)} när vi lämnade dalen. ${capitalize(num(alive.length))} av oss gick vidare.`);
+}
+
+// ---------------------------------------------------------------- the campfire
+
+const FIRE_TALK = {
+  wary: ['{a} och {b} satt nära elden. Ingen sov riktigt, men ingen gick heller.', '{a} höll avstånd, men stannade kvar hos {b} hela natten.'],
+  close: ['{a} och {b} pratade om dalen tills glöden falnade.', '{a} somnade med huvudet mot {b}.'],
+  other: ['{a} och {b} delade värmen. Det blev lättare att tiga tillsammans.', '{a} berättade något som fick {b} att nästan le.'],
+};
+
+function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
+  const s = c.s;
+  if (s.phase !== 'campfire') fail('Här finns ingen eld.');
+  const problem = planProblem(s, plan);
+  if (problem) fail(problem);
+  const talk = (lines: string[], a: Animal, b: Animal) =>
+    lines[Math.floor(random(s) * lines.length)].replace('{a}', a.name).replace('{b}', b.name);
+
+  // 1. We mourn: the closest tells a memory and carries on something of the dead.
+  for (const deadId of s.unmourned) {
+    const dead = animal(s, deadId);
+    const teller = closestTo(s, deadId);
+    if (teller) {
+      const t = inheritedTrait(s, deadId, teller);
+      if (t) {
+        teller.traits.push(t);
+        s.discard.push({ uid: s.nextUid++, kind: TRAITS[t].card, owner: teller.id, inheritedFrom: deadId });
+        line(c, teller.id, `${teller.name} berättade om ${dead.name} länge. Sedan dess bär ${teller.name} ${dead.name}s ${TRAITS[t].noun}.`);
+      } else line(c, teller.id, `${teller.name} berättade om ${dead.name} länge.`);
+    }
+    if (plan.mourning[deadId] === 'bury') {
+      for (const card of [...s.draw, ...s.hand, ...s.discard]) if (card.memoryOf === deadId) card.buried = true;
+      narrate(c, `Vi begravde ${dead.name} under granarna. Det gör mindre ont nu.`);
+    } else {
+      const mourners = living(s).filter((a) => bond(s, a.id, deadId) >= 2 || a === teller);
+      for (const m of mourners) if (!m.grief.includes(deadId)) m.grief.push(deadId);
+      narrate(c, `Vi bär ${dead.name} med oss.${mourners.length ? ` ${mourners.map((m) => m.name).join(' och ')} sörjer.` : ''}`);
+    }
+  }
+  s.unmourned = [];
+
+  // 2. The watch. A hungry predator awake over sleeping prey is a test of trust.
+  const w = plan.watch ? animal(s, plan.watch) : undefined;
+  if (w) {
+    if (hungryWatcher(s, w)) {
+      const prey = living(s).filter((p) => p !== w && canPrey(w, p)).sort((x, y) => bond(s, w.id, x.id) - bond(s, w.id, y.id))[0];
+      if (random(s) < 0.5) hunt(c, w, prey);
+      else {
+        changeBelief(c, w, 2);
+        living(s).filter((p) => canPrey(w, p)).forEach((p) => addBond(c, w, p, 1));
+        narrate(c, `${w.name} vakade över oss hela natten. Ingen rörde de små.`);
+      }
+    } else narrate(c, `${w.name} vakade medan vi sov. Natten var lång, men ingen kom.`);
+  }
+
+  // 3. By the embers.
+  for (const [ai, bi] of plan.pairs) {
+    const a = animal(s, ai);
+    const b = animal(s, bi);
+    if (!isPresent(a) || !isPresent(b)) continue;
+    const kind = a.predator !== b.predator ? 'wary' : bond(s, a.id, b.id) >= 2 ? 'close' : 'other';
+    addBond(c, a, b, 1);
+    changeBelief(c, a, 1);
+    changeBelief(c, b, 1);
+    line(c, a.id, talk(FIRE_TALK[kind], a, b));
+  }
+  for (const a of sitsAlone(s, plan)) {
+    changeBelief(c, a, -1);
+    line(c, a.id, `${a.name} satt ensam i mörkret, utanför glöden.`);
+  }
+
+  // 4. Rest heals what can heal, for all but the one who kept watch.
+  for (const a of living(s)) {
+    const heal: InjuryKind[] = a.injuries.filter((k) => k === 'bleeding' || k === 'shock');
+    if (!heal.length) continue;
+    if (a === w) {
+      line(c, a.id, `${a.name} vakade och fick ingen vila. Såren får vänta.`);
+      continue;
+    }
+    a.injuries = a.injuries.filter((k) => !heal.includes(k));
+    if (heal.includes('bleeding')) line(c, a.id, `${a.name}s sår slutade blöda.`);
+    if (heal.includes('shock')) line(c, a.id, `Darrningen i ${a.name} släppte till slut.`);
+  }
+  changeHope(c, 1, 'fire');
+  narrate(c, 'Vid gryningen släckte vi elden och gick vidare.');
+  s.phase = 'map';
 }
 
 function flipVerse(c: Ctx, id: VerseId) {
@@ -233,6 +376,7 @@ function chooseIntent(c: Ctx, a: Animal): Intent {
   let chance = DOUBT_BY_BELIEF[a.belief] ?? 0;
   if (a.traits.includes('modig')) chance -= 0.15;
   if (hasInjury(a, 'shock')) chance += 0.3;
+  chance += 0.15 * a.grief.length;
   if (random(s) >= chance) return { kind: 'follow' };
 
   const elderNear = elderVerse && s.animals.some((e) => e.elder && isActive(e) && e.zone === a.zone);
@@ -408,9 +552,15 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       line(c, o.id, `${o.name} lovar att inte bita. De små i närheten tror inte riktigt på det.`);
       break;
     case 'minne':
-      s.animals.filter(isPresent).forEach((x) => changeBelief(c, x, 2));
-      changeHope(c, -1, 'memory', o.id);
-      narrate(c, `Vi minns ${o.name}. Det gör ont, och det håller oss uppe.`);
+      // A buried memory is gentler; one we carry hurts more, and holds more.
+      if (card.buried) {
+        s.animals.filter(isPresent).forEach((x) => changeBelief(c, x, 1));
+        narrate(c, `Vi minns ${o.name}, som vilar under granarna.`);
+      } else {
+        s.animals.filter(isPresent).forEach((x) => changeBelief(c, x, 2));
+        changeHope(c, -1, 'memory', o.id);
+        narrate(c, `Vi minns ${o.name}. Det gör ont, och det håller oss uppe.`);
+      }
       break;
   }
 }
@@ -638,6 +788,7 @@ function die(c: Ctx, a: Animal, cause: keyof typeof DEATH_CAUSE) {
   c.ev.push({ kind: 'death', who: a.id });
   removeCards(s, a.id);
   s.discard.push({ uid: s.nextUid++, kind: 'minne', owner: a.id, memoryOf: a.id });
+  s.unmourned.push(a.id);
   s.verses.push({ id: `minne-${a.id}`, kind: 'memorial', text: `För ${a.name}, ${DEATH_CAUSE[cause]}.`, flipped: false });
   changeHope(c, -1, 'death', a.id);
   grieve(c, a);
@@ -677,14 +828,19 @@ function endIfAllAcross(c: Ctx) {
   if (c.s.phase === 'play' && !c.s.animals.some(isActive)) endEncounter(c);
 }
 
+/** Survivors go on to the map; if no one made it, the oath falls and the run ends. */
 function endEncounter(c: Ctx) {
   const s = c.s;
-  const ids = (st: Animal['status']) => s.animals.filter((a) => a.status === st).map((a) => a.id);
-  s.phase = 'over';
-  s.outcome = { safe: ids('safe'), dead: ids('dead'), left: ids('left'), fallen: ids('safe').length === 0 };
-  if (s.outcome.fallen) narrate(c, 'Ingen av oss nådde andra sidan. Eden föll i diket.');
-  else if (s.outcome.safe.length === s.animals.length) narrate(c, `Vi var ${num(s.animals.length)}. Alla ${num(s.animals.length)} kom över vägen.`);
-  else narrate(c, `Vi var ${num(s.animals.length)}. ${capitalize(num(s.outcome.safe.length))} av oss kom över vägen.`);
+  const safe = s.animals.filter((a) => a.status === 'safe');
+  const crossed = encounterOf(s).crossed;
+  if (safe.length === 0) {
+    narrate(c, 'Ingen av oss nådde andra sidan. Eden föll.');
+    return endRun(c);
+  }
+  const before = s.animals.filter((a) => a.status === 'safe' || a.status === 'dead' || a.status === 'left').length;
+  if (safe.length === before) narrate(c, `Alla ${num(safe.length)} ${crossed}.`);
+  else narrate(c, `${capitalize(num(safe.length))} av oss ${crossed}.`);
+  s.phase = 'map';
 }
 
 const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);

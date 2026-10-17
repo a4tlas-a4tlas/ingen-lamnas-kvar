@@ -11,7 +11,7 @@ describe('determinism', () => {
   it('replays identically from the same seed and actions', () => {
     const play = () => {
       let s: GameState = createGame(1234);
-      const actions: Action[] = [{ type: 'swear', verses: [ALL3[0]] }];
+      const actions: Action[] = [{ type: 'swear', verses: [ALL3[0]] }, { type: 'travel', to: 'vagen' }];
       for (const a of actions) s = step(s, a).state;
       for (let i = 0; i < 12 && s.phase !== 'over'; i++) {
         const a: Action = s.phase === 'lastMoment' ? { type: 'lastMoment', choice: 'letGo' } : { type: 'endTurn' };
@@ -168,6 +168,7 @@ describe('the road', () => {
     let s = calmGame([...ALL3]);
     s.turn = s.maxTurn;
     s = run(s, { type: 'endTurn' });
+    // No one made it across: the oath falls and the run ends here.
     expect(s.phase).toBe('over');
     expect(s.outcome?.fallen).toBe(true);
     expect(s.animals.every((a) => a.status === 'left')).toBe(true);
@@ -179,9 +180,9 @@ describe('the road', () => {
     for (const a of s.animals) a.zone = 'lane2';
     s.kraft = 99;
     for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
-    // No need to let the hour pass: the night ends when the last one is over.
-    expect(s.phase).toBe('over');
-    expect(s.outcome?.safe).toHaveLength(6);
+    // No need to let the hour pass: the night ends when the last one is over, and the map opens.
+    expect(s.phase).toBe('map');
+    expect(s.animals.every((a) => a.status === 'safe')).toBe(true);
   });
 
   it('walking onto asphalt in moonlight breaks the moon verse', () => {

@@ -72,6 +72,8 @@ export interface Animal {
   traits: TraitId[];
   belief: number;
   injuries: InjuryKind[];
+  /** The dead this animal carries with it (mourned by the fire, not buried). */
+  grief: string[];
   /** Swarms (a mouse family) lose members instead of taking injuries. */
   count?: number;
   zone: ZoneId;
@@ -100,6 +102,10 @@ export interface Card {
   owner: string;
   /** Memory cards remember who they were made from. */
   memoryOf?: string;
+  /** A buried memory is gentler: less belief, but no hope lost. */
+  buried?: boolean;
+  /** A card the owner took over when telling a memory of the dead by the fire. */
+  inheritedFrom?: string;
 }
 
 export interface Strike {
@@ -126,7 +132,7 @@ export interface LogEntry {
 }
 
 /** Why hope moved, so the UI can let an animal speak about it. */
-export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh';
+export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh' | 'fire';
 
 /** Side effects the UI and audio react to; the log keeps the readable text. */
 export type GameEvent =
@@ -139,7 +145,15 @@ export type GameEvent =
   | { kind: 'hope'; delta: number; reason: HopeReason; who?: string }
   | { kind: 'error'; text: string };
 
-export type Phase = 'oath' | 'play' | 'lastMoment' | 'over';
+/** oath → map → (encounter: play/lastMoment | campfire) → map … → over */
+export type Phase = 'oath' | 'map' | 'play' | 'lastMoment' | 'campfire' | 'over';
+
+export interface Journey {
+  at: string;
+  visited: string[];
+}
+
+export type MourningChoice = 'bury' | 'carry';
 
 export interface Outcome {
   safe: string[];
@@ -149,7 +163,10 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 2;
+  version: 3;
+  journey: Journey;
+  /** The dead not yet mourned by a fire. */
+  unmourned: string[];
   encounterId: EncounterId;
   seed: number;
   rng: number;
@@ -182,5 +199,7 @@ export type Action =
   | { type: 'play'; uid: number; target?: string; zone?: ZoneId }
   | { type: 'lead'; target: string; zone: ZoneId }
   | { type: 'endTurn' }
+  | { type: 'travel'; to: string }
+  | { type: 'restAtFire'; watch?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice> }
   | { type: 'lastMoment'; choice: 'shield'; by: string }
   | { type: 'lastMoment'; choice: 'letGo' };

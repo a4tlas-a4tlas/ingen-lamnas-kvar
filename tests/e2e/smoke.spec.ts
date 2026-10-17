@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('swear the oath and live through the night', async ({ page }) => {
+test('a whole run: oath, map, road, campfire, onward', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
@@ -17,9 +17,12 @@ test('swear the oath and live through the night', async ({ page }) => {
   await verses.nth(0).click(); // picking another replaces it: only one oath
   await expect(page.locator('.verse-card.chosen')).toHaveCount(1);
   await page.getByRole('button', { name: /Svär eden/ }).click();
+
+  // The map: the glen, and the road ahead in fog.
+  await expect(page.locator('.map-screen')).toBeVisible();
+  await page.locator('.onward .btn').first().click();
   await expect(page.locator('.token')).toHaveCount(6);
 
-  // Lead one animal, then let the hours pass, letting go whenever asked.
   // The deck checker shows every card, grouped by animal.
   await page.getByRole('button', { name: 'Hela leken' }).click();
   await expect(page.locator('.deck-animal')).toHaveCount(6);
@@ -31,18 +34,30 @@ test('swear the oath and live through the night', async ({ page }) => {
   await expect(page.locator('.inspect')).toBeVisible();
   await page.locator('.zone.target').first().click({ position: { x: 8, y: 8 } });
 
-  const deadline = Date.now() + 60_000;
+  const seen = new Set<string>();
+  const deadline = Date.now() + 75_000;
   while (Date.now() < deadline) {
-    if (await page.locator('.end').count()) break;
+    if (await page.locator('.end-screen').count()) break;
     if (await page.locator('[data-act="lm-letgo"]').count()) {
       await page.locator('[data-act="lm-letgo"]').click();
+      continue;
+    }
+    if (await page.locator('.fire-screen').count()) {
+      seen.add('fire');
+      await page.getByRole('button', { name: 'Låt natten gå' }).click();
+      continue;
+    }
+    if (await page.locator('.map-screen').count()) {
+      seen.add('map');
+      await page.locator('.onward .btn').first().click();
       continue;
     }
     const end = page.getByRole('button', { name: 'Låt timmen gå' });
     if (await end.isEnabled()) await end.click();
     else await page.waitForTimeout(200);
   }
-  await expect(page.locator('.end')).toBeVisible({ timeout: 10_000 });
-  await expect(page.locator('#end-title')).toHaveText(/Gryning|Eden föll/);
+  await expect(page.locator('.end-screen')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.end-screen h2')).toHaveText(/Åkrarna|Eden föll/);
+  if ((await page.locator('.end-screen h2').textContent()) === 'Åkrarna') expect([...seen].sort()).toEqual(['fire', 'map']);
   expect(errors).toEqual([]);
 });

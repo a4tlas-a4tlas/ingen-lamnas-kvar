@@ -17,7 +17,7 @@ export function run(s: GameState, ...actions: Action[]): GameState {
  * The oath takes one verse; tests may hold more to exercise verses gained later.
  */
 export function calmGame(verses: VerseId[], seed = 7): GameState {
-  const s = run(createGame(seed), { type: 'swear', verses: [verses[0]] });
+  const s = run(createGame(seed), { type: 'swear', verses: [verses[0]] }, { type: 'travel', to: 'vagen' });
   s.verses = verses.map(oathVerse);
   for (const a of s.animals) {
     a.belief = 8;
