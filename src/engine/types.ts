@@ -111,6 +111,9 @@ export interface LogEntry {
   who?: string;
 }
 
+/** Why hope moved, so the UI can let an animal speak about it. */
+export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh';
+
 /** Side effects the UI and audio react to; the log keeps the readable text. */
 export type GameEvent =
   | { kind: 'log'; entry: LogEntry }
@@ -119,6 +122,7 @@ export type GameEvent =
   | { kind: 'death'; who: string }
   | { kind: 'flip'; verse: string }
   | { kind: 'safe'; who: string }
+  | { kind: 'hope'; delta: number; reason: HopeReason; who?: string }
   | { kind: 'error'; text: string };
 
 export type Phase = 'oath' | 'play' | 'lastMoment' | 'over';

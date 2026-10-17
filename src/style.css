@@ -121,9 +121,6 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .tb-title { font-family: var(--caps); font-size: 1.2em; color: var(--paper); }
 .tb-stats { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .stat { white-space: nowrap; }
-.pips { letter-spacing: 1px; }
-.pips.hope { color: var(--gold); }
-.pips.kraft { color: var(--paper); }
 .stage { grid-area: stage; min-height: 0; height: 100%; padding: 7px; }
 .panel { grid-area: panel; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 4px 4px 0 0; overflow-y: auto; }
 .chronicle { flex: 1 0 200px; min-height: 200px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -144,7 +141,7 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .culvert-art { opacity: 0; transition: opacity 1s; }
 .culvert-open .culvert-art { opacity: 1; }
 .moon {
-  position: absolute; top: 2.5%; right: 9%; width: 9%; aspect-ratio: 1; border-radius: 50%;
+  position: absolute; top: 2.5%; left: 63%; width: 9%; aspect-ratio: 1; border-radius: 50%;
   background: radial-gradient(circle at 40% 40%, #fbf3dc, #e3d3a8);
   box-shadow: 0 0 30px 6px rgba(240,230,190,0.25);
   transition: box-shadow 1s;
@@ -158,6 +155,55 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .moon.hidden .cloud { opacity: 1; transform: translateX(0); }
 
 .zones { position: absolute; inset: 0; }
+
+/* Hope and kraft: paper tags in the sky of the scene. */
+.hud { font-size: clamp(0.9rem, 1.3vw, 1.35rem); position: absolute; top: 1.4%; left: 2.5%; right: 2.5%; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; z-index: 3; }
+.meter {
+  position: relative; pointer-events: auto; cursor: help; background: var(--paper); color: var(--ink);
+  padding: 0.3em 0.65em 0.4em; display: grid; gap: 0.2em; box-shadow: 0 3px 0 rgba(0,0,0,0.45), 0 6px 14px rgba(0,0,0,0.4);
+  clip-path: polygon(0 4%, 5% 0, 95% 3%, 100% 0, 99% 96%, 94% 100%, 4% 97%, 0 100%);
+}
+.mlabel { font-family: var(--caps); font-size: 1em; font-weight: 600; letter-spacing: 0.05em; line-height: 1; }
+.mlabel b { font-size: 1.15em; }
+.mpips { display: flex; gap: 0.2em; }
+.pip.hope { width: 0.9em; height: 0.9em; border-radius: 50%; background: rgba(20,26,36,0.18); box-shadow: inset 0 0 0 1.5px rgba(20,26,36,0.35); }
+.pip.hope.on { background: radial-gradient(circle at 40% 35%, #f7d98a, #c9912f); box-shadow: 0 0 5px rgba(228,160,60,0.7); }
+.pip.kraft { width: 0.95em; height: 0.95em; transform: rotate(45deg) scale(0.8); background: rgba(20,26,36,0.15); box-shadow: inset 0 0 0 1.5px rgba(20,26,36,0.4); }
+.pip.kraft.on { background: var(--ink); box-shadow: none; }
+.meter.kraft .mpips { gap: 0.4em; padding: 0 0.15em; }
+.meter.low { background: #f3c9b8; }
+.meter.low .mlabel { color: #7a1f12; }
+.mnote { font-size: 0.78em; font-style: italic; font-weight: 600; color: #7a1f12; }
+.meter.empty { opacity: 0.75; }
+.meter.drop { animation: meter-drop 0.9s ease-out; }
+.meter.rise { animation: meter-rise 0.9s ease-out; }
+.meter .float {
+  position: absolute; right: 6px; top: 100%; font-weight: 700; font-size: 1rem; text-shadow: 0 1px 3px #000;
+  animation: float-off 2.2s ease-out forwards; pointer-events: none;
+}
+.meter .float.bad { color: #ff8a70; }
+.meter .float.good { color: var(--moss); }
+@keyframes meter-drop { 15% { transform: translateX(-4px) rotate(-1.5deg); background: #f0a993; } 35% { transform: translateX(4px); } 60% { transform: none; } }
+@keyframes meter-rise { 30% { transform: translateY(-3px); background: #fff4cf; } }
+@keyframes float-off { from { opacity: 0; transform: translateY(-6px); } 15% { opacity: 1; } to { opacity: 0; transform: translateY(18px); } }
+
+/* Speech bubbles: an animal speaks when hope sinks (or kraft runs out). */
+.bubbles { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.bubble {
+  position: absolute; transform: translate(-50%, -100%); max-width: 54%; width: max-content;
+  background: var(--paper); color: var(--ink); padding: 6px 10px 7px; border-radius: 12px;
+  font-size: 0.82rem; font-style: italic; line-height: 1.25; box-shadow: 0 4px 14px rgba(0,0,0,0.55);
+  animation: bubble 4.6s ease-in-out forwards;
+}
+.bubble b { font-style: normal; font-family: var(--caps); }
+.bubble .chip { margin-left: 6px; vertical-align: 1px; font-size: 0.66rem; }
+.bubble::after {
+  content: ''; position: absolute; left: 50%; bottom: -7px; width: 14px; height: 8px; transform: translateX(-50%);
+  background: var(--paper); clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.bubble.below { transform: translate(-50%, 0); }
+.bubble.below::after { bottom: auto; top: -7px; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+@keyframes bubble { 0% { opacity: 0; margin-top: 6px; } 8% { opacity: 1; margin-top: 0; } 85% { opacity: 1; } 100% { opacity: 0; } }
 .zone { position: absolute; left: 0; right: 0; cursor: default; }
 .zone span {
   position: absolute; left: 6px; top: 4px; font-family: var(--caps); font-size: 0.72em; color: var(--paper);
@@ -319,7 +365,7 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .cband .sil { width: 36px; flex: none; }
 .card { container-type: inline-size; }
 /* Narrow cards: shrink the silhouette so the owner's name always fits. */
-@container (max-width: 140px) {
+@container (max-width: 150px) {
   .cband { gap: 4px; padding: 5px 5px 4px 4px; }
   .cband .sil { width: 24px; }
   .cowner { font-size: 0.78em; letter-spacing: 0; }

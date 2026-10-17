@@ -1,6 +1,6 @@
 import { CAST } from '../data/animals';
 import { CARDS, TAG_NAMES } from '../data/cards';
-import { ZONE_LABELS } from '../data/text.sv';
+import { HOPE_LINES, KRAFT_OUT_LINES, ZONE_LABELS } from '../data/text.sv';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
 import { Sound } from '../audio/sound';
@@ -12,6 +12,7 @@ import {
   cardAnimals,
   cardCost,
   cardTarget,
+  handSize,
   cardZones,
   isPresent,
   lastMomentShields,
@@ -261,6 +262,7 @@ export class App {
 
   private dispatch(action: Action) {
     if (!this.state) return;
+    const prevKraft = this.state.kraft;
     const r = step(this.state, action);
     const err = r.events.find((e) => e.kind === 'error');
     if (err && err.kind === 'error') {
@@ -271,11 +273,11 @@ export class App {
     this.sel = { mode: 'idle' };
     this.hint = '';
     writeSave(this.state);
-    this.play(r.events);
+    this.play(r.events, prevKraft);
   }
 
   /** Cars sweep first; the board updates once they have passed. */
-  private play(events: GameEvent[]) {
+  private play(events: GameEvent[], prevKraft: number) {
     const cars = events.filter((e): e is Extract<GameEvent, { kind: 'car' }> => e.kind === 'car');
     const after = () => {
       for (const e of events) {
@@ -287,6 +289,7 @@ export class App {
       const hurt = new Set(events.flatMap((e) => (e.kind === 'hit' || e.kind === 'death' ? [e.who] : [])));
       this.busy = false;
       this.render(hurt);
+      this.speak(events, prevKraft);
     };
     if (!cars.length || !this.mounted) return after();
     this.busy = true;
@@ -304,6 +307,65 @@ export class App {
       }, i * 350);
     });
     window.setTimeout(after, 900 + (cars.length - 1) * 350);
+  }
+
+  /** When hope moves, or kraft runs out, an animal says something about it. */
+  private speak(events: GameEvent[], prevKraft: number) {
+    const s = this.state;
+    if (!s || !this.mounted) return;
+    const present = s.animals.filter(isPresent);
+    const pickAny = () => present[Math.floor(Math.random() * present.length)];
+    const pickLine = (lines: string[], name = '') => lines[Math.floor(Math.random() * lines.length)].replace(/\{name\}/g, name);
+    const bubbles: { who?: Animal; text: string; tag: string; tone: 'bad' | 'good' | 'warn' }[] = [];
+
+    for (const e of events) {
+      if (e.kind !== 'hope') continue;
+      const about = e.who ? animal(s, e.who) : undefined;
+      let who: Animal | undefined;
+      if (e.reason === 'death' || e.reason === 'leave' || e.reason === 'dawn') {
+        who = [...present].sort((a, b) => bond(s, b.id, about!.id) - bond(s, a.id, about!.id))[0];
+      } else if (e.reason === 'hunt') {
+        who = present.find((a) => !a.predator) ?? pickAny();
+      } else if (e.reason === 'laugh') {
+        who = about && isPresent(about) ? about : pickAny();
+      } else who = pickAny();
+      bubbles.push({ who, text: pickLine(HOPE_LINES[e.reason], about?.name), tag: `${e.delta > 0 ? '+' : '−'}${Math.abs(e.delta)} hopp`, tone: e.delta > 0 ? 'good' : 'bad' });
+    }
+    if (s.phase === 'play' && s.kraft === 0 && prevKraft > 0) {
+      const active = present.filter((a) => a.status === 'active');
+      bubbles.push({ who: active[Math.floor(Math.random() * active.length)], text: pickLine(KRAFT_OUT_LINES), tag: 'kraften är slut', tone: 'warn' });
+    }
+
+    const hopeDelta = events.reduce((t, e) => t + (e.kind === 'hope' ? e.delta : 0), 0);
+    const meter = this.root.querySelector<HTMLElement>('.meter.hope');
+    if (meter && hopeDelta) {
+      meter.classList.add(hopeDelta < 0 ? 'drop' : 'rise');
+      const f = document.createElement('span');
+      f.className = `float ${hopeDelta < 0 ? 'bad' : 'good'}`;
+      f.textContent = `${hopeDelta > 0 ? '+' : '−'}${Math.abs(hopeDelta)}`;
+      meter.appendChild(f);
+    }
+
+    const layer = this.root.querySelector<HTMLElement>('.bubbles');
+    if (!layer) return;
+    bubbles.slice(0, 4).forEach((b, i) => {
+      window.setTimeout(() => {
+        const el = document.createElement('div');
+        const token = b.who ? this.root.querySelector<HTMLElement>(`.token[data-animal="${b.who.id}"]`) : null;
+        const x = token ? parseFloat(token.style.left) : 22;
+        const y = token ? parseFloat(token.style.top) : 12;
+        el.className = `bubble ${y < 40 ? 'below' : ''}`;
+        // Bubbles that show at the same time stack instead of overlapping.
+        const lift = layer.querySelectorAll('.bubble').length * 9;
+        el.style.top = `${y < 40 ? y + 6 + lift : y - 7 - lift}%`;
+        el.innerHTML = `${b.who ? `<b>${esc(b.who.name)}</b> ` : ''}${esc(b.text)}<span class="chip tone-${b.tone}">${esc(b.tag)}</span>`;
+        layer.appendChild(el);
+        // Keep the whole bubble inside the scene, even for animals at the edge.
+        const half = el.offsetWidth / 2 + 6;
+        el.style.left = `${Math.max(half, Math.min(layer.clientWidth - half, (x / 100) * layer.clientWidth))}px`;
+        window.setTimeout(() => el.remove(), 4600);
+      }, i * 900);
+    });
   }
 
   // ------------------------------------------------------------ screens
@@ -393,6 +455,8 @@ export class App {
             <div class="telegraph"></div>
             <div class="sweeps"></div>
             <div class="tokens"></div>
+            <div class="hud"></div>
+            <div class="bubbles" aria-live="polite"></div>
           </div>
         </main>
         <section class="panel">
@@ -414,6 +478,7 @@ export class App {
     if (!this.mounted) this.mountGame();
     const q = <T extends HTMLElement>(sel: string) => this.root.querySelector<T>(sel)!;
     q('.topbar').innerHTML = this.topbarHtml(s);
+    q('.hud').innerHTML = this.hudHtml(s);
     const scene = q('.scene');
     scene.classList.toggle('culvert-open', s.culvertRevealed);
     q('.moon').classList.toggle('hidden', moonHidden(s));
@@ -435,14 +500,32 @@ export class App {
   // ------------------------------------------------------------ parts
 
   private topbarHtml(s: GameState): string {
-    const pips = (n: number, max: number, on: string, off: string) => on.repeat(Math.max(0, n)) + off.repeat(Math.max(0, max - n));
     return `
       <div class="tb-title">Ingen lämnas kvar <span class="muted">· Vägen om natten</span></div>
       <div class="tb-stats">
         <span class="stat">Timme <b>${s.turn}</b>/${s.maxTurn}</span>
-        <span class="stat" title="Hopp: under 4 drar vi färre kort.">Hopp <span class="pips hope">${pips(s.hope, 10, '●', '○')}</span></span>
-        <span class="stat" title="Kraft att spela kort och leda.">Kraft <span class="pips kraft">${pips(s.kraft, Math.max(3, s.kraft), '◆', '◇')}</span></span>
         <button class="btn small" data-act="mute">${this.sound.muted ? 'Ljud av' : 'Ljud på'}</button>
+      </div>`;
+  }
+
+  /** Hope and kraft live in the sky of the scene, where the eye already is. */
+  private hudHtml(s: GameState): string {
+    const pips = (n: number, max: number, cls: string) =>
+      Array.from({ length: max }, (_, i) => `<span class="pip ${cls} ${i < n ? 'on' : ''}"></span>`).join('');
+    const hand = handSize(s);
+    const low = hand < 5;
+    const maxKraft = Math.max(3, s.kraft);
+    const hopeTip = `data-tip-icon="●" data-tip-title="Hopp ${s.hope}/10" data-tip="Gruppens hopp. Sjunker när någon dör eller lämnas, när ett rovdjur jagar och när ett löfte bryts. Under 4 drar vi färre kort varje timme."`;
+    const kraftTip = `data-tip-icon="◆" data-tip-title="Kraft ${s.kraft}" data-tip="Kraft att spela kort och leda djur den här timmen. Fylls på till 3 varje timme – månens vers kan ge eller ta en."`;
+    return `
+      <div class="meter hope ${low ? 'low' : ''}" ${hopeTip}>
+        <span class="mlabel">Hopp <b>${s.hope}</b></span>
+        <span class="mpips">${pips(s.hope, 10, 'hope')}</span>
+        ${low ? `<span class="mnote">Lågt hopp – vi drar ${hand} kort</span>` : ''}
+      </div>
+      <div class="meter kraft ${s.kraft === 0 ? 'empty' : ''}" ${kraftTip}>
+        <span class="mlabel">Kraft <b>${s.kraft}</b></span>
+        <span class="mpips">${pips(s.kraft, maxKraft, 'kraft')}</span>
       </div>`;
   }
 

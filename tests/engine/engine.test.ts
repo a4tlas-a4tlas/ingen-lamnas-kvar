@@ -273,3 +273,20 @@ describe('Sicksack the adder', () => {
     expect(get(s, 'frona').belief).toBe(7);
   });
 });
+
+describe('hope events', () => {
+  it('say why hope sank, so an animal can speak about it', () => {
+    const s = calmGame([...ALL3]);
+    const k = get(s, 'kvarn');
+    k.zone = 'lane1';
+    k.wounds = 2;
+    s.trafficPlan[0] = [car('lane1')];
+    const paused = run(s, { type: 'endTurn' });
+    const r = step(paused, { type: 'lastMoment', choice: 'letGo' });
+    const hope = r.events.filter((e) => e.kind === 'hope');
+    expect(hope).toEqual(expect.arrayContaining([
+      { kind: 'hope', delta: -1, reason: 'death', who: 'kvarn' },
+      { kind: 'hope', delta: -2, reason: 'flip', who: undefined },
+    ]));
+  });
+});

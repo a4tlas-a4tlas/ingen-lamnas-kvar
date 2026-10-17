@@ -38,6 +38,7 @@ import type {
   GameEvent,
   GameState,
   Hit,
+  HopeReason,
   Intent,
   LogEntry,
   VerseId,
@@ -96,8 +97,10 @@ function changeBelief(c: Ctx, a: Animal, d: number) {
   a.belief = Math.max(beliefFloor(c.s), Math.min(10, a.belief + d));
 }
 
-function changeHope(c: Ctx, d: number) {
+function changeHope(c: Ctx, d: number, reason: HopeReason, who?: string) {
+  const before = c.s.hope;
   c.s.hope = Math.max(0, Math.min(10, c.s.hope + d));
+  if (c.s.hope !== before) c.ev.push({ kind: 'hope', delta: c.s.hope - before, reason, who });
 }
 
 function addBond(c: Ctx, a: Animal, b: Animal, d: number) {
@@ -141,24 +144,24 @@ function flipVerse(c: Ctx, id: VerseId) {
   const present = s.animals.filter(isPresent);
   switch (id) {
     case 'ingenLamnas':
-      changeHope(c, -2);
+      changeHope(c, -2, 'flip');
       present.forEach((a) => changeBelief(c, a, -1));
       break;
     case 'viJagarInte':
-      changeHope(c, -1);
+      changeHope(c, -1, 'flip');
       present.filter((a) => !a.predator).forEach((a) => changeBelief(c, a, -1));
       break;
     case 'denAldste':
-      changeHope(c, -1);
+      changeHope(c, -1, 'flip');
       present.forEach((a) => changeBelief(c, a, -1));
       break;
     case 'ingenEnsam':
-      changeHope(c, -1);
+      changeHope(c, -1, 'flip');
       for (const k of Object.keys(s.bonds)) s.bonds[k] = Math.max(-3, s.bonds[k] - 1);
       break;
     case 'denStarke':
     case 'manen':
-      changeHope(c, -1);
+      changeHope(c, -1, 'flip');
       break;
   }
 }
@@ -378,7 +381,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       break;
     case 'skratt':
       s.animals.filter((x) => isPresent(x) && x.zone === o.zone).forEach((x) => changeBelief(c, x, 1));
-      changeHope(c, 1);
+      changeHope(c, 1, 'laugh', o.id);
       line(c, o.id, `${o.name} skrattar till i mörkret. Det låter nästan som hemma.`);
       break;
     case 'taEmot':
@@ -392,7 +395,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       break;
     case 'minne':
       s.animals.filter(isPresent).forEach((x) => changeBelief(c, x, 2));
-      changeHope(c, -1);
+      changeHope(c, -1, 'memory', o.id);
       narrate(c, `Vi minns ${o.name}. Det gör ont, och det håller oss uppe.`);
       break;
   }
@@ -572,7 +575,7 @@ function hunt(c: Ctx, pred: Animal, prey: Animal) {
   addBond(c, pred, prey, -3);
   s.animals.filter((x) => isPresent(x) && x !== pred && x !== prey).forEach((x) => changeBelief(c, x, -1));
   changeBelief(c, pred, 1);
-  changeHope(c, -1);
+  changeHope(c, -1, 'hunt', pred.id);
   if (verseStatus(s, 'viJagarInte') === 'intact') flipVerse(c, 'viJagarInte');
   if ((prey.count !== undefined && prey.count <= 0) || prey.wounds >= 3) die(c, prey, 'hunt');
 }
@@ -607,7 +610,7 @@ function die(c: Ctx, a: Animal, cause: keyof typeof DEATH_CAUSE) {
   removeCards(s, a.id);
   s.discard.push({ uid: s.nextUid++, kind: 'minne', owner: a.id, memoryOf: a.id });
   s.verses.push({ id: `minne-${a.id}`, kind: 'memorial', text: `För ${a.name}, ${DEATH_CAUSE[cause]}.`, flipped: false });
-  changeHope(c, -1);
+  changeHope(c, -1, 'death', a.id);
   grieve(c, a);
   if (a.elder && verseStatus(s, 'denAldste') === 'intact') flipVerse(c, 'denAldste');
   if (a.count !== undefined && cause !== 'hunt' && verseStatus(s, 'denStarke') === 'intact') flipVerse(c, 'denStarke');
@@ -619,7 +622,7 @@ function leaveGroup(c: Ctx, a: Animal, cause: 'dawn' | 'doubt') {
   removeCards(s, a.id);
   s.verses.push({ id: `minne-${a.id}`, kind: 'memorial', text: `För ${a.name}, ${LEAVE_CAUSE[cause]}.`, flipped: false });
   narrate(c, cause === 'dawn' ? `${a.name} hann inte över. Vi kunde inte vänta.` : `${a.name} vände om, ut i mörkret. Vi såg ${a.name} aldrig igen.`);
-  changeHope(c, -1);
+  changeHope(c, -1, cause === 'dawn' ? 'dawn' : 'leave', a.id);
   grieve(c, a);
   if (a.elder && verseStatus(s, 'denAldste') === 'intact') flipVerse(c, 'denAldste');
   if (cause === 'dawn' && verseStatus(s, 'ingenLamnas') === 'intact') flipVerse(c, 'ingenLamnas');
