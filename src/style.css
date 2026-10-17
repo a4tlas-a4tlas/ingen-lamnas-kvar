@@ -125,8 +125,8 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .pips.hope { color: var(--gold); }
 .pips.kraft { color: var(--paper); }
 .stage { grid-area: stage; min-height: 0; height: 100%; padding: 7px; }
-.panel { grid-area: panel; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
-.chronicle { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.panel { grid-area: panel; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 4px 4px 0 0; overflow-y: auto; }
+.chronicle { flex: 1 0 200px; min-height: 200px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .chronicle > section { min-height: 0; overflow-y: auto; }
 
 /* ---------------------------------------------------------------- scene */
@@ -216,20 +216,27 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .token .tname i { font-style: normal; }
 .token .tstats { display: flex; justify-content: center; gap: 4px; font-size: 0.66em; flex-wrap: wrap; text-shadow: 0 1px 2px #000; }
 .token .belief { color: var(--gold); }
-.token .wounds { color: #ff8a70; font-weight: 700; letter-spacing: -1px; }
-.token .flag { color: var(--moss); font-style: italic; }
-.token .intent {
-  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); white-space: nowrap;
-  font-size: 0.64em; background: var(--paper); color: var(--ink); padding: 1px 6px; border-radius: 8px;
-  font-style: italic; box-shadow: 0 2px 4px #0008;
+.token .chips {
+  position: absolute; bottom: calc(100% - 4px); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 2px; justify-content: center; flex-wrap: wrap; width: 160%; pointer-events: none;
 }
-.token .intent.hunt, .token .intent.leave { background: var(--blood); color: var(--paper); }
-.token .intent.bolt { background: var(--gold); }
+
+/* Status chips: the same look on the board, in the info panel and in the how-to. */
+.chip {
+  display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; font-size: 0.64rem; line-height: 1.3;
+  font-weight: 700; padding: 0 5px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  font-family: var(--serif); font-style: normal;
+}
+.chip.tone-bad { background: #b8402f; color: #fff4e6; }
+.chip.tone-warn { background: var(--gold); color: var(--ink); }
+.chip.tone-good { background: var(--moss); color: var(--ink); }
+.chip.tone-info { background: #c9d4e6; color: var(--ink); }
 .token.target .sil { filter: drop-shadow(0 0 6px var(--gold)) drop-shadow(0 3px 1.5px #000); animation: lift 1.2s ease-in-out infinite; }
 .token.selected .sil, .token.inspecting .sil { filter: drop-shadow(0 0 5px var(--paper)) drop-shadow(0 3px 1.5px #000); }
 .token.pending .sil { filter: drop-shadow(0 0 10px #fff6d0); }
 .token.safe { opacity: 0.85; }
 .token.airborne .sil { transform: translateY(-14px) scale(1.05); transition: transform 0.6s; }
+.token.airborne .chips { bottom: calc(100% + 12px); }
 .token.airborne::after {
   content: ''; position: absolute; left: 25%; right: 25%; top: 58%; height: 8%; border-radius: 50%;
   background: rgba(0,0,0,0.45); filter: blur(2px); z-index: -1;
@@ -240,11 +247,6 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .token.can-move .tname { box-shadow: 0 0 0 2px var(--gold), 0 1px 3px rgba(0,0,0,0.7); }
 .token.frozen .sil { filter: grayscale(0.8) brightness(0.75) drop-shadow(0 0 4px #9fc3ff) drop-shadow(0 3px 1.5px #000); }
 .token.card-owner .sil { filter: drop-shadow(0 0 7px var(--gold)) drop-shadow(0 3px 1.5px #000); transform: translateY(-3px); }
-.token .tstate {
-  position: absolute; top: -2px; right: -4px; font-size: 0.58em; background: var(--ink); color: var(--paper);
-  padding: 0 5px; border-radius: 6px; border: 1px solid rgba(239,227,200,0.4);
-}
-.token.safe .tstate { background: var(--moss); color: var(--ink); border: 0; }
 .token.gone { opacity: 0; pointer-events: none; filter: grayscale(1) blur(1px); }
 .token.hurt .sil { animation: hurt 0.6s ease-out; }
 @keyframes lift { 50% { transform: translateY(-3px); } }
@@ -256,6 +258,18 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .hint { font-style: italic; color: var(--paper-dim); margin: 0.4em 0 0; min-height: 1.4em; }
 .inspect-slot:empty { display: none; }
 .inspect .reason { color: var(--gold); font-style: italic; }
+.status-list { list-style: none; margin: 2px 0; padding: 0; display: grid; gap: 4px; }
+.status-list li { display: flex; gap: 8px; align-items: baseline; }
+.status-list .chip { flex: none; font-size: 0.72rem; }
+
+.forecast { background: rgba(239,227,200,0.06); border-left: 3px solid var(--paper-dim); padding: 6px 12px; font-size: 0.86em; }
+.forecast:empty { display: none; }
+.forecast h3 { font-size: 0.9em; margin: 0 0 2px; color: var(--paper); }
+.forecast ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 1px; }
+.forecast li::before { content: '• '; }
+.forecast .tone-bad { color: #ff9a80; font-weight: 600; }
+.forecast .tone-warn { color: var(--gold); }
+.forecast .tone-good { color: var(--moss); }
 .inspect { background: rgba(239,227,200,0.07); border-left: 3px solid var(--gold); padding: 8px 12px; font-size: 0.88em; display: grid; gap: 3px; }
 .bonds { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.92em; }
 .bond.b2, .bond.b3 { color: var(--gold); }

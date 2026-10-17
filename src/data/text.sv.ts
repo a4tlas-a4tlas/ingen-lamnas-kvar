@@ -18,17 +18,6 @@ export const ZONE_LABELS: Record<ZoneId, string> = {
   culvert: 'Trumman',
 };
 
-export function intentLabel(intent: Intent, targetName?: string): string {
-  switch (intent.kind) {
-    case 'follow': return 'följer';
-    case 'freeze': return 'fryser';
-    case 'flee': return 'vill tillbaka';
-    case 'bolt': return 'tänker rusa';
-    case 'leave': return 'tänker lämna oss';
-    case 'hunt': return `betraktar ${targetName ?? '…'}`;
-  }
-}
-
 export function intentLine(name: string, intent: Intent, targetName?: string): string | null {
   switch (intent.kind) {
     case 'follow': return null;

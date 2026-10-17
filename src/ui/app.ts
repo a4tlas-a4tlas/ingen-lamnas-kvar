@@ -1,6 +1,6 @@
 import { CAST } from '../data/animals';
 import { CARDS, TAG_NAMES } from '../data/cards';
-import { ZONE_LABELS, intentLabel } from '../data/text.sv';
+import { ZONE_LABELS } from '../data/text.sv';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
 import { Sound } from '../audio/sound';
@@ -27,12 +27,17 @@ import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { BANDS, CULVERT_X, sceneSvg } from './scene';
 import { silhouette, speciesColor } from './silhouettes';
+import { animalStatuses, forecast, type Status } from './status';
 
 const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
 
 type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | { mode: 'lead'; animal?: string };
 
 const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
+function chipHtml(st: Status, withLabel: boolean): string {
+  return `<span class="chip tone-${st.tone}" title="${esc(`${st.label}: ${st.explain}`)}">${st.icon}${withLabel ? ` ${esc(st.label)}` : ''}</span>`;
+}
+
 const kindName = (id: string) => CAST.find((d) => d.id === id)?.kindName ?? '';
 
 function loadSave(): GameState | null {
@@ -294,6 +299,7 @@ export class App {
             <li>Du är <b>Eden</b> – löftet som håller djuren samman. Du har ingen kropp, bara ord.</li>
             <li>Varje timme visar vägen var ljusen kommer. Djuren visar också vad <em>de själva</em> tänker göra.</li>
             <li>Tryck på ett djur med ljus ring för att <b>leda</b> det (◆1), eller spela kort. Varje kort tillhör ett djur. Få alla till andra diket innan gryningen.</li>
+            <li><b>Tillstånd</b> syns ovanför djuren: <span class="chip tone-bad">❄︎ fryser</span> kan inte flyttas, <span class="chip tone-warn">↩︎ vill tillbaka</span> backar och <span class="chip tone-warn">» tänker rusa</span> springer ut på egen hand när timmen går, <span class="chip tone-bad">⚠︎ jagar</span> rovdjuret anfaller, <span class="chip tone-bad">✕ lämnar oss</span> försvinner. <b>Trösta</b> bryter dem. Rutan <i>När timmen går</i> visar vad som kommer att hända.</li>
             <li>Bara små djur får plats i trumman. Ugglan flyger när den flyttas, och kan inte träffas i luften.</li>
             <li>Djuren slåss aldrig. De gömmer sig, bär varandra, tröstar – och offrar.</li>
             <li><b>Tro</b> håller dem kvar. Rovdjur vars tro sviker minns vad de är.</li>
@@ -363,6 +369,7 @@ export class App {
         </main>
         <section class="panel">
           <div class="actions"></div>
+          <div class="forecast" aria-live="polite"></div>
           <div class="hand"></div>
           <div class="inspect-slot"></div>
           <div class="chronicle">
@@ -387,6 +394,7 @@ export class App {
     q('.telegraph').innerHTML = this.telegraphHtml(s);
     this.updateTokens(s, q('.tokens'), hurt);
     q('.actions').innerHTML = this.actionsHtml(s);
+    q('.forecast').innerHTML = s.phase === 'play' ? this.forecastHtml(s) : '';
     q('.hand').innerHTML = this.handHtml(s);
     q('.inspect-slot').innerHTML = this.inspect && s.phase !== 'over' ? this.inspectHtml(s, animal(s, this.inspect)) : '';
     q('.poem').innerHTML = this.poemHtml(s);
@@ -465,8 +473,6 @@ export class App {
         el.style.left = `${x}%`;
         el.style.top = `${y}%`;
       }
-      const target = a.intent.kind === 'hunt' ? animal(s, a.intent.target).name : undefined;
-      const showIntent = a.status === 'active' && a.intent.kind !== 'follow' && s.phase !== 'over';
       el.classList.toggle('gone', !isPresent(a));
       el.classList.toggle('safe', a.status === 'safe');
       el.classList.toggle('target', targets.includes(a.id));
@@ -482,16 +488,17 @@ export class App {
         el.classList.add('hurt');
       }
       el.setAttribute('aria-label', `${a.name}, tro ${a.belief}`);
-      const state =
-        a.status === 'safe' ? 'över' :
-        a.zone === 'culvert' && a.status === 'active' ? (a.culvertTime >= 1 ? 'kan krypa ut' : 'kryper') : '';
+      const statuses = s.phase === 'over' ? [] : animalStatuses(s, a);
       el.innerHTML = `
-        ${state ? `<span class="tstate">${state}</span>` : ''}
-        ${showIntent ? `<span class="intent ${a.intent.kind}">${esc(intentLabel(a.intent, target))}</span>` : ''}
+        <span class="chips">${statuses.map((st) => chipHtml(st, !!st.intent || st.key === 'safe' || st.key === 'culvert')).join('')}</span>
         ${silhouette(a.species)}
         <span class="tname">${esc(a.name)}${a.count !== undefined ? ` <i>×${a.count}</i>` : ''}</span>
-        <span class="tstats"><span class="belief" title="Tro">✶${a.belief}</span>${a.wounds ? `<span class="wounds" title="Sår">${'⁄'.repeat(a.wounds)}</span>` : ''}${a.flying ? '<span class="flag">flyger</span>' : ''}${a.braced ? '<span class="flag">biter ihop</span>' : ''}${a.protectedBy ? '<span class="flag">skyddad</span>' : ''}</span>`;
+        <span class="tstats"><span class="belief" title="Tro">✶${a.belief}</span></span>`;
     }
+  }
+
+  private forecastHtml(s: GameState): string {
+    return `<h3>När timmen går</h3><ul>${forecast(s).map((f) => `<li class="tone-${f.tone}">${esc(f.text)}</li>`).join('')}</ul>`;
   }
 
   private actionsHtml(s: GameState): string {
@@ -529,6 +536,7 @@ export class App {
         <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(a.id)}${a.predator ? ' · rovdjur' : ''}${a.elder ? ' · den äldste' : ''}</span></div>
         <div class="muted">${a.traits.map((t) => `${TRAITS[t].name} – ${TRAITS[t].note}`).join(' · ')}</div>
         <div>Tro ${a.belief} · Sår ${a.wounds}/3${a.wounds >= 2 ? ' (att leda kostar ◆2)' : ''}${a.count !== undefined ? ` · ${a.count} kvar` : ''}${a.zone === 'culvert' ? ` · i trumman ${a.culvertTime} timme` : ''}</div>
+        <ul class="status-list">${animalStatuses(s, a).map((st) => `<li>${chipHtml(st, true)}<span>${esc(st.explain)}</span></li>`).join('') || `<li class="muted">${a.status === 'active' ? `${esc(a.name)} följer oss. Inga särskilda tillstånd.` : ''}</li>`}</ul>
         ${a.status === 'active' ? `<div class="reason">${esc(leadBlockReason(s, a) ?? (a.flier ? `${a.name} kan ledas – flyger upp till 2 steg och kan inte träffas i luften.` : `${a.name} kan ledas ett steg.`))}</div>` : ''}
         <div class="bonds">${bonds}</div>
       </div>`;

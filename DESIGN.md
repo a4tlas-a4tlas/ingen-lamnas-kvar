@@ -151,3 +151,15 @@ Feedback: the UI should fit on one screen. On desktop the road now fills the scr
 - the poem and the night's log, side by side, each scrolling on its own
 
 On phones and narrow windows the layout stays stacked, and the hand scrolls sideways.
+
+### Playtest round 3 → changes
+Feedback: the night didn't end by getting everyone across, and the states (fryser and so on) need to be clearer.
+- **The night ends when the last animal is across.** There's no need to let the hour pass.
+- **Status chips:** every state has one name, symbol and colour, used the same way everywhere:
+  - red = danger: ❄ fryser, ✕ lämnar oss, ⚠ jagar, ⁄ deep wounds
+  - gold = warning: ↩ vill tillbaka, » tänker rusa, ✶ tvivlar
+  - green = protection: ⇡ flyger, ⛨ skyddas av, ◈ biter ihop, ✓ över
+  - blue = ◌ kryper (in the culvert)
+
+  Own-will states show their name on the board. The info panel lists every state with what it means and how to break it.
+- **"När timmen går" (forecast):** before you let the hour pass, it shows what will happen: who backs off or rushes out, who attacks, which car hits whom and how hard, whether a hit is deadly, and when dawn is near. Dark cars stay hidden until the owl has scouted.

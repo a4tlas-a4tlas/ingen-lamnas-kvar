@@ -183,7 +183,7 @@ describe('the road', () => {
     for (const a of s.animals) a.zone = 'lane2';
     s.kraft = 99;
     for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
-    s = run(s, { type: 'endTurn' });
+    // No need to let the hour pass: the night ends when the last one is over.
     expect(s.phase).toBe('over');
     expect(s.outcome?.safe).toHaveLength(5);
   });

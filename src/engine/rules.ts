@@ -96,6 +96,36 @@ export function leadZones(s: GameState, a: Animal): ZoneId[] {
   return [...zones];
 }
 
+/** A car hit costs a swarm 2 (truck: 3) members instead of a wound. */
+export const swarmLoss = (wounds: number) => (wounds === 1 ? 2 : 3);
+
+export function isLethal(a: Animal, wounds: number): boolean {
+  return a.count !== undefined ? a.count - swarmLoss(wounds) <= 0 : a.wounds + wounds >= 3;
+}
+
+/** Where an animal that flees on its own goes: one step back toward the ditch. */
+export function backZone(z: ZoneId): ZoneId | null {
+  switch (z) {
+    case 'lane1': return 'dike';
+    case 'median': return 'lane1';
+    case 'lane2': return 'median';
+    case 'culvert': return 'dike';
+    default: return null;
+  }
+}
+
+/** Where an animal that bolts on its own goes: one step forward, lights or not. */
+export function boltZone(a: Animal): ZoneId | null {
+  switch (a.zone) {
+    case 'dike': return 'lane1';
+    case 'lane1': return 'median';
+    case 'median': return 'lane2';
+    case 'lane2': return 'farDike';
+    case 'culvert': return a.culvertTime >= 1 ? 'farDike' : null;
+    default: return null;
+  }
+}
+
 /** Undirected distance between two zones (culvert counts once revealed). */
 export function zoneDistance(s: GameState, from: ZoneId, to: ZoneId): number {
   const edges: Record<ZoneId, ZoneId[]> = {

@@ -5,7 +5,9 @@ import {
   ON_ROAD,
   ROAD_LANES,
   animal,
+  backZone,
   beliefFloor,
+  boltZone,
   bond,
   bondKey,
   canPlay,
@@ -17,12 +19,14 @@ import {
   huntThreshold,
   isActive,
   isFrozen,
+  isLethal,
   isPresent,
   lastMomentShields,
   leadCost,
   leadTargets,
   leadZones,
   moonHidden,
+  swarmLoss,
   verseStatus,
   zoneDistance,
 } from './rules';
@@ -59,8 +63,8 @@ export function step(prev: GameState, action: Action): { state: GameState; event
   try {
     switch (action.type) {
       case 'swear': swear(c, action.verses); break;
-      case 'play': playCard(c, action.uid, action.target, action.zone); break;
-      case 'lead': lead(c, action.target, action.zone); break;
+      case 'play': playCard(c, action.uid, action.target, action.zone); endIfAllAcross(c); break;
+      case 'lead': lead(c, action.target, action.zone); endIfAllAcross(c); break;
       case 'endTurn': endTurn(c); break;
       case 'lastMoment': resolveLastMoment(c, action); break;
     }
@@ -242,27 +246,6 @@ function rollIntents(c: Ctx) {
     const target = a.intent.kind === 'hunt' ? animal(c.s, a.intent.target).name : undefined;
     const text = intentLine(a.name, a.intent, target);
     if (text) line(c, a.id, text);
-  }
-}
-
-function backZone(z: ZoneId): ZoneId | null {
-  switch (z) {
-    case 'lane1': return 'dike';
-    case 'median': return 'lane1';
-    case 'lane2': return 'median';
-    case 'culvert': return 'dike';
-    default: return null;
-  }
-}
-
-function boltZone(a: Animal): ZoneId | null {
-  switch (a.zone) {
-    case 'dike': return 'lane1';
-    case 'lane1': return 'median';
-    case 'median': return 'lane2';
-    case 'lane2': return 'farDike';
-    case 'culvert': return a.culvertTime >= 1 ? 'farDike' : null;
-    default: return null;
   }
 }
 
@@ -478,12 +461,6 @@ function resolveIntents(c: Ctx) {
   }
 }
 
-const swarmLoss = (wounds: number) => (wounds === 1 ? 2 : 3);
-
-function isLethal(a: Animal, wounds: number): boolean {
-  return a.count !== undefined ? a.count - swarmLoss(wounds) <= 0 : a.wounds + wounds >= 3;
-}
-
 function processHits(c: Ctx) {
   const s = c.s;
   while (s.hitQueue.length) {
@@ -655,13 +632,19 @@ function finishTurn(c: Ctx) {
   startTurn(c);
 }
 
+/** The night ends the moment the last of us reaches the far side. */
+function endIfAllAcross(c: Ctx) {
+  if (c.s.phase === 'play' && !c.s.animals.some(isActive)) endEncounter(c);
+}
+
 function endEncounter(c: Ctx) {
   const s = c.s;
   const ids = (st: Animal['status']) => s.animals.filter((a) => a.status === st).map((a) => a.id);
   s.phase = 'over';
   s.outcome = { safe: ids('safe'), dead: ids('dead'), left: ids('left'), fallen: ids('safe').length === 0 };
   if (s.outcome.fallen) narrate(c, 'Ingen av oss nådde andra sidan. Eden föll i diket.');
-  else narrate(c, `Vi var ${num(s.animals.length)}. ${capitalize(num(s.outcome.safe.length))} av oss såg gryningen från andra sidan.`);
+  else if (s.outcome.safe.length === s.animals.length) narrate(c, `Vi var ${num(s.animals.length)}. Alla ${num(s.animals.length)} kom över vägen.`);
+  else narrate(c, `Vi var ${num(s.animals.length)}. ${capitalize(num(s.outcome.safe.length))} av oss kom över vägen.`);
 }
 
 const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
