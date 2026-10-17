@@ -1,0 +1,613 @@
+import { CAST } from '../data/animals';
+import { CARDS } from '../data/cards';
+import { ZONE_LABELS, intentLabel } from '../data/text.sv';
+import { TRAITS } from '../data/traits';
+import { VERSES, VERSE_IDS } from '../data/verses';
+import { Sound } from '../audio/sound';
+import { randomSeed } from '../engine/rng';
+import {
+  animal,
+  bond,
+  canPlay,
+  cardAnimals,
+  cardCost,
+  cardTarget,
+  cardZones,
+  isPresent,
+  lastMomentShields,
+  leadTargets,
+  moonHidden,
+  neighbors,
+  verseStatus,
+} from '../engine/rules';
+import { createGame } from '../engine/setup';
+import { step } from '../engine/step';
+import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
+import { BANDS, CULVERT_X, sceneSvg } from './scene';
+import { silhouette } from './silhouettes';
+
+const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
+
+type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | { mode: 'lead'; animal?: string };
+
+const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
+const kindName = (id: string) => CAST.find((d) => d.id === id)?.kindName ?? '';
+
+function loadSave(): GameState | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as GameState;
+    return s.version === 1 && s.phase !== 'over' ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSave(s: GameState | null) {
+  try {
+    if (s && s.phase !== 'over') localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+    else localStorage.removeItem(SAVE_KEY);
+  } catch {
+    // Saving is a convenience; the game works without it.
+  }
+}
+
+export class App {
+  private state: GameState | null = null;
+  private sel: Sel = { mode: 'idle' };
+  private inspect: string | null = null;
+  private oathPick: VerseId[] = [];
+  private mounted = false;
+  private busy = false;
+  private hint = '';
+  private sound = new Sound();
+
+  constructor(private root: HTMLElement) {
+    root.addEventListener('click', (e) => this.onClick(e));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.cancel();
+    });
+    this.renderTitle();
+  }
+
+  // ------------------------------------------------------------ flow
+
+  private onClick(e: Event) {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
+    if (!el || el.hasAttribute('disabled')) return;
+    const act = el.dataset.act!;
+    if (act !== 'mute') this.sound.start();
+    switch (act) {
+      case 'new':
+        this.state = createGame(randomSeed());
+        this.oathPick = [];
+        this.mounted = false;
+        writeSave(this.state);
+        this.render();
+        break;
+      case 'continue':
+        this.state = loadSave();
+        this.mounted = false;
+        this.render();
+        break;
+      case 'title':
+        this.state = null;
+        this.mounted = false;
+        this.renderTitle();
+        break;
+      case 'mute':
+        this.sound.setMuted(!this.sound.muted);
+        this.sound.start();
+        this.render();
+        break;
+      case 'verse-toggle': {
+        const v = el.dataset.verse as VerseId;
+        if (this.oathPick.includes(v)) this.oathPick = this.oathPick.filter((x) => x !== v);
+        else if (this.oathPick.length < 3) this.oathPick.push(v);
+        this.render();
+        break;
+      }
+      case 'swear':
+        this.dispatch({ type: 'swear', verses: this.oathPick });
+        break;
+      default:
+        if (!this.busy) this.onGameClick(act, el);
+    }
+  }
+
+  private onGameClick(act: string, el: HTMLElement) {
+    const s = this.state;
+    if (!s) return;
+    switch (act) {
+      case 'card': {
+        const card = s.hand.find((c) => c.uid === Number(el.dataset.uid));
+        if (!card) return;
+        if (this.sel.mode === 'card' && this.sel.uid === card.uid) return this.cancel();
+        if (!canPlay(s, card)) {
+          this.hint = cardCost(s, card) > s.kraft ? 'Vi har inte kraft nog.' : 'Det kortet kan inte spelas just nu.';
+          return this.render();
+        }
+        if (cardTarget(card) === 'none') return this.dispatch({ type: 'play', uid: card.uid });
+        this.sel = { mode: 'card', uid: card.uid };
+        this.hint = '';
+        return this.render();
+      }
+      case 'lead':
+        this.sel = this.sel.mode === 'lead' ? { mode: 'idle' } : { mode: 'lead' };
+        this.hint = '';
+        return this.render();
+      case 'end':
+        this.sel = { mode: 'idle' };
+        return this.dispatch({ type: 'endTurn' });
+      case 'cancel':
+        return this.cancel();
+      case 'animal':
+        return this.pickAnimal(el.dataset.animal!);
+      case 'zone':
+        return this.pickZone(el.dataset.zone as ZoneId);
+      case 'lm-shield':
+        return this.dispatch({ type: 'lastMoment', choice: 'shield', by: el.dataset.animal! });
+      case 'lm-verse':
+        return this.dispatch({ type: 'lastMoment', choice: 'verse', verse: el.dataset.verse! });
+      case 'lm-letgo':
+        return this.dispatch({ type: 'lastMoment', choice: 'letGo' });
+    }
+  }
+
+  private cancel() {
+    this.sel = { mode: 'idle' };
+    this.hint = '';
+    if (this.state) this.render();
+  }
+
+  private selectedCard(): Card | undefined {
+    const sel = this.sel;
+    return sel.mode === 'card' ? this.state?.hand.find((c) => c.uid === sel.uid) : undefined;
+  }
+
+  private targetAnimals(): string[] {
+    const s = this.state!;
+    const card = this.selectedCard();
+    if (card) {
+      const spec = cardTarget(card);
+      if ((spec === 'animal' || spec === 'animalZone') && this.sel.mode === 'card' && !this.sel.animal) return cardAnimals(s, card);
+      return [];
+    }
+    if (this.sel.mode === 'lead' && !this.sel.animal) return leadTargets(s);
+    return [];
+  }
+
+  private targetZones(): ZoneId[] {
+    const s = this.state!;
+    const card = this.selectedCard();
+    if (card) {
+      const spec = cardTarget(card);
+      if (spec === 'zone') return cardZones(s, card);
+      if (spec === 'animalZone' && this.sel.mode === 'card' && this.sel.animal) return cardZones(s, card);
+      return [];
+    }
+    if (this.sel.mode === 'lead' && this.sel.animal) return neighbors(s, animal(s, this.sel.animal));
+    return [];
+  }
+
+  private pickAnimal(id: string) {
+    const s = this.state!;
+    if (!this.targetAnimals().includes(id)) {
+      // Tapping an animal that stands in a highlighted zone picks that zone.
+      const zone = animal(s, id).zone;
+      if (this.targetZones().includes(zone)) return this.pickZone(zone);
+      this.inspect = this.inspect === id ? null : id;
+      return this.render();
+    }
+    const card = this.selectedCard();
+    if (card && this.sel.mode === 'card') {
+      if (cardTarget(card) === 'animal') return this.dispatch({ type: 'play', uid: card.uid, target: id });
+      this.sel = { ...this.sel, animal: id };
+    } else if (this.sel.mode === 'lead') {
+      this.sel = { mode: 'lead', animal: id };
+      const zones = neighbors(s, animal(s, id));
+      if (zones.length === 1) return this.dispatch({ type: 'lead', target: id, zone: zones[0] });
+    }
+    this.render();
+  }
+
+  private pickZone(zone: ZoneId) {
+    if (!this.targetZones().includes(zone)) return;
+    const card = this.selectedCard();
+    if (card && this.sel.mode === 'card') {
+      return this.dispatch({ type: 'play', uid: card.uid, target: this.sel.animal, zone });
+    }
+    if (this.sel.mode === 'lead' && this.sel.animal) this.dispatch({ type: 'lead', target: this.sel.animal, zone });
+  }
+
+  private dispatch(action: Action) {
+    if (!this.state) return;
+    const r = step(this.state, action);
+    const err = r.events.find((e) => e.kind === 'error');
+    if (err && err.kind === 'error') {
+      this.hint = err.text;
+      return this.render();
+    }
+    this.state = r.state;
+    this.sel = { mode: 'idle' };
+    this.hint = '';
+    writeSave(this.state);
+    this.play(r.events);
+  }
+
+  /** Cars sweep first; the board updates once they have passed. */
+  private play(events: GameEvent[]) {
+    const cars = events.filter((e): e is Extract<GameEvent, { kind: 'car' }> => e.kind === 'car');
+    const after = () => {
+      for (const e of events) {
+        if (e.kind === 'hit') this.sound.hit();
+        if (e.kind === 'death') this.sound.death();
+        if (e.kind === 'flip') this.sound.flip();
+        if (e.kind === 'safe') this.sound.safe();
+      }
+      const hurt = new Set(events.flatMap((e) => (e.kind === 'hit' || e.kind === 'death' ? [e.who] : [])));
+      this.busy = false;
+      this.render(hurt);
+    };
+    if (!cars.length || !this.mounted) return after();
+    this.busy = true;
+    const actions = this.root.querySelector('.actions');
+    if (actions && this.state) actions.innerHTML = this.actionsHtml(this.state);
+    const layer = this.root.querySelector('.sweeps');
+    cars.forEach((c, i) => {
+      window.setTimeout(() => {
+        this.sound.car(c.vehicle !== 'bil');
+        if (!layer) return;
+        const el = document.createElement('div');
+        el.className = `sweep ${c.lane}${c.vehicle === 'mörk bil' ? ' dark' : ''}`;
+        layer.appendChild(el);
+        window.setTimeout(() => el.remove(), 1500);
+      }, i * 350);
+    });
+    window.setTimeout(after, 900 + (cars.length - 1) * 350);
+  }
+
+  // ------------------------------------------------------------ screens
+
+  private renderTitle() {
+    const hasSave = loadSave() !== null;
+    this.root.innerHTML = `
+      <div class="screen title-screen">
+        <div class="title-cast">${CAST.map((d) => silhouette(d.species)).join('')}</div>
+        <h1>Ingen lämnas kvar</h1>
+        <p class="sub">Vi lämnade dalen i skymningen.<br>Framför oss låg vägen.</p>
+        <div class="title-buttons">
+          <button class="btn primary" data-act="new">Börja vandringen</button>
+          ${hasSave ? '<button class="btn" data-act="continue">Fortsätt natten</button>' : ''}
+        </div>
+        <p class="small">Första kapitlet: <em>Vägen om natten</em> · ca 10 minuter</p>
+        <details class="howto">
+          <summary>Hur man spelar</summary>
+          <ul>
+            <li>Du är <b>Eden</b> – löftet som håller djuren samman. Du har ingen kropp, bara ord.</li>
+            <li>Varje timme visar vägen var ljusen kommer. Djuren visar också vad <em>de själva</em> tänker göra.</li>
+            <li>Spela kort för ◆ kraft, eller <b>led</b> ett djur ett steg. Få alla till andra diket innan gryningen.</li>
+            <li>Djuren slåss aldrig. De gömmer sig, bär varandra, tröstar – och offrar.</li>
+            <li><b>Tro</b> håller dem kvar. Rovdjur vars tro sviker minns vad de är.</li>
+            <li>Bryts ett löfte skrivs historien om: <em>”Ingen lämnas kvar”</em> blir <em>”Någon lämnades kvar”</em>.</li>
+          </ul>
+        </details>
+      </div>`;
+  }
+
+  private render(hurt?: Set<string>) {
+    const s = this.state;
+    if (!s) return this.renderTitle();
+    if (s.phase === 'oath') return this.renderOath(s);
+    this.renderGame(s, hurt);
+  }
+
+  private renderOath(s: GameState) {
+    this.mounted = false;
+    const n = this.oathPick.length;
+    this.root.innerHTML = `
+      <div class="screen oath-screen">
+        <h2>Eden</h2>
+        <p class="lead-text">I dalens sista natt svär vi tre löften. Välj dem med omsorg – de binder oss, och om de bryts skrivs vår historia om.</p>
+        <div class="verse-grid">
+          ${VERSE_IDS.map((id) => {
+            const v = VERSES[id];
+            const chosen = this.oathPick.includes(id);
+            return `<button class="verse-card ${chosen ? 'chosen' : ''}" data-act="verse-toggle" data-verse="${id}" aria-pressed="${chosen}">
+              <span class="vtext">${esc(v.text)}</span>
+              <span class="vrow"><b>Löfte</b> ${esc(v.promise)}</span>
+              <span class="vrow"><b>Bryts</b> ${esc(v.breaks)}</span>
+              <span class="vrow vflip"><b>Då</b> ”${esc(v.flippedText)}” ${esc(v.flipCost)}</span>
+            </button>`;
+          }).join('')}
+        </div>
+        <h3>Vi som går</h3>
+        <div class="cast-grid">
+          ${s.animals.map((a) => `
+            <div class="cast-card">
+              ${silhouette(a.species)}
+              <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(a.id)}${a.predator ? ' · rovdjur' : ''}${a.count ? ` · ${a.count} st` : ''}</span></div>
+              <div class="muted">${a.traits.map((t) => TRAITS[t].name).join(', ')} · tro ${a.belief}</div>
+            </div>`).join('')}
+        </div>
+        <button class="btn primary swear" data-act="swear" ${n === 3 ? '' : 'disabled'}>Svär eden (${n}/3)</button>
+      </div>`;
+  }
+
+  private mountGame() {
+    const zoneDivs = (Object.keys(BANDS) as (keyof typeof BANDS)[])
+      .map((z) => `<div class="zone" data-act="zone" data-zone="${z}" style="top:${BANDS[z][0]}%;height:${BANDS[z][1] - BANDS[z][0]}%"><span>${ZONE_LABELS[z]}</span></div>`)
+      .join('');
+    this.root.innerHTML = `
+      <div class="game">
+        <header class="topbar"></header>
+        <main class="board">
+          <div class="scene">
+            ${sceneSvg()}
+            <div class="moon"><div class="cloud"></div></div>
+            <div class="zones">${zoneDivs}
+              <div class="zone culvert" data-act="zone" data-zone="culvert" style="left:${CULVERT_X[0]}%;width:${CULVERT_X[1] - CULVERT_X[0]}%;top:26%;height:44%"><span>Trumman</span></div>
+            </div>
+            <div class="telegraph"></div>
+            <div class="sweeps"></div>
+            <div class="tokens"></div>
+          </div>
+          <div class="actions"></div>
+          <div class="hand"></div>
+        </main>
+        <aside class="side">
+          <section class="poem"></section>
+          <section class="log" aria-live="polite"></section>
+        </aside>
+        <div class="modal-root"></div>
+      </div>`;
+    this.mounted = true;
+  }
+
+  private renderGame(s: GameState, hurt?: Set<string>) {
+    if (!this.mounted) this.mountGame();
+    const q = <T extends HTMLElement>(sel: string) => this.root.querySelector<T>(sel)!;
+    q('.topbar').innerHTML = this.topbarHtml(s);
+    const scene = q('.scene');
+    scene.classList.toggle('culvert-open', s.culvertRevealed);
+    q('.moon').classList.toggle('hidden', moonHidden(s));
+    const zones = this.targetZones();
+    scene.querySelectorAll<HTMLElement>('.zone').forEach((z) => z.classList.toggle('target', zones.includes(z.dataset.zone as ZoneId)));
+    q('.telegraph').innerHTML = this.telegraphHtml(s);
+    this.updateTokens(s, q('.tokens'), hurt);
+    q('.actions').innerHTML = this.actionsHtml(s);
+    q('.hand').innerHTML = this.handHtml(s);
+    q('.poem').innerHTML = this.poemHtml(s);
+    const log = q('.log');
+    log.innerHTML = this.logHtml(s.log);
+    log.scrollTop = log.scrollHeight;
+    q('.modal-root').innerHTML = s.phase === 'lastMoment' ? this.lastMomentHtml(s) : s.phase === 'over' ? this.endHtml(s) : '';
+  }
+
+  // ------------------------------------------------------------ parts
+
+  private topbarHtml(s: GameState): string {
+    const pips = (n: number, max: number, on: string, off: string) => on.repeat(Math.max(0, n)) + off.repeat(Math.max(0, max - n));
+    return `
+      <div class="tb-title">Ingen lämnas kvar <span class="muted">· Vägen om natten</span></div>
+      <div class="tb-stats">
+        <span class="stat">Timme <b>${s.turn}</b>/${s.maxTurn}</span>
+        <span class="stat" title="Hopp: under 4 drar vi färre kort.">Hopp <span class="pips hope">${pips(s.hope, 10, '●', '○')}</span></span>
+        <span class="stat" title="Kraft att spela kort och leda.">Kraft <span class="pips kraft">${pips(s.kraft, Math.max(3, s.kraft), '◆', '◇')}</span></span>
+        <button class="btn small" data-act="mute">${this.sound.muted ? 'Ljud av' : 'Ljud på'}</button>
+      </div>`;
+  }
+
+  private telegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const mid = (z: 'lane1' | 'lane2') => (BANDS[z][0] + BANDS[z][1]) / 2;
+    if (s.phase !== 'over') {
+      for (const st of s.trafficPlan[s.turn - 1] ?? []) {
+        if (st.dark && !s.darkRevealed) continue;
+        out.push(`<div class="light ${st.dark ? 'dark' : ''} ${st.wounds > 1 ? 'heavy' : ''}" style="top:${mid(st.lane)}%">
+          <span>${st.vehicle} · ${st.wounds} sår</span></div>`);
+      }
+      if ((s.trafficPlan[s.turn - 1] ?? []).some((x) => x.dark) && !s.darkRevealed) {
+        for (const z of ['lane1', 'lane2'] as const) out.push(`<div class="light rumble" style="top:${mid(z)}%"><span>mullrar…</span></div>`);
+      }
+      if (s.peekNext && s.turn < s.maxTurn) {
+        for (const st of s.trafficPlan[s.turn] ?? []) {
+          if (st.dark) continue;
+          out.push(`<div class="light next" style="top:${mid(st.lane)}%"><span>nästa timme: ${st.vehicle}</span></div>`);
+        }
+      }
+    }
+    return out.join('');
+  }
+
+  private updateTokens(s: GameState, layer: HTMLElement, hurt?: Set<string>) {
+    const targets = this.targetAnimals();
+    const byZone = new Map<ZoneId, Animal[]>();
+    for (const a of s.animals) if (isPresent(a)) byZone.set(a.zone, [...(byZone.get(a.zone) ?? []), a]);
+    const selAnimal = this.sel.mode !== 'idle' ? this.sel.animal : undefined;
+    const selCard = this.selectedCard();
+
+    for (const a of s.animals) {
+      let el = layer.querySelector<HTMLElement>(`[data-animal="${a.id}"]`);
+      if (!el) {
+        el = document.createElement('button');
+        el.className = 'token';
+        el.dataset.act = 'animal';
+        el.dataset.animal = a.id;
+        layer.appendChild(el);
+      }
+      if (isPresent(a)) {
+        const group = byZone.get(a.zone)!;
+        const i = group.indexOf(a);
+        let x: number, y: number;
+        if (a.zone === 'culvert') {
+          x = (CULVERT_X[0] + CULVERT_X[1]) / 2;
+          y = 38 + i * 12;
+        } else {
+          const [top, bottom] = BANDS[a.zone];
+          y = (top + bottom) / 2 + (a.zone === 'dike' ? -2 : 0);
+          x = 24 + ((i + 0.5) * 68) / group.length;
+        }
+        el.style.left = `${x}%`;
+        el.style.top = `${y}%`;
+      }
+      const target = a.intent.kind === 'hunt' ? animal(s, a.intent.target).name : undefined;
+      const showIntent = a.status === 'active' && a.intent.kind !== 'follow' && s.phase !== 'over';
+      el.classList.toggle('gone', !isPresent(a));
+      el.classList.toggle('safe', a.status === 'safe');
+      el.classList.toggle('target', targets.includes(a.id));
+      el.classList.toggle('selected', selAnimal === a.id || selCard?.owner === a.id);
+      el.classList.toggle('inspecting', this.inspect === a.id);
+      el.classList.toggle('pending', s.pending?.victim === a.id);
+      if (hurt?.has(a.id)) {
+        el.classList.remove('hurt');
+        void el.offsetWidth;
+        el.classList.add('hurt');
+      }
+      el.setAttribute('aria-label', `${a.name}, tro ${a.belief}`);
+      el.innerHTML = `
+        ${showIntent ? `<span class="intent ${a.intent.kind}">${esc(intentLabel(a.intent, target))}</span>` : ''}
+        ${silhouette(a.species)}
+        <span class="tname">${esc(a.name)}${a.count !== undefined ? ` <i>×${a.count}</i>` : ''}</span>
+        <span class="tstats"><span class="belief" title="Tro">✶${a.belief}</span>${a.wounds ? `<span class="wounds" title="Sår">${'⁄'.repeat(a.wounds)}</span>` : ''}${a.flying ? '<span class="flag">flyger</span>' : ''}${a.braced ? '<span class="flag">biter ihop</span>' : ''}${a.protectedBy ? '<span class="flag">skyddad</span>' : ''}</span>`;
+    }
+  }
+
+  private actionsHtml(s: GameState): string {
+    let hint = this.hint;
+    const card = this.selectedCard();
+    if (!hint) {
+      if (card) {
+        const o = animal(s, card.owner).name;
+        const spec = cardTarget(card);
+        hint =
+          spec === 'zone' ? `Välj vart ${o} ska gå.` :
+          spec === 'animal' ? 'Välj ett djur.' :
+          this.sel.mode === 'card' && this.sel.animal ? `Välj vart ${o} ska bära ${animal(s, this.sel.animal).name}.` : `Välj vem ${o} ska bära.`;
+      } else if (this.sel.mode === 'lead') {
+        hint = this.sel.animal ? `Välj vart vi leder ${animal(s, this.sel.animal).name}.` : 'Välj ett djur att leda ett steg.';
+      } else hint = 'Spela ett kort, eller led ett djur ett steg. Tryck på ett djur för att se det.';
+    }
+    const canLead = !this.busy && s.phase === 'play' && leadTargets(s).length > 0;
+    const ins = this.inspect ? this.inspectHtml(s, animal(s, this.inspect)) : '';
+    return `
+      <div class="action-row">
+        <button class="btn ${this.sel.mode === 'lead' ? 'active' : ''}" data-act="lead" ${canLead ? '' : 'disabled'}>Led ett djur <span class="cost-chip">◆1</span></button>
+        <button class="btn primary" data-act="end" ${s.phase === 'play' && !this.busy ? '' : 'disabled'}>Låt timmen gå</button>
+        ${this.sel.mode !== 'idle' ? '<button class="btn small" data-act="cancel">Avbryt</button>' : ''}
+      </div>
+      <p class="hint">${esc(hint)}</p>
+      ${ins}`;
+  }
+
+  private inspectHtml(s: GameState, a: Animal): string {
+    const bondWord = (b: number) => (b >= 2 ? 'nära' : b === 1 ? 'vän' : b === 0 ? 'främling' : b === -1 ? 'misstro' : 'rädsla');
+    const bonds = s.animals
+      .filter((o) => o.id !== a.id && isPresent(o))
+      .map((o) => { const b = bond(s, a.id, o.id); return `<span class="bond b${b}">${esc(o.name)}: ${bondWord(b)}</span>`; })
+      .join('');
+    return `
+      <div class="inspect">
+        <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(a.id)}${a.predator ? ' · rovdjur' : ''}${a.elder ? ' · den äldste' : ''}</span></div>
+        <div class="muted">${a.traits.map((t) => `${TRAITS[t].name} – ${TRAITS[t].note}`).join(' · ')}</div>
+        <div>Tro ${a.belief} · Sår ${a.wounds}/3${a.wounds >= 2 ? ' (att leda kostar ◆2)' : ''}${a.count !== undefined ? ` · ${a.count} kvar` : ''}${a.zone === 'culvert' ? ` · i trumman ${a.culvertTime} timme` : ''}</div>
+        <div class="bonds">${bonds}</div>
+      </div>`;
+  }
+
+  private handHtml(s: GameState): string {
+    if (s.phase === 'over') return '';
+    return s.hand
+      .map((c) => {
+        const def = CARDS[c.kind];
+        const owner = animal(s, c.owner);
+        const playable = canPlay(s, c);
+        const selected = this.sel.mode === 'card' && this.sel.uid === c.uid;
+        return `<button class="card ${c.kind === 'minne' ? 'memory' : ''} ${playable ? '' : 'unplayable'} ${selected ? 'selected' : ''}" data-act="card" data-uid="${c.uid}">
+          <span class="ccost">${cardCost(s, c)}</span>
+          <span class="cname">${esc(def.name)}</span>
+          <span class="ctext">${esc(def.text.replace(/\{o\}/g, owner.name))}</span>
+          <span class="cowner">${esc(owner.name)}${c.kind === 'minne' ? '' : ` · ${kindName(owner.id)}`}</span>
+        </button>`;
+      })
+      .join('') + `<div class="piles muted">Dra ${s.draw.length} · Kasta ${s.discard.length}</div>`;
+  }
+
+  private poemHtml(s: GameState): string {
+    const oath = s.verses.filter((v) => v.kind === 'oath');
+    const memorial = s.verses.filter((v) => v.kind === 'memorial');
+    return `
+      <h2>Eden</h2>
+      ${oath.map((v) => {
+        const def = VERSES[v.base!];
+        return v.flipped
+          ? `<p class="verse broken"><s>${esc(v.text)}</s><span class="rewritten">${esc(v.flippedText!)}</span><span class="vnote">${esc(def.flipCost)}</span></p>`
+          : `<p class="verse"><span>${esc(v.text)}</span><span class="vnote">${esc(def.promise)} <i>Bryts: ${esc(def.breaks)}</i></span></p>`;
+      }).join('')}
+      ${memorial.length ? `<div class="memorial">${memorial.map((v) => `<p class="verse mem">${esc(v.text)}</p>`).join('')}</div>` : ''}`;
+  }
+
+  private logHtml(log: LogEntry[]): string {
+    return log
+      .slice(-50)
+      .map((e) => {
+        if (e.kind === 'turn') return `<h4>${esc(e.text)}</h4>`;
+        return `<p class="${e.kind}">${esc(e.text)}</p>`;
+      })
+      .join('');
+  }
+
+  private lastMomentHtml(s: GameState): string {
+    const h = s.pending!;
+    const v = animal(s, h.victim);
+    const shields = lastMomentShields(s).map((id) => animal(s, id));
+    const verses = s.verses.filter((x) => x.kind === 'oath' && !x.flipped);
+    const lethalFor = (a: Animal) => (a.count !== undefined ? a.count - (h.wounds === 1 ? 2 : 3) <= 0 : a.wounds + h.wounds >= 3);
+    return `
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="lm-title">
+        <div class="modal-card lm">
+          ${silhouette(v.species)}
+          <h2 id="lm-title">Sista ögonblicket</h2>
+          <p>Ljuset fyller allt. ${esc(v.name)} står kvar i ${esc(ZONE_LABELS[v.zone].toLowerCase())}. Det finns ett ögonblick kvar.</p>
+          <div class="lm-options">
+            ${shields.map((a) => `<button class="btn option" data-act="lm-shield" data-animal="${a.id}">
+              <b>${esc(a.name)} kastar sig emellan</b>
+              <span>${lethalFor(a) ? `Det blir ${esc(a.name)}s död.` : `${esc(a.name)} tar ${h.wounds} sår.`} Bandet dem emellan stärks.</span></button>`).join('')}
+            ${verses.map((x) => `<button class="btn option" data-act="lm-verse" data-verse="${x.id}">
+              <b>Bryt ”${esc(x.text)}”</b>
+              <span>${esc(v.name)} överlever, svårt skadad. Versen blir ”${esc(x.flippedText!)}” – ${esc(VERSES[x.base!].flipCost)}</span></button>`).join('')}
+            <button class="btn option grave" data-act="lm-letgo">
+              <b>Låt ${esc(v.name)} gå</b>
+              <span>${verseStatus(s, 'ingenLamnas') === 'intact' ? '”Ingen lämnas kvar” blir ”Någon lämnades kvar”.' : 'Vi har gjort det förut.'}</span></button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  private endHtml(s: GameState): string {
+    const o = s.outcome!;
+    const safe = o.safe.map((id) => animal(s, id));
+    const lost = s.verses.filter((v) => v.kind === 'memorial');
+    const last = [...s.log].reverse().find((e) => e.kind === 'narrate');
+    return `
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="end-title">
+        <div class="modal-card end">
+          <h2 id="end-title">${o.fallen ? 'Eden föll' : 'Gryning'}</h2>
+          <p class="lead-text">${esc(last?.text ?? '')}</p>
+          ${safe.length ? `<div class="end-cast">${safe.map((a) => `<div>${silhouette(a.species)}<span>${esc(a.name)}${a.count !== undefined ? ` ×${a.count}` : ''}</span></div>`).join('')}</div>` : ''}
+          <h3>Vår dikt</h3>
+          <div class="end-poem">
+            ${s.verses.filter((v) => v.kind === 'oath').map((v) => `<p>${esc(v.flipped ? v.flippedText! : v.text)}</p>`).join('')}
+            ${lost.map((v) => `<p class="mem">${esc(v.text)}</p>`).join('')}
+          </div>
+          ${lost.length ? '<p class="muted small">Minnesstenen står kvar vid vägen.</p>' : ''}
+          <div class="title-buttons">
+            <button class="btn primary" data-act="new">Gå igen</button>
+            <button class="btn" data-act="title">Till början</button>
+          </div>
+        </div>
+      </div>`;
+  }
+}
+
