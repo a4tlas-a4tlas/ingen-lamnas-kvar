@@ -209,9 +209,9 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
   position: absolute; left: 6px; top: 4px; font-family: var(--caps); font-size: 0.72em; color: var(--paper);
   opacity: 0.45; pointer-events: none;
 }
-.zone.culvert { right: auto; display: none; }
-.culvert-open .zone.culvert { display: block; }
-.zone.culvert span { top: 50%; transform: rotate(-90deg) translateX(30%); transform-origin: left top; left: 30%; }
+.zone.hidden-zone { display: none; }
+.zone.hidden-zone.found { display: block; }
+.zone.column span { top: 50%; transform: rotate(-90deg) translateX(30%); transform-origin: left top; left: 30%; }
 .zone.target { cursor: pointer; background: rgba(228,192,112,0.14); box-shadow: inset 0 0 0 2px rgba(228,192,112,0.75); animation: breathe 1.6s ease-in-out infinite; }
 .zone.target span { opacity: 1; color: var(--gold); }
 @keyframes breathe { 50% { background: rgba(228,192,112,0.26); } }

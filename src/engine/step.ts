@@ -1,22 +1,23 @@
-import { DEATH_CAUSE, LEAVE_CAUSE, ZONE_NAMES, intentLine } from '../data/text.sv';
+import { DEATH_CAUSE, INJURY_LINES, LEAVE_CAUSE, intentLine } from '../data/text.sv';
 import { VERSES } from '../data/verses';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, oathVerse } from './setup';
+import { encounterOf, zoneDef } from './encounters';
 import {
-  ON_ROAD,
-  ROAD_LANES,
   animal,
   backZone,
   beliefFloor,
   boltZone,
   bond,
   bondKey,
+  canFly,
   canPlay,
   cardAnimals,
   cardCost,
   cardTarget,
   cardZones,
   handSize,
+  hasInjury,
   huntsAt,
   canPrey,
   isActive,
@@ -28,6 +29,8 @@ import {
   leadTargets,
   leadZones,
   moonHidden,
+  moonVisible,
+  neighbors,
   swarmLoss,
   verseStatus,
   zoneDistance,
@@ -40,6 +43,7 @@ import type {
   GameState,
   Hit,
   HopeReason,
+  InjuryKind,
   Intent,
   LogEntry,
   VerseId,
@@ -177,13 +181,23 @@ function startTurn(c: Ctx) {
   s.kraft = 3 + (hidden && moon === 'intact' ? 1 : 0) - (!hidden && moon === 'flipped' ? 1 : 0);
 
   log(c, { kind: 'turn', text: `Timme ${s.turn} av ${s.maxTurn}` });
-  narrate(c, hidden ? 'Månen gömmer sig bakom molnen.' : 'Månen lyser över asfalten.');
-  const strikes = s.trafficPlan[s.turn - 1] ?? [];
-  const visible = strikes.filter((x) => !x.dark);
-  if (strikes.length === 0) narrate(c, 'Vägen är tyst. För tyst, kanske.');
-  for (const st of visible) narrate(c, `Ljus i fjärran – en ${st.vehicle} i ${ZONE_NAMES[st.lane]}.`);
-  if (strikes.some((x) => x.dark)) narrate(c, 'Något mullrar i mörkret. Inga ljus.');
-  if (s.turn === s.maxTurn) narrate(c, 'Himlen ljusnar i öster. Det här är nattens sista timme.');
+  if (encounterOf(s).night) narrate(c, hidden ? 'Månen gömmer sig bakom molnen.' : 'Månen lyser över asfalten.');
+  if (s.encounterId === 'road') {
+    const strikes = s.trafficPlan[s.turn - 1] ?? [];
+    if (strikes.length === 0) narrate(c, 'Vägen är tyst. För tyst, kanske.');
+    for (const st of strikes.filter((x) => !x.dark)) {
+      narrate(c, `Ljus i fjärran – en ${st.vehicle} i ${zoneDef(s, st.lane).name}. ${st.severity === 'kill' ? 'Den dödar.' : 'Den skadar.'}`);
+    }
+    if (strikes.some((x) => x.dark)) narrate(c, 'Något mullrar i mörkret. Inga ljus.');
+    if (s.turn === s.maxTurn) narrate(c, 'Himlen ljusnar i öster. Det här är nattens sista timme.');
+  }
+  // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
+  if (s.turn > 1) {
+    for (const a of s.animals.filter((x) => isActive(x) && hasInjury(x, 'bleeding'))) {
+      changeBelief(c, a, -1);
+      line(c, a.id, `${a.name} blöder fortfarande. Det gör ont att tro.`);
+    }
+  }
 
   rollIntents(c);
   drawCards(c, handSize(s));
@@ -218,12 +232,13 @@ function chooseIntent(c: Ctx, a: Animal): Intent {
 
   let chance = DOUBT_BY_BELIEF[a.belief] ?? 0;
   if (a.traits.includes('modig')) chance -= 0.15;
+  if (hasInjury(a, 'shock')) chance += 0.3;
   if (random(s) >= chance) return { kind: 'follow' };
 
   const elderNear = elderVerse && s.animals.some((e) => e.elder && isActive(e) && e.zone === a.zone);
   const weights: [Intent, number][] = [
-    [{ kind: 'freeze' }, elderNear ? 0 : 1 + (a.traits.includes('skygg') ? 2 : 0)],
-    [{ kind: 'flee' }, backZone(a.zone) ? 1 : 0],
+    [{ kind: 'freeze' }, elderNear ? 0 : 1 + (a.traits.includes('skygg') ? 2 : 0) + (hasInjury(a, 'shock') ? 2 : 0)],
+    [{ kind: 'flee' }, backZone(s, a) ? 1 : 0],
     [{ kind: 'bolt' }, 1 + (a.traits.includes('otalig') ? 2 : 0)],
   ];
   const total = weights.reduce((t, [, w]) => t + w, 0);
@@ -253,11 +268,12 @@ function moveAnimal(c: Ctx, a: Animal, to: ZoneId, byPlayer: boolean) {
   const s = c.s;
   if (a.zone === to) return;
   a.zone = to;
-  if (to === 'culvert') a.culvertTime = 0;
+  const zone = zoneDef(s, to);
+  if (zone.slow) a.slowTime = 0;
   // Fliers never walk: they take off, and stay airborne for the rest of the hour.
-  if (a.flier) a.flying = true;
+  if (canFly(a)) a.flying = true;
 
-  if (byPlayer && !a.flier && ROAD_LANES.includes(to) && !moonHidden(s) && verseStatus(s, 'manen') === 'intact') {
+  if (byPlayer && !canFly(a) && zone.road && moonVisible(s) && verseStatus(s, 'manen') === 'intact') {
     line(c, a.id, `${a.name} går ut på asfalten i månens ljus.`);
     flipVerse(c, 'manen');
   }
@@ -269,11 +285,11 @@ function moveAnimal(c: Ctx, a: Animal, to: ZoneId, byPlayer: boolean) {
       line(c, a.id, `${a.name} söker sig till ${friend.name}. Ingen går ensam.`);
     }
   }
-  if (to === 'farDike') {
+  if (zone.goal) {
     a.status = 'safe';
     a.intent = { kind: 'follow' };
     changeBelief(c, a, 1);
-    line(c, a.id, `${a.name} når andra diket. Gräset luktar annorlunda här.`);
+    line(c, a.id, `${a.name} når ${zone.name}. Gräset luktar annorlunda här.`);
     c.ev.push({ kind: 'safe', who: a.id });
   }
 }
@@ -328,7 +344,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       s.darkRevealed = true;
       s.peekNext = true;
       const dark = (s.trafficPlan[s.turn - 1] ?? []).find((x) => x.dark);
-      line(c, o.id, dark ? `${o.name} ser från ovan: en mörk bil närmar sig i ${ZONE_NAMES[dark.lane]}.` : `${o.name} kretsar över vägen och spanar.`);
+      line(c, o.id, dark ? `${o.name} ser från ovan: en mörk bil närmar sig i ${zoneDef(s, dark.lane).name}.` : `${o.name} kretsar över vägen och spanar.`);
       break;
     }
     case 'gaForst': {
@@ -346,11 +362,15 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       addBond(c, o, tgt!, 1);
       break;
     case 'gamlaVagar':
-      if (!s.culvertRevealed) {
-        s.culvertRevealed = true;
-        narrate(c, `${o.name} minns: under vägen går en gammal trumma. Smal, mörk, långsam – men säker.`);
-        if (isActive(o) && o.zone === 'dike' && o.size === 'small' && !isFrozen(o)) moveAnimal(c, o, 'culvert', true);
-      } else {
+      {
+        const hidden = encounterOf(s).zones.filter((z) => z.hidden && !s.revealed.includes(z.id));
+        if (hidden.length) {
+          s.revealed.push(...hidden.map((z) => z.id));
+          narrate(c, `${o.name} minns: under vägen går en gammal trumma. Smal, mörk, långsam – men säker. Bara små djur får plats.`);
+          const way = hidden.find((z) => isActive(o) && !isFrozen(o) && neighbors(s, o).includes(z.id));
+          if (way) moveAnimal(c, o, way.id, true);
+          break;
+        }
         s.peekNext = true;
         line(c, o.id, `${o.name} lyssnar mot asfalten.`);
       }
@@ -407,7 +427,7 @@ function endTurn(c: Ctx) {
 
   if (verseStatus(s, 'ingenEnsam') === 'intact') {
     const alone = s.animals.find(
-      (a) => isActive(a) && ON_ROAD.includes(a.zone) && !s.animals.some((o) => o.id !== a.id && isActive(o) && o.zone === a.zone),
+      (a) => isActive(a) && zoneDef(s, a.zone).exposed && !s.animals.some((o) => o.id !== a.id && isActive(o) && o.zone === a.zone),
     );
     if (alone) {
       line(c, alone.id, `${alone.name} står ensam på vägen.`);
@@ -416,13 +436,16 @@ function endTurn(c: Ctx) {
   }
 
   s.hitQueue = [];
-  for (const st of s.trafficPlan[s.turn - 1] ?? []) {
-    c.ev.push({ kind: 'car', lane: st.lane, vehicle: st.vehicle });
-    const inLane = s.animals.filter((a) => isActive(a) && a.zone === st.lane);
-    if (inLane.length === 0) {
-      narrate(c, st.dark ? `Något svart for förbi i ${ZONE_NAMES[st.lane]}, utan ljus.` : `En ${st.vehicle} sveper förbi i ${ZONE_NAMES[st.lane]}. Ingen av oss var där.`);
+  if (s.encounterId === 'road') {
+    for (const st of s.trafficPlan[s.turn - 1] ?? []) {
+      c.ev.push({ kind: 'car', lane: st.lane, vehicle: st.vehicle });
+      const lane = zoneDef(s, st.lane).name;
+      const inLane = s.animals.filter((a) => isActive(a) && a.zone === st.lane);
+      if (inLane.length === 0) {
+        narrate(c, st.dark ? `Något svart for förbi i ${lane}, utan ljus.` : `En ${st.vehicle} sveper förbi i ${lane}. Ingen av oss var där.`);
+      }
+      for (const a of inLane) s.hitQueue.push({ victim: a.id, severity: st.severity, sudden: st.dark, zone: st.lane, source: st.vehicle });
     }
-    for (const a of inLane) s.hitQueue.push({ victim: a.id, wounds: st.wounds, dark: st.dark, lane: st.lane });
   }
   processHits(c);
 }
@@ -434,17 +457,17 @@ function resolveIntents(c: Ctx) {
     const i = a.intent;
     switch (i.kind) {
       case 'flee': {
-        const z = backZone(a.zone);
+        const z = backZone(s, a);
         if (z) {
-          line(c, a.id, `${a.name} vände tillbaka mot ${ZONE_NAMES[z]}.`);
+          line(c, a.id, `${a.name} vände tillbaka mot ${zoneDef(s, z).name}.`);
           moveAnimal(c, a, z, false);
         }
         break;
       }
       case 'bolt': {
-        const z = boltZone(a);
+        const z = boltZone(s, a);
         if (z) {
-          line(c, a.id, `${a.name} rusade ut i ${ZONE_NAMES[z]}.`);
+          line(c, a.id, `${a.name} rusade ut i ${zoneDef(s, z).name}.`);
           moveAnimal(c, a, z, false);
         }
         break;
@@ -485,9 +508,9 @@ function processHits(c: Ctx) {
       line(c, v.id, `${v.name} biter ihop. Det går, den här gången.`);
       continue;
     }
-    if (isLethal(v, h.wounds)) {
-      if (h.dark) {
-        narrate(c, `Det fanns inget ljus. ${v.name} hann aldrig förstå.`);
+    if (isLethal(v, h)) {
+      if (h.sudden) {
+        narrate(c, `Det fanns ingen varning. ${v.name} hann aldrig förstå.`);
         die(c, v, 'dark');
         continue;
       }
@@ -501,16 +524,34 @@ function processHits(c: Ctx) {
   finishTurn(c);
 }
 
+const HIT_BY: Record<string, string> = { bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden' };
+
+/** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
+function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
+  const pool: InjuryKind[] = h.source === 'hund' || h.source === 'bett' ? ['bleeding'] : ['halt', 'broken'];
+  const fresh = pool.filter((k) => !hasInjury(v, k));
+  if (fresh.length) return fresh[Math.floor(random(c.s) * fresh.length)];
+  return hasInjury(v, 'bleeding') ? null : 'bleeding';
+}
+
+function injure(c: Ctx, v: Animal, k: InjuryKind) {
+  if (hasInjury(v, k)) return;
+  v.injuries.push(k);
+  line(c, v.id, INJURY_LINES[k].replace(/\{name\}/g, v.name));
+}
+
+/** A hit that doesn't kill: a swarm loses members, anyone else takes an injury. */
 function applyHit(c: Ctx, v: Animal, h: Hit) {
   c.ev.push({ kind: 'hit', who: v.id });
   if (v.count !== undefined) {
-    const loss = swarmLoss(h.wounds);
+    const loss = Math.min(swarmLoss(h), v.count - 1);
     v.count -= loss;
-    line(c, v.id, `Ljuset tog ${num(loss)} av ${v.name}. ${v.count} är kvar.`);
+    line(c, v.id, `${HIT_BY[h.source] ?? capitalize(h.source)} tog ${num(loss)} av ${v.name}. ${v.count} är kvar.`);
     if (verseStatus(c.s, 'denStarke') === 'intact') flipVerse(c, 'denStarke');
   } else {
-    v.wounds += h.wounds;
-    line(c, v.id, `${v.name} träffas och släpar sig vidare.`);
+    const k = injuryFor(c, v, h);
+    if (k) injure(c, v, k);
+    else line(c, v.id, `${v.name} träffas igen och släpar sig vidare.`);
   }
   changeBelief(c, v, -1);
 }
@@ -526,30 +567,22 @@ function resolveLastMoment(c: Ctx, action: Extract<Action, { type: 'lastMoment' 
     const by = animal(s, action.by);
     s.pending = undefined;
     s.phase = 'play';
-    narrate(c, `${by.name} kastade sig emellan.`);
+    narrate(c, `${by.name} kastade sig emellan och knuffade undan ${v.name}.`);
     addBond(c, by, v, 2);
     changeBelief(c, v, 2);
-    if (isLethal(by, h.wounds)) die(c, by, 'sacrifice');
-    else applyHit(c, by, h);
-  } else if (action.choice === 'verse') {
-    const verse = s.verses.find((x) => x.id === action.verse && x.kind === 'oath' && !x.flipped);
-    if (!verse) fail('Den versen finns inte att bryta.');
-    s.pending = undefined;
-    s.phase = 'play';
-    narrate(c, `Vi bröt ett löfte för att ${v.name} skulle få leva.`);
-    flipVerse(c, verse.base!);
-    c.ev.push({ kind: 'hit', who: v.id });
-    if (v.count !== undefined) {
-      v.count = 1;
-      if (verseStatus(s, 'denStarke') === 'intact') flipVerse(c, 'denStarke');
-    } else v.wounds = 2;
-    changeBelief(c, v, -1);
-  } else {
+    // The one who throws themselves in the way is hurt, not killed.
+    const pushed: Hit = { ...h, victim: by.id, severity: 'injure' };
+    if (isLethal(by, pushed)) die(c, by, 'sacrifice');
+    else applyHit(c, by, pushed);
+  } else if (action.choice === 'letGo') {
     s.pending = undefined;
     s.phase = 'play';
     narrate(c, `Vi lät ${v.name} gå.`);
     die(c, v, 'letGo');
     if (verseStatus(s, 'ingenLamnas') === 'intact') flipVerse(c, 'ingenLamnas');
+  } else {
+    // Verses are lasting modifiers and story, never a price to pay for a life.
+    fail('Det valet finns inte.');
   }
   processHits(c);
 }
@@ -558,12 +591,14 @@ function hunt(c: Ctx, pred: Animal, prey: Animal) {
   const s = c.s;
   narrate(c, `I mörkret glömde ${pred.name} eden.`);
   c.ev.push({ kind: 'hit', who: prey.id });
+  // A first bite tears; an attack on one already hurt kills.
+  const kills = prey.count === undefined && prey.injuries.length > 0;
   if (prey.count !== undefined) {
     prey.count -= 1;
     line(c, prey.id, `${pred.name} tog en av ${prey.name}. ${prey.count} är kvar.`);
-  } else {
-    prey.wounds += 1;
+  } else if (!kills) {
     line(c, prey.id, `${pred.name} högg efter ${prey.name}.`);
+    injure(c, prey, 'bleeding');
   }
   changeBelief(c, prey, -2);
   addBond(c, pred, prey, -3);
@@ -571,7 +606,7 @@ function hunt(c: Ctx, pred: Animal, prey: Animal) {
   changeBelief(c, pred, 1);
   changeHope(c, -1, 'hunt', pred.id);
   if (verseStatus(s, 'viJagarInte') === 'intact') flipVerse(c, 'viJagarInte');
-  if ((prey.count !== undefined && prey.count <= 0) || prey.wounds >= 3) die(c, prey, 'hunt');
+  if ((prey.count !== undefined && prey.count <= 0) || kills) die(c, prey, 'hunt');
 }
 
 // ---------------------------------------------------------------- loss
@@ -606,6 +641,8 @@ function die(c: Ctx, a: Animal, cause: keyof typeof DEATH_CAUSE) {
   s.verses.push({ id: `minne-${a.id}`, kind: 'memorial', text: `För ${a.name}, ${DEATH_CAUSE[cause]}.`, flipped: false });
   changeHope(c, -1, 'death', a.id);
   grieve(c, a);
+  // Those who saw it happen up close carry it in the body.
+  for (const w of s.animals.filter((x) => isActive(x) && x.zone === a.zone && !hasInjury(x, 'shock'))) injure(c, w, 'shock');
   if (a.elder && verseStatus(s, 'denAldste') === 'intact') flipVerse(c, 'denAldste');
   if (a.count !== undefined && cause !== 'hunt' && verseStatus(s, 'denStarke') === 'intact') flipVerse(c, 'denStarke');
 }
@@ -624,7 +661,7 @@ function leaveGroup(c: Ctx, a: Animal, cause: 'dawn' | 'doubt') {
 
 function finishTurn(c: Ctx) {
   const s = c.s;
-  for (const a of s.animals) if (isActive(a) && a.zone === 'culvert') a.culvertTime++;
+  for (const a of s.animals) if (isActive(a) && zoneDef(s, a.zone).slow) a.slowTime++;
   if (!s.animals.some(isActive)) return endEncounter(c);
   if (s.turn >= s.maxTurn) {
     narrate(c, 'Gryningen kom, grå och obeveklig. Vi kunde inte vänta längre.');

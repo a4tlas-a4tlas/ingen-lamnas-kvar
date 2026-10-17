@@ -1,6 +1,7 @@
 import { CAST } from '../data/animals';
 import { CARDS, TAG_NAMES } from '../data/cards';
-import { HOPE_LINES, KRAFT_OUT_LINES, ZONE_LABELS } from '../data/text.sv';
+import { HOPE_LINES, KRAFT_OUT_LINES } from '../data/text.sv';
+import { encounterOf, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
 import { Sound } from '../audio/sound';
@@ -14,6 +15,7 @@ import {
   cardTarget,
   handSize,
   cardZones,
+  isLethal,
   isPresent,
   lastMomentShields,
   leadBlockReason,
@@ -26,7 +28,7 @@ import {
 import { OATH_VERSES, createGame } from '../engine/setup';
 import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
-import { BANDS, CULVERT_X, sceneSvg } from './scene';
+import { sceneSvg, slotIn } from './scene';
 import { silhouette, speciesColor } from './silhouettes';
 import { animalStatuses, forecast, type Status } from './status';
 
@@ -74,7 +76,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 1 && s.phase !== 'over' ? s : null;
+    return s.version === 2 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -204,8 +206,6 @@ export class App {
         return this.pickZone(el.dataset.zone as ZoneId);
       case 'lm-shield':
         return this.dispatch({ type: 'lastMoment', choice: 'shield', by: el.dataset.animal! });
-      case 'lm-verse':
-        return this.dispatch({ type: 'lastMoment', choice: 'verse', verse: el.dataset.verse! });
       case 'lm-letgo':
         return this.dispatch({ type: 'lastMoment', choice: 'letGo' });
     }
@@ -476,8 +476,11 @@ export class App {
   }
 
   private mountGame() {
-    const zoneDivs = (Object.keys(BANDS) as (keyof typeof BANDS)[])
-      .map((z) => `<div class="zone" data-act="zone" data-zone="${z}" style="top:${BANDS[z][0]}%;height:${BANDS[z][1] - BANDS[z][0]}%"><span>${ZONE_LABELS[z]}</span></div>`)
+    const zoneDivs = encounterOf(this.state!).zones
+      .map((z) => {
+        const [x, y, w, h] = z.rect;
+        return `<div class="zone ${z.hidden ? 'hidden-zone' : ''} ${h > w ? 'column' : ''}" data-act="zone" data-zone="${z.id}" style="left:${x}%;top:${y}%;width:${w}%;height:${h}%"><span>${esc(z.label)}</span></div>`;
+      })
       .join('');
     this.root.innerHTML = `
       <div class="game">
@@ -487,7 +490,6 @@ export class App {
             ${sceneSvg()}
             <div class="moon"><div class="cloud"></div></div>
             <div class="zones">${zoneDivs}
-              <div class="zone culvert" data-act="zone" data-zone="culvert" style="left:${CULVERT_X[0]}%;width:${CULVERT_X[1] - CULVERT_X[0]}%;top:26%;height:44%"><span>Trumman</span></div>
             </div>
             <div class="telegraph"></div>
             <div class="sweeps"></div>
@@ -518,7 +520,8 @@ export class App {
     q('.topbar').innerHTML = this.topbarHtml(s);
     q('.hud').innerHTML = this.hudHtml(s);
     const scene = q('.scene');
-    scene.classList.toggle('culvert-open', s.culvertRevealed);
+    scene.classList.toggle('culvert-open', s.revealed.includes('culvert'));
+    scene.querySelectorAll<HTMLElement>('.zone.hidden-zone').forEach((z) => z.classList.toggle('found', s.revealed.includes(z.dataset.zone!)));
     q('.moon').classList.toggle('hidden', moonHidden(s));
     const zones = this.targetZones();
     scene.querySelectorAll<HTMLElement>('.zone').forEach((z) => z.classList.toggle('target', zones.includes(z.dataset.zone as ZoneId)));
@@ -572,12 +575,12 @@ export class App {
 
   private telegraphHtml(s: GameState): string {
     const out: string[] = [];
-    const mid = (z: 'lane1' | 'lane2') => (BANDS[z][0] + BANDS[z][1]) / 2;
+    const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {
       for (const st of s.trafficPlan[s.turn - 1] ?? []) {
         if (st.dark && !s.darkRevealed) continue;
-        out.push(`<div class="light ${st.dark ? 'dark' : ''} ${st.wounds > 1 ? 'heavy' : ''}" style="top:${mid(st.lane)}%">
-          <span>${st.vehicle} · ${st.wounds} sår</span></div>`);
+        out.push(`<div class="light ${st.dark ? 'dark' : ''} ${st.severity === 'kill' ? 'heavy' : ''}" style="top:${mid(st.lane)}%">
+          <span>${st.vehicle} · ${st.severity === 'kill' ? 'dödar' : 'skadar'}</span></div>`);
       }
       if ((s.trafficPlan[s.turn - 1] ?? []).some((x) => x.dark) && !s.darkRevealed) {
         for (const z of ['lane1', 'lane2'] as const) out.push(`<div class="light rumble" style="top:${mid(z)}%"><span>mullrar…</span></div>`);
@@ -613,15 +616,7 @@ export class App {
       if (isPresent(a)) {
         const group = byZone.get(a.zone)!;
         const i = group.indexOf(a);
-        let x: number, y: number;
-        if (a.zone === 'culvert') {
-          x = (CULVERT_X[0] + CULVERT_X[1]) / 2;
-          y = 38 + i * 12;
-        } else {
-          const [top, bottom] = BANDS[a.zone];
-          y = (top + bottom) / 2 + (a.zone === 'dike' ? -2 : 0);
-          x = 19 + ((i + 0.5) * 76) / group.length;
-        }
+        const { x, y } = slotIn(zoneDef(s, a.zone), i, group.length);
         el.style.left = `${x}%`;
         el.style.top = `${y}%`;
       }
@@ -687,7 +682,7 @@ export class App {
       <div class="inspect">
         <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(a.id)}${a.predator ? ' · rovdjur' : ''}${a.elder ? ' · den äldste' : ''}</span></div>
         <div class="muted">${a.traits.map((t) => `${TRAITS[t].name} – ${TRAITS[t].note}`).join(' · ')}</div>
-        <div>Tro ${a.belief} · Sår ${a.wounds}/3${a.wounds >= 2 ? ' (att leda kostar ◆2)' : ''}${a.count !== undefined ? ` · ${a.count} kvar` : ''}${a.zone === 'culvert' ? ` · i trumman ${a.culvertTime} timme` : ''}</div>
+        <div>Tro ${a.belief}${a.count !== undefined ? ` · ${a.count} kvar` : ''}${a.injuries.length ? '' : ' · oskadd'}</div>
         <ul class="status-list">${animalStatuses(s, a).map((st) => `<li>${chipHtml(st, true)}<span>${esc(st.explain)}</span></li>`).join('') || `<li class="muted">${a.status === 'active' ? `${esc(a.name)} följer oss. Inga särskilda tillstånd.` : ''}</li>`}</ul>
         ${a.status === 'active' ? `<div class="reason">${esc(leadBlockReason(s, a) ?? (a.flier ? `${a.name} kan ledas – flyger upp till 2 steg och kan inte träffas i luften.` : `${a.name} kan ledas ett steg.`))}</div>` : ''}
         <div class="bonds">${bonds}</div>
@@ -796,24 +791,22 @@ export class App {
     const h = s.pending!;
     const v = animal(s, h.victim);
     const shields = lastMomentShields(s).map((id) => animal(s, id));
-    const verses = s.verses.filter((x) => x.kind === 'oath' && !x.flipped);
-    const lethalFor = (a: Animal) => (a.count !== undefined ? a.count - (h.wounds === 1 ? 2 : 3) <= 0 : a.wounds + h.wounds >= 3);
+    // Whoever throws themselves in the way is injured, not killed (a last mouse can still be lost).
+    const lethalFor = (a: Animal) => isLethal(a, { severity: 'injure' });
     return `
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="lm-title">
         <div class="modal-card lm">
           ${silhouette(v.species)}
           <h2 id="lm-title">Sista ögonblicket</h2>
-          <p>Ljuset fyller allt. ${esc(v.name)} står kvar i ${esc(ZONE_LABELS[v.zone].toLowerCase())}. Det finns ett ögonblick kvar.</p>
+          <p>${h.source === 'lastbil' || h.source === 'bil' ? 'Ljuset fyller allt. ' : ''}${esc(v.name)} står kvar i ${esc(zoneDef(s, v.zone).name)}. ${esc(`En ${h.source}`)} som dödar. Det finns ett ögonblick kvar.</p>
           <div class="lm-options">
             ${shields.map((a) => `<button class="btn option" data-act="lm-shield" data-animal="${a.id}">
               <b>${esc(a.name)} kastar sig emellan</b>
-              <span>${lethalFor(a) ? `Det blir ${esc(a.name)}s död.` : `${esc(a.name)} tar ${h.wounds} sår.`} Bandet dem emellan stärks.</span></button>`).join('')}
-            ${verses.map((x) => `<button class="btn option" data-act="lm-verse" data-verse="${x.id}">
-              <b>Bryt ”${esc(x.text)}”</b>
-              <span>${esc(v.name)} överlever, svårt skadad. Versen blir ”${esc(x.flippedText!)}” – ${esc(VERSES[x.base!].flipCost)}</span></button>`).join('')}
+              <span>${lethalFor(a) ? `Det blir ${esc(a.name)}s död.` : `${esc(a.name)} knuffar undan ${esc(v.name)} och skadas själv – en skada som stannar.`} Bandet dem emellan stärks.</span></button>`).join('')}
+            ${shields.length ? '' : `<p class="muted">Ingen av oss hinner fram.</p>`}
             <button class="btn option grave" data-act="lm-letgo">
               <b>Låt ${esc(v.name)} gå</b>
-              <span>${verseStatus(s, 'ingenLamnas') === 'intact' ? '”Ingen lämnas kvar” blir ”Någon lämnades kvar”.' : 'Vi har gjort det förut.'}</span></button>
+              <span>${{ intact: '”Ingen lämnas kvar” blir ”Någon lämnades kvar”.', flipped: 'Vi har gjort det förut.', none: `${esc(v.name)} dör.` }[verseStatus(s, 'ingenLamnas')]}</span></button>
           </div>
         </div>
       </div>`;

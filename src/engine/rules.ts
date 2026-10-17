@@ -1,9 +1,8 @@
 // Read-only rule helpers shared by the engine (validation) and the UI (targeting).
+import { CAST } from '../data/animals';
 import { CARDS, type TargetSpec } from '../data/cards';
-import type { Animal, Card, GameState, VerseId, ZoneId } from './types';
-
-export const ROAD_LANES: ZoneId[] = ['lane1', 'lane2'];
-export const ON_ROAD: ZoneId[] = ['lane1', 'median', 'lane2'];
+import { encounterOf, zoneDef } from './encounters';
+import type { Animal, Card, GameState, Hit, InjuryKind, VerseId, ZoneId } from './types';
 
 export function animal(s: GameState, id: string): Animal {
   const a = s.animals.find((x) => x.id === id);
@@ -56,44 +55,59 @@ export function handSize(s: GameState): number {
   return s.hope >= 4 ? 5 : s.hope >= 1 ? 4 : 3;
 }
 
+/** Only night encounters have a moon. */
 export function moonHidden(s: GameState): boolean {
-  return s.moonPlan[s.turn - 1] ?? false;
+  return encounterOf(s).night && (s.moonPlan[s.turn - 1] ?? false);
 }
 
-/** Zones one step away, both directions. The culvert is only for small animals. */
+export function moonVisible(s: GameState): boolean {
+  return encounterOf(s).night && !(s.moonPlan[s.turn - 1] ?? false);
+}
+
+export const hasInjury = (a: Animal, k: InjuryKind) => a.injuries.includes(k);
+
+/** Fliers fly unless a wing is broken. */
+export const canFly = (a: Animal) => a.flier && !hasInjury(a, 'broken');
+
+// ---------------------------------------------------------------- the zone graph
+
+export function zoneOpen(s: GameState, z: ZoneId): boolean {
+  return !zoneDef(s, z).hidden || s.revealed.includes(z);
+}
+
+/** Whether this animal can step into a zone at all (it must be found, and fit). */
+export function canEnter(s: GameState, a: Animal, z: ZoneId): boolean {
+  const d = zoneDef(s, z);
+  return zoneOpen(s, z) && (!d.smallOnly || a.size === 'small');
+}
+
+const forwardOf = (s: GameState, z: ZoneId) => encounterOf(s).edges.filter(([f]) => f === z).map(([, t]) => t);
+const backOf = (s: GameState, z: ZoneId) => encounterOf(s).edges.filter(([, t]) => t === z).map(([f]) => f);
+
+/** A slow zone (the culvert) holds you for one full hour before you can go on. */
+const heldBySlowZone = (s: GameState, z: ZoneId, slowTime: number) => !!zoneDef(s, z).slow && slowTime < 1;
+
+/** Zones one step away, both directions. */
 export function neighbors(s: GameState, a: Animal): ZoneId[] {
-  const culvert = s.culvertRevealed && a.size === 'small';
-  switch (a.zone) {
-    case 'dike': return culvert ? ['lane1', 'culvert'] : ['lane1'];
-    case 'lane1': return ['dike', 'median'];
-    case 'median': return ['lane1', 'lane2'];
-    case 'lane2': return ['median', 'farDike'];
-    case 'culvert': return a.culvertTime >= 1 ? ['dike', 'farDike'] : ['dike'];
-    case 'farDike': return [];
-  }
+  if (zoneDef(s, a.zone).goal) return [];
+  const fwd = heldBySlowZone(s, a.zone, a.slowTime) ? [] : forwardOf(s, a.zone);
+  return [...fwd, ...backOf(s, a.zone)].filter((z) => canEnter(s, a, z));
 }
 
-function forwardStep(s: GameState, a: Animal, zone: ZoneId, culvertTime: number): ZoneId[] {
-  switch (zone) {
-    case 'dike': return s.culvertRevealed && a.size === 'small' ? ['lane1', 'culvert'] : ['lane1'];
-    case 'lane1': return ['median'];
-    case 'median': return ['lane2'];
-    case 'lane2': return ['farDike'];
-    case 'culvert': return culvertTime >= 1 ? ['farDike'] : [];
-    case 'farDike': return [];
-  }
-}
-
-/** Zones reachable moving forward up to `steps`. Entering the culvert ends the move. */
+/** Zones reachable moving forward up to `steps`. Slow zones and the goal end the move. A limp allows 1. */
 export function forwardReach(s: GameState, a: Animal, steps: number): ZoneId[] {
+  const n = hasInjury(a, 'halt') ? Math.min(steps, 1) : steps;
   const out = new Set<ZoneId>();
-  let frontier: { zone: ZoneId; time: number }[] = [{ zone: a.zone, time: a.culvertTime }];
-  for (let i = 0; i < steps; i++) {
+  let frontier: { zone: ZoneId; time: number }[] = [{ zone: a.zone, time: a.slowTime }];
+  for (let i = 0; i < n; i++) {
     const next: { zone: ZoneId; time: number }[] = [];
     for (const f of frontier) {
-      for (const z of forwardStep(s, a, f.zone, f.time)) {
+      if (heldBySlowZone(s, f.zone, f.time)) continue;
+      for (const z of forwardOf(s, f.zone)) {
+        if (!canEnter(s, a, z)) continue;
         out.add(z);
-        if (z !== 'culvert' && z !== 'farDike') next.push({ zone: z, time: 0 });
+        const d = zoneDef(s, z);
+        if (!d.slow && !d.goal) next.push({ zone: z, time: 0 });
       }
     }
     frontier = next;
@@ -104,59 +118,47 @@ export function forwardReach(s: GameState, a: Animal, steps: number): ZoneId[] {
 /** Where leading can take an animal. Fliers cover two steps forward in one flight. */
 export function leadZones(s: GameState, a: Animal): ZoneId[] {
   const zones = new Set(neighbors(s, a));
-  if (a.flier) for (const z of forwardReach(s, a, 2)) if (z !== 'culvert') zones.add(z);
+  if (canFly(a) && !hasInjury(a, 'halt')) for (const z of forwardReach(s, a, 2)) if (!zoneDef(s, z).slow) zones.add(z);
   return [...zones];
 }
 
-/** A car hit costs a swarm 2 (truck: 3) members instead of a wound. */
-export const swarmLoss = (wounds: number) => (wounds === 1 ? 2 : 3);
-
-export function isLethal(a: Animal, wounds: number): boolean {
-  return a.count !== undefined ? a.count - swarmLoss(wounds) <= 0 : a.wounds + wounds >= 3;
+/** Where an animal that flees on its own goes: one step back along the main way. */
+export function backZone(s: GameState, a: Animal): ZoneId | null {
+  return backOf(s, a.zone).find((z) => canEnter(s, a, z) && !zoneDef(s, z).hidden) ?? backOf(s, a.zone).find((z) => canEnter(s, a, z)) ?? null;
 }
 
-/** Where an animal that flees on its own goes: one step back toward the ditch. */
-export function backZone(z: ZoneId): ZoneId | null {
-  switch (z) {
-    case 'lane1': return 'dike';
-    case 'median': return 'lane1';
-    case 'lane2': return 'median';
-    case 'culvert': return 'dike';
-    default: return null;
-  }
+/** Where an animal that bolts on its own goes: one step forward along the main way, danger or not. */
+export function boltZone(s: GameState, a: Animal): ZoneId | null {
+  if (zoneDef(s, a.zone).goal || heldBySlowZone(s, a.zone, a.slowTime)) return null;
+  return forwardOf(s, a.zone).find((z) => canEnter(s, a, z) && !zoneDef(s, z).hidden) ?? null;
 }
 
-/** Where an animal that bolts on its own goes: one step forward, lights or not. */
-export function boltZone(a: Animal): ZoneId | null {
-  switch (a.zone) {
-    case 'dike': return 'lane1';
-    case 'lane1': return 'median';
-    case 'median': return 'lane2';
-    case 'lane2': return 'farDike';
-    case 'culvert': return a.culvertTime >= 1 ? 'farDike' : null;
-    default: return null;
-  }
-}
-
-/** Undirected distance between two zones (culvert counts once revealed). */
+/** Steps between two zones, ignoring direction (hidden zones count once found). */
 export function zoneDistance(s: GameState, from: ZoneId, to: ZoneId): number {
-  const edges: Record<ZoneId, ZoneId[]> = {
-    dike: s.culvertRevealed ? ['lane1', 'culvert'] : ['lane1'],
-    lane1: ['dike', 'median'],
-    median: ['lane1', 'lane2'],
-    lane2: ['median', 'farDike'],
-    farDike: s.culvertRevealed ? ['lane2', 'culvert'] : ['lane2'],
-    culvert: ['dike', 'farDike'],
-  };
   const seen = new Set<ZoneId>([from]);
   let frontier = [from];
   for (let d = 0; frontier.length; d++) {
     if (frontier.includes(to)) return d;
     const next: ZoneId[] = [];
-    for (const z of frontier) for (const n of edges[z]) if (!seen.has(n)) { seen.add(n); next.push(n); }
+    for (const z of frontier) {
+      for (const n of [...forwardOf(s, z), ...backOf(s, z)]) {
+        if (!seen.has(n) && zoneOpen(s, n)) { seen.add(n); next.push(n); }
+      }
+    }
     frontier = next;
   }
   return Infinity;
+}
+
+// ---------------------------------------------------------------- hits
+
+/** A swarm loses 1 member to an injuring hit and 3 to a killing one. */
+export const swarmLoss = (hit: Pick<Hit, 'severity'>) => (hit.severity === 'kill' ? 3 : 1);
+
+/** Killing hits kill (a swarm only once it's that small). Injuries never kill by themselves. */
+export function isLethal(a: Animal, hit: Pick<Hit, 'severity'>): boolean {
+  if (hit.severity !== 'kill') return a.count !== undefined && a.count - swarmLoss(hit) <= 0;
+  return a.count === undefined || a.count - swarmLoss(hit) <= 0;
 }
 
 export function cardTarget(card: Card): TargetSpec {
@@ -171,8 +173,15 @@ export function cardCost(s: GameState, card: Card): number {
   return CARDS[card.kind].cost;
 }
 
+/** Leading a limping animal is slow, heavy work. */
 export function leadCost(a: Animal): number {
-  return a.wounds >= 2 ? 2 : 1;
+  return hasInjury(a, 'halt') ? 2 : 1;
+}
+
+/** A broken wing or paw takes away what makes the animal itself: its species card. */
+export function speciesCardBroken(s: GameState, card: Card): boolean {
+  const o = s.animals.find((x) => x.id === card.owner);
+  return !!o && hasInjury(o, 'broken') && CAST.find((d) => d.id === o.id)?.speciesCard === card.kind;
 }
 
 export const canMove = (a: Animal) => isActive(a) && !isFrozen(a);
@@ -188,7 +197,7 @@ export function cardAnimals(s: GameState, card: Card): string[] {
       return others.filter((x) => x.zone === o.zone && !isFrozen(x)).map((x) => x.id);
     case 'hallaSigNara':
       if (!canMove(o)) return [];
-      return others.filter((x) => neighbors(s, o).includes(x.zone) && x.zone !== 'culvert').map((x) => x.id);
+      return others.filter((x) => neighbors(s, o).includes(x.zone) && !zoneDef(s, x.zone).slow).map((x) => x.id);
     case 'trosta':
       if (!isPresent(o)) return [];
       return others.filter((x) => zoneDistance(s, o.zone, x.zone) <= 1).map((x) => x.id);
@@ -218,7 +227,7 @@ export function cardZones(s: GameState, card: Card): ZoneId[] {
 }
 
 export function canPlay(s: GameState, card: Card): boolean {
-  if (s.phase !== 'play' || cardCost(s, card) > s.kraft) return false;
+  if (s.phase !== 'play' || cardCost(s, card) > s.kraft || speciesCardBroken(s, card)) return false;
   const o = s.animals.find((x) => x.id === card.owner);
   switch (cardTarget(card)) {
     case 'zone': return cardZones(s, card).length > 0;
@@ -252,7 +261,7 @@ export function leadBlockReason(s: GameState, a: Animal): string | null {
   if (a.status === 'safe') return `${a.name} är i säkerhet.`;
   if (a.status !== 'active') return `${a.name} är inte längre med oss.`;
   if (isFrozen(a)) return `${a.name} fryser och kan inte flyttas. Trösta för att bryta det.`;
-  if (leadZones(s, a).length === 0) return a.zone === 'culvert' ? `${a.name} kryper genom trumman – ute om en timme.` : `${a.name} kan inte gå någonstans.`;
+  if (leadZones(s, a).length === 0) return zoneDef(s, a.zone).slow ? `${a.name} kryper genom ${zoneDef(s, a.zone).name} – ute om en timme.` : `${a.name} kan inte gå någonstans.`;
   if (leadCost(a) > s.kraft) return `Att leda ${a.name} kostar ◆${leadCost(a)}.`;
   return null;
 }
@@ -264,12 +273,13 @@ export function cardBlockReason(s: GameState, card: Card): string | null {
   if (canPlay(s, card)) return null;
   const o = s.animals.find((x) => x.id === card.owner);
   if (!o) return 'Kan inte spelas.';
+  if (speciesCardBroken(s, card)) return o.flier ? `${o.name}s vinge är bruten.` : `${o.name}s tass är bruten.`;
   const spec = cardTarget(card);
   const movesOwner = spec === 'zone' || spec === 'animalZone' || card.kind === 'hallaSigNara';
   if (o.status === 'safe' && movesOwner) return `${o.name} är redan över.`;
   if (o.status !== 'active' && o.status !== 'safe') return `${o.name} är borta.`;
   if (isFrozen(o) && movesOwner) return `${o.name} fryser.`;
-  if (spec === 'zone') return o.zone === 'culvert' ? `${o.name} kryper i trumman.` : `${o.name} kan inte gå dit.`;
+  if (spec === 'zone') return zoneDef(s, o.zone).slow ? `${o.name} kryper i ${zoneDef(s, o.zone).name}.` : `${o.name} kan inte gå dit.`;
   if (card.kind === 'bara') return `Ingen att bära bredvid ${o.name}.`;
   if (card.kind === 'taEmot') return `Ingen bredvid ${o.name}.`;
   if (spec === 'animal') return `Ingen inom räckhåll för ${o.name}.`;

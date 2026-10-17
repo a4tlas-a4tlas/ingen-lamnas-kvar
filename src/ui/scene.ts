@@ -1,16 +1,17 @@
-import type { ZoneId } from '../engine/types';
+import type { ZoneDef } from '../engine/encounters';
 
-/** Vertical bands of the scene, in percent of its height (top → bottom). */
-export const BANDS: Record<Exclude<ZoneId, 'culvert'>, [number, number]> = {
-  farDike: [14, 28],
-  lane2: [28, 44],
-  median: [44, 52],
-  lane1: [52, 68],
-  dike: [68, 100],
-};
-
-/** The culvert runs under the road on the left edge. */
-export const CULVERT_X: [number, number] = [0, 15];
+/**
+ * Where token i of n stands inside a zone: spread along the zone's long side.
+ * Wide bands (the road) spread sideways; tall columns (the culvert) spread down.
+ */
+export function slotIn(z: ZoneDef, i: number, n: number): { x: number; y: number } {
+  const [x, y, w, h] = z.rect;
+  if (w >= h * 1.5) {
+    const pad = Math.min(19, w * 0.12);
+    return { x: x + pad + ((i + 0.5) * (w - 2 * pad)) / n, y: y + h / 2 - (z.start && h > 20 ? 2 : 0) };
+  }
+  return { x: x + w / 2, y: y + h * 0.27 + ((i + 0.5) * h * 0.46) / Math.max(n, 2) };
+}
 
 // Folk-style pine: a stack of cut triangles.
 function pine(x: number, base: number, h: number): string {

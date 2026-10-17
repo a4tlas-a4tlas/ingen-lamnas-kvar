@@ -1,8 +1,9 @@
 // Every state an animal can be in, in words for the player, plus a forecast
 // of what letting the hour pass will do. Shared by tokens, the info panel and
 // the forecast box so they always say the same thing.
-import { ZONE_NAMES } from '../data/text.sv';
+import { zoneDef } from '../engine/encounters';
 import { animal, backZone, boltZone, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
+import type { InjuryKind } from '../engine/types';
 import type { Animal, GameState, ZoneId } from '../engine/types';
 
 export type Tone = 'bad' | 'warn' | 'good' | 'info';
@@ -59,16 +60,14 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
     const p = animal(s, a.protectedBy).name;
     out.push({ key: 'protected', icon: '⛨︎', label: `skyddas av ${p}`, tone: 'good', explain: `${p} tar träffen i stället för ${a.name}, om de står i samma zon.` });
   }
-  if (a.braced) out.push({ key: 'braced', icon: '◈', label: 'biter ihop', tone: 'good', explain: `Nästa sår på ${a.name} den här timmen uteblir.` });
-  if (a.zone === 'culvert') {
-    out.push(a.culvertTime >= 1
-      ? { key: 'culvert', icon: '◌', label: 'kan krypa ut', tone: 'info', explain: `${a.name} har krupit genom trumman och kan ta sig ut till andra diket nu.` }
-      : { key: 'culvert', icon: '◌', label: 'kryper', tone: 'info', explain: `${a.name} kryper genom trumman. Bilar når inte hit. Ute om en timme.` });
+  if (a.braced) out.push({ key: 'braced', icon: '◈', label: 'biter ihop', tone: 'good', explain: `Nästa skada på ${a.name} den här timmen uteblir.` });
+  const zone = zoneDef(s, a.zone);
+  if (zone.slow) {
+    out.push(a.slowTime >= 1
+      ? { key: 'culvert', icon: '◌', label: 'kan krypa ut', tone: 'info', explain: `${a.name} har krupit genom ${zone.name} och kan ta sig ut nu.` }
+      : { key: 'culvert', icon: '◌', label: 'kryper', tone: 'info', explain: `${a.name} kryper genom ${zone.name}. Bilar når inte hit. Ute om en timme.` });
   }
-  if (a.wounds > 0) {
-    out.push({ key: 'wounds', icon: '⁄', label: `sår ${a.wounds}/3`, tone: a.wounds >= 2 ? 'bad' : 'warn',
-      explain: a.wounds >= 2 ? `${a.name} är svårt skadad: ett sår till kan döda. Att leda kostar ◆2.` : `${a.name} är skadad. Vid tre sår dör ${a.name}.` });
-  }
+  for (const k of a.injuries) out.push(injuryStatus(a, k));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
       explain: `${a.name}s tro är låg. Sjunker den till ${huntsAt(s, a)} kan ${a.name} glömma eden och börja jaga.` });
@@ -76,6 +75,26 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
     out.push({ key: 'doubt', icon: '✶', label: 'tvivlar', tone: 'warn', explain: `${a.name}s tro är låg (${a.belief}). Snart kan ${a.name} frysa, fly eller rusa på egen hand.` });
   }
   return out;
+}
+
+/** Injuries: halt and broken never heal; bleeding and shock heal by the campfire. */
+export function injuryStatus(a: Animal, k: InjuryKind): Status {
+  switch (k) {
+    case 'halt':
+      return { key: 'halt', icon: '≀', label: 'haltar', tone: 'bad',
+        explain: `${a.name} haltar: går bara ett steg i taget, även med kort som annars ger två. Att leda kostar ◆2. Läker aldrig.` };
+    case 'broken':
+      return { key: 'broken', icon: '⌁', label: a.flier ? 'bruten vinge' : 'bruten tass', tone: 'bad',
+        explain: a.flier
+          ? `${a.name}s vinge är bruten: kan inte flyga, och artkortet går inte att spela. Läker aldrig.`
+          : `${a.name}s tass är bruten: artkortet går inte att spela. Läker aldrig.` };
+    case 'bleeding':
+      return { key: 'bleeding', icon: '❢', label: 'blöder', tone: 'bad',
+        explain: `${a.name} blöder och tappar 1 tro varje timme. Läker vid lägerelden.` };
+    case 'shock':
+      return { key: 'shock', icon: '≋', label: 'chock', tone: 'warn',
+        explain: `${a.name} är i chock: tvivlar och fryser mycket lättare. Läker vid lägerelden.` };
+  }
 }
 
 export interface ForecastLine {
@@ -91,11 +110,11 @@ export function forecast(s: GameState): ForecastLine[] {
     let z = a.zone;
     const i = a.intent;
     if (i.kind === 'flee') {
-      const b = backZone(a.zone);
-      if (b) { z = b; out.push({ text: `${a.name} backar till ${ZONE_NAMES[b]}.`, tone: 'warn' }); }
+      const b = backZone(s, a);
+      if (b) { z = b; out.push({ text: `${a.name} backar till ${zoneDef(s, b).name}.`, tone: 'warn' }); }
     } else if (i.kind === 'bolt') {
-      const b = boltZone(a);
-      if (b) { z = b; out.push({ text: `${a.name} rusar ut i ${ZONE_NAMES[b]}.`, tone: 'warn' }); }
+      const b = boltZone(s, a);
+      if (b) { z = b; out.push({ text: `${a.name} rusar ut i ${zoneDef(s, b).name}.`, tone: 'warn' }); }
     } else if (i.kind === 'leave') {
       out.push({ text: `${a.name} lämnar oss.`, tone: 'bad' });
       continue;
@@ -106,11 +125,11 @@ export function forecast(s: GameState): ForecastLine[] {
     zoneOf.set(a.id, z);
   }
 
-  const strikes = s.trafficPlan[s.turn - 1] ?? [];
+  const strikes = s.encounterId === 'road' ? s.trafficPlan[s.turn - 1] ?? [] : [];
   for (const st of strikes) {
     if (st.dark && !s.darkRevealed) continue;
     const victims = s.animals.filter((a) => isActive(a) && zoneOf.get(a.id) === st.lane && !a.flying);
-    const lane = ZONE_NAMES[st.lane];
+    const lane = zoneDef(s, st.lane).name;
     if (victims.length === 0) {
       out.push({ text: `En ${st.vehicle} i ${lane} – ingen av oss där.`, tone: 'good' });
       continue;
@@ -118,10 +137,10 @@ export function forecast(s: GameState): ForecastLine[] {
     for (const v of victims) {
       const shield = v.protectedBy ? animal(s, v.protectedBy) : undefined;
       const takes = shield && isActive(shield) && !shield.flying && zoneOf.get(shield.id) === st.lane ? shield : v;
-      const harm = takes.count !== undefined ? `${swarmLoss(st.wounds)} av ${takes.name} dör` : `${st.wounds} sår`;
-      const lethal = isLethal(takes, st.wounds);
+      const lethal = isLethal(takes, st);
+      const harm = lethal ? 'dödar' : takes.count !== undefined ? `${swarmLoss(st)} av ${takes.name} dör` : 'skadar (en skada som stannar)';
       const who = takes === v ? v.name : `${takes.name} (i stället för ${v.name})`;
-      out.push({ text: `En ${st.vehicle} i ${lane} träffar ${who}: ${harm}${lethal ? ' – dödligt!' : '.'}`, tone: lethal ? 'bad' : 'warn' });
+      out.push({ text: `En ${st.vehicle} i ${lane} träffar ${who}: ${harm}${lethal ? '!' : '.'}`, tone: lethal ? 'bad' : 'warn' });
     }
   }
   if (strikes.some((x) => x.dark) && !s.darkRevealed) out.push({ text: 'Något mullrar i mörkret, utan ljus. Vi vet inte i vilket körfält.', tone: 'bad' });

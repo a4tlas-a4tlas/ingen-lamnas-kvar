@@ -32,6 +32,8 @@ export function setTraffic(s: GameState, strikes: Strike[]) {
   s.trafficPlan[s.turn - 1] = strikes;
 }
 
-export const car = (lane: 'lane1' | 'lane2', wounds = 1): Strike => ({ lane, wounds, vehicle: wounds > 1 ? 'lastbil' : 'bil', dark: false });
+/** A car injures; a truck kills. */
+export const car = (lane: 'lane1' | 'lane2'): Strike => ({ lane, severity: 'injure', vehicle: 'bil', dark: false });
+export const truck = (lane: 'lane1' | 'lane2'): Strike => ({ lane, severity: 'kill', vehicle: 'lastbil', dark: false });
 
 export const get = (s: GameState, id: string) => s.animals.find((a) => a.id === id)!;
