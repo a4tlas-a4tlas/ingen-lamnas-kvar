@@ -136,3 +136,9 @@ Feedback: it was unclear which animals could move, and the cards weren't clear e
 - **Cards:** each card shows the owner's silhouette and name, a type (Rörelse / Skydd / Tröst / Insikt / Minne) with a colour stripe, and shorter text. Unplayable cards say why ("Sotfot fryser", "Behöver ◆1"). Hovering a card lights up its owner on the board.
 - **Size:** animals are small, medium or large. Only small animals (the toad, the mice) fit through the culvert.
 - **Flight:** fliers (the owl) take off whenever they move. They can be led up to 2 steps and can't be hit while airborne, but a flier sitting still on the road has landed and can be hit. Flying doesn't break "Vi går när månen gömmer sig". The owl's card is now *Spana från ovan* (scout from above): it reveals dark cars and the next hour's traffic.
+
+### Playtest round 2 → changes
+Feedback: the cards themselves were fine, but it was still hard to see who a card belongs to.
+- **Colour identity per animal:** each animal's paper colour (fox red-brown, badger grey, toad olive, owl brown, mice beige) is its identity. Every card's top is a band in the owner's colour, with the owner's silhouette in ink and their name. The animal's name tag on the board is the same colour.
+- **The hand is grouped by animal:** each animal's cards sit together (display only).
+- The card type is now a small coloured word (● Rörelse, ● Skydd …) instead of a competing colour stripe.

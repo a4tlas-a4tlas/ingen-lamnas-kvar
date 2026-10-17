@@ -68,7 +68,11 @@ const shapes: Record<Species, { paper: string; svg: string }> = {
   },
 };
 
-export function silhouette(species: Species): string {
-  const s = shapes[species];
-  return `<svg class="sil" viewBox="0 0 64 48" aria-hidden="true" style="color:${s.paper}" fill="currentColor">${s.svg}</svg>`;
+/** Each animal's paper colour doubles as its identity on cards and name tags. */
+export function speciesColor(species: Species): string {
+  return shapes[species].paper;
+}
+
+export function silhouette(species: Species, color = shapes[species].paper): string {
+  return `<svg class="sil" viewBox="0 0 64 48" aria-hidden="true" style="color:${color}" fill="currentColor">${shapes[species].svg}</svg>`;
 }

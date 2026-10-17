@@ -26,7 +26,7 @@ import { createGame } from '../engine/setup';
 import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { BANDS, CULVERT_X, sceneSvg } from './scene';
-import { silhouette } from './silhouettes';
+import { silhouette, speciesColor } from './silhouettes';
 
 const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
 
@@ -445,6 +445,7 @@ export class App {
         el.className = 'token';
         el.dataset.act = 'animal';
         el.dataset.animal = a.id;
+        el.style.setProperty('--owner', speciesColor(a.species));
         layer.appendChild(el);
       }
       if (isPresent(a)) {
@@ -534,17 +535,22 @@ export class App {
   private handHtml(s: GameState): string {
     if (s.phase === 'over') return '';
     const leading = this.sel.mode === 'lead' ? this.sel.animal : undefined;
-    return s.hand
+    // Group by animal so each one's cards sit together; the engine's order is untouched.
+    const order = (c: Card) => s.animals.findIndex((a) => a.id === c.owner);
+    const cards = [...s.hand].sort((a, b) => order(a) - order(b) || a.uid - b.uid);
+    return cards
       .map((c) => {
         const def = CARDS[c.kind];
         const owner = animal(s, c.owner);
+        const memory = c.kind === 'minne';
         const blocked = cardBlockReason(s, c);
         const selected = this.sel.mode === 'card' && this.sel.uid === c.uid;
-        const classes = ['card', `tag-${def.tag}`, blocked ? 'unplayable' : '', selected ? 'selected' : '', leading === c.owner ? 'owned' : ''];
-        return `<button class="${classes.join(' ')}" data-act="card" data-uid="${c.uid}" data-owner="${c.owner}">
-          <span class="chead">
+        const classes = ['card', `tag-${def.tag}`, memory ? 'memory' : '', blocked ? 'unplayable' : '', selected ? 'selected' : '', leading === c.owner ? 'owned' : ''];
+        return `<button class="${classes.filter(Boolean).join(' ')}" data-act="card" data-uid="${c.uid}" data-owner="${c.owner}" style="--owner:${memory ? '#2a2e3b' : speciesColor(owner.species)}">
+          <span class="cband">
+            ${silhouette(owner.species, memory ? 'var(--paper)' : 'var(--ink)')}
+            <span class="cowner">${memory ? 'Minnet av ' : ''}${esc(owner.name)}</span>
             <span class="ccost" title="Kraft">${cardCost(s, c)}</span>
-            <span class="cowner">${silhouette(owner.species)}<span>${c.kind === 'minne' ? 'Minnet av ' : ''}${esc(owner.name)}</span></span>
           </span>
           <span class="cname">${esc(def.name)}</span>
           <span class="ctag">${TAG_NAMES[def.tag]}</span>
