@@ -21,8 +21,8 @@ import {
   lastMomentShields,
   leadCost,
   leadTargets,
+  leadZones,
   moonHidden,
-  neighbors,
   verseStatus,
   zoneDistance,
 } from './rules';
@@ -273,8 +273,10 @@ function moveAnimal(c: Ctx, a: Animal, to: ZoneId, byPlayer: boolean) {
   if (a.zone === to) return;
   a.zone = to;
   if (to === 'culvert') a.culvertTime = 0;
+  // Fliers never walk: they take off, and stay airborne for the rest of the hour.
+  if (a.flier) a.flying = true;
 
-  if (byPlayer && ROAD_LANES.includes(to) && !moonHidden(s) && verseStatus(s, 'manen') === 'intact') {
+  if (byPlayer && !a.flier && ROAD_LANES.includes(to) && !moonHidden(s) && verseStatus(s, 'manen') === 'intact') {
     line(c, a.id, `${a.name} går ut på asfalten i månens ljus.`);
     flipVerse(c, 'manen');
   }
@@ -300,7 +302,7 @@ function lead(c: Ctx, target: string, zone: ZoneId) {
   if (s.phase !== 'play') fail('Inte nu.');
   if (!leadTargets(s).includes(target)) fail('Det djuret kan inte ledas nu.');
   const a = animal(s, target);
-  if (!neighbors(s, a).includes(zone)) fail('Dit kan vi inte leda.');
+  if (!leadZones(s, a).includes(zone)) fail('Dit kan vi inte leda.');
   s.kraft -= leadCost(a);
   moveAnimal(c, a, zone, true);
 }
@@ -343,9 +345,9 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
     case 'vingar': {
       o.flying = true;
       s.darkRevealed = true;
-      moveAnimal(c, o, zone!, true);
+      s.peekNext = true;
       const dark = (s.trafficPlan[s.turn - 1] ?? []).find((x) => x.dark);
-      if (dark) line(c, o.id, `${o.name} ser från ovan: en mörk bil närmar sig i ${ZONE_NAMES[dark.lane]}.`);
+      line(c, o.id, dark ? `${o.name} ser från ovan: en mörk bil närmar sig i ${ZONE_NAMES[dark.lane]}.` : `${o.name} kretsar över vägen och spanar.`);
       break;
     }
     case 'gaForst': {
@@ -366,7 +368,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       if (!s.culvertRevealed) {
         s.culvertRevealed = true;
         narrate(c, `${o.name} minns: under vägen går en gammal trumma. Smal, mörk, långsam – men säker.`);
-        if (isActive(o) && o.zone === 'dike' && !isFrozen(o)) moveAnimal(c, o, 'culvert', true);
+        if (isActive(o) && o.zone === 'dike' && o.size === 'small' && !isFrozen(o)) moveAnimal(c, o, 'culvert', true);
       } else {
         s.peekNext = true;
         line(c, o.id, `${o.name} lyssnar mot asfalten.`);

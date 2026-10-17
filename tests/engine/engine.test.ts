@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../../src/engine/setup';
 import { step } from '../../src/engine/step';
-import { cardCost, cardZones, verseStatus } from '../../src/engine/rules';
+import { cardBlockReason, cardCost, cardZones, leadBlockReason, leadZones, verseStatus } from '../../src/engine/rules';
 import type { Action, GameState } from '../../src/engine/types';
 import { calmGame, car, get, run, setTraffic } from './helpers';
 
@@ -193,5 +193,53 @@ describe('the road', () => {
     s.moonPlan[0] = false;
     s = run(s, { type: 'lead', target: 'ljung', zone: 'lane1' });
     expect(verseStatus(s, 'manen')).toBe('flipped');
+  });
+});
+
+describe('size and flight', () => {
+  it('only small animals fit through the culvert', () => {
+    const s = calmGame([...ALL3]);
+    s.culvertRevealed = true;
+    expect(leadZones(s, get(s, 'kvarn'))).toContain('culvert');
+    expect(leadZones(s, get(s, 'frona'))).toContain('culvert');
+    expect(leadZones(s, get(s, 'sotfot'))).not.toContain('culvert');
+    expect(leadZones(s, get(s, 'ljung'))).not.toContain('culvert');
+  });
+
+  it('the owl flies two steps and cannot be hit while airborne', () => {
+    let s = calmGame([...ALL3]);
+    expect(leadZones(s, get(s, 'skymning'))).toEqual(expect.arrayContaining(['lane1', 'median']));
+    s.trafficPlan[0] = [car('lane1', 2)];
+    s = run(s, { type: 'lead', target: 'skymning', zone: 'lane1' });
+    expect(get(s, 'skymning').flying).toBe(true);
+    s = run(s, { type: 'endTurn' });
+    expect(get(s, 'skymning').wounds).toBe(0);
+  });
+
+  it('an owl that sits still on the road has landed and can be hit', () => {
+    let s = calmGame([...ALL3]);
+    get(s, 'skymning').zone = 'lane1';
+    s.trafficPlan[0] = [car('lane1')];
+    s = run(s, { type: 'endTurn' });
+    expect(get(s, 'skymning').wounds).toBe(1);
+  });
+
+  it('a flying owl does not break the moon verse', () => {
+    let s = calmGame(['ingenLamnas', 'denStarke', 'manen']);
+    s.moonPlan[0] = false;
+    s = run(s, { type: 'lead', target: 'skymning', zone: 'lane1' });
+    expect(verseStatus(s, 'manen')).toBe('intact');
+  });
+});
+
+describe('reasons shown to the player', () => {
+  it('explains frozen animals and missing kraft', () => {
+    const s = calmGame([...ALL3]);
+    get(s, 'sotfot').intent = { kind: 'freeze' };
+    expect(leadBlockReason(s, get(s, 'sotfot'))).toMatch(/fryser/);
+    expect(cardBlockReason(s, { uid: 1, kind: 'snabbaTassar', owner: 'sotfot' })).toBe('Sotfot fryser.');
+    s.kraft = 0;
+    expect(cardBlockReason(s, { uid: 2, kind: 'bitaIhop', owner: 'ljung' })).toBe('Behöver ◆1.');
+    expect(leadBlockReason(s, get(s, 'kvarn'))).toMatch(/kostar/);
   });
 });

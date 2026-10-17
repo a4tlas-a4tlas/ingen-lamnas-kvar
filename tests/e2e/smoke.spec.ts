@@ -18,10 +18,10 @@ test('swear the oath and live through the night', async ({ page }) => {
   await expect(page.locator('.token')).toHaveCount(5);
 
   // Lead one animal, then let the hours pass, letting go whenever asked.
-  await page.getByRole('button', { name: /Led ett djur/ }).click();
-  await page.locator('.token.target').first().click();
-  const zone = page.locator('.zone.target').first();
-  if (await zone.count()) await zone.click();
+  // Tap an animal that can move, then a lit zone.
+  await page.locator('.token.can-move').first().click();
+  await expect(page.locator('.inspect')).toBeVisible();
+  await page.locator('.zone.target').first().click({ position: { x: 8, y: 8 } });
 
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
