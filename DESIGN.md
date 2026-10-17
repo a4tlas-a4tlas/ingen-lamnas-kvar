@@ -203,3 +203,22 @@ Design from the milestone 2 interview, part 1. The run becomes: oath → map →
 - **Predators:** a first bite causes bleeding, and an attack on an already injured animal kills.
 - **Encounters are data** (`src/engine/encounters/`): zones with layout rectangles and flags (`start`, `goal`, `road`, `exposed`, `hidden`, `smallOnly`, `slow`), plus paths toward the goal. Movement, bolting and fleeing, distances, the culvert rule and the board layout all come from this data, so a new encounter is mostly a new definition.
 - Balance (lead-only bot, 300 nights): 3.2–4.0 of 6 saved depending on the verse, and about 0.9 survivors per night carry an injury onward.
+
+### Step 2: the map, the campfire, the run from place to place (done)
+- **The run:** oath → **map** (Dalen) → Vägen → map → **Granbacken** (campfire) → map → Åkrarna (end of this chapter: "fortsättning följer").
+- **The map** (`src/data/journey.ts`) is a graph of places and paths, drawn as the toad's pencil map:
+  - unvisited places sit in fog under half-remembered names ("Ett skydd under granarna?")
+  - paw prints mark the way we've walked
+  - the forest waits far up in the fog
+  - **Alternate routes are just more paths:** a place with several onward paths lets you choose, and a path can carry a note.
+  - A "Kartan" button opens the map read-only during encounters.
+- **Each encounter starts fresh:** everyone alive starts at its start, and the whole deck is shuffled. Injuries, grief, bonds, belief, hope and the poem carry over. If no one crosses, the oath falls and the run ends.
+- **The campfire:** you plan everything, then "Låt natten gå" plays it out.
+  - **Mourning, per death:** the closest animal tells a memory and **inherits one of the dead's traits** and its card (shown as "Kvarns minne" on the card). Then:
+    - **Begrav** (bury): the memory card gets gentler (+1 belief, no hope lost).
+    - **Bär med oss** (carry with us): the card stays strong, but the closest get **❦ sörjer** (mourning), which adds +15% doubt per grief.
+  - **Watch:** one animal stays awake and doesn't heal. A hungry predator on watch is a **test of trust**, a 50/50 chance: it hunts a sleeping prey animal, or it gets +2 belief and stronger bonds with the prey.
+  - **The embers:** 2 pairs, each gets bond +1 and belief +1. Whoever has no place sits **alone in the dark** (−1 belief).
+  - **Rest:** bleeding and shock heal for all but the watcher. The fire gives +1 hope.
+  - A suggested seating is filled in (a calm watcher who doesn't need rest, and the closest pairs). The player changes it per animal: Vakt / Glöd 1 / Glöd 2 / Mörkret.
+- **Minnesstenen** shows the names and verses of the fallen on the map, at the fire and on the end screen.

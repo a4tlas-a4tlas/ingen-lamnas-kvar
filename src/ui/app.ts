@@ -29,6 +29,9 @@ import { OATH_VERSES, createGame } from '../engine/setup';
 import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
+import { assignSeat, fireSceneSvg, firePanelHtml, mapSvg, memorialHtml, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
+import { defaultPlan } from '../engine/campfire';
+import { pathsFrom, place } from '../data/journey';
 import { silhouette, speciesColor } from './silhouettes';
 import { animalStatuses, forecast, type Status } from './status';
 
@@ -59,7 +62,8 @@ function cardFaceHtml(s: GameState, c: Card, o: { tag: 'button' | 'div'; attrs?:
     </span>
     <span class="cname">${esc(def.name)}</span>
     <span class="ctag">${TAG_NAMES[def.tag]}</span>
-    <span class="ctext">${esc(def.text.replace(/\{o\}/g, owner.name))}</span>
+    <span class="ctext">${esc((c.buried ? 'Vi minns {o}, som vilar under granarna. Alla får +1 tro.' : def.text).replace(/\{o\}/g, owner.name))}</span>
+    ${c.inheritedFrom ? `<span class="cwhere">${esc(animal(s, c.inheritedFrom).name)}s minne</span>` : ''}
     ${o.footer ?? ''}
   </${o.tag}>`;
 }
@@ -76,7 +80,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 2 && s.phase !== 'over' ? s : null;
+    return s.version === 3 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -97,6 +101,9 @@ export class App {
   private inspect: string | null = null;
   private oathPick: VerseId[] = [];
   private deckView: DeckView | null = null;
+  private mapOpen = false;
+  private fireSeats: Seats | null = null;
+  private fireMourning: Record<string, 'bury' | 'carry'> = {};
   private mounted = false;
   private busy = false;
   private hint = '';
@@ -138,6 +145,8 @@ export class App {
       case 'new':
         this.state = createGame(randomSeed());
         this.oathPick = [];
+        this.fireSeats = null;
+        this.mapOpen = false;
         this.mounted = false;
         writeSave(this.state);
         this.render();
@@ -200,6 +209,25 @@ export class App {
       case 'deck-close':
         this.deckView = null;
         return this.render();
+      case 'map-open':
+        this.mapOpen = true;
+        return this.render();
+      case 'map-close':
+        this.mapOpen = false;
+        return this.render();
+      case 'travel':
+        return this.dispatch({ type: 'travel', to: el.dataset.to! });
+      case 'fire-seat':
+        if (this.fireSeats) this.fireSeats = assignSeat(this.fireSeats, el.dataset.animal!, el.dataset.seat as Seat);
+        return this.render();
+      case 'fire-mourn':
+        this.fireMourning = { ...this.fireMourning, [el.dataset.dead!]: el.dataset.choice as 'bury' | 'carry' };
+        return this.render();
+      case 'fire-rest': {
+        if (!this.fireSeats) return;
+        const plan = planFromSeats(this.fireSeats, this.fireMourning);
+        return this.dispatch({ type: 'restAtFire', watch: plan.watch, pairs: plan.pairs, mourning: plan.mourning });
+      }
       case 'animal':
         return this.pickAnimal(el.dataset.animal!);
       case 'zone':
@@ -309,6 +337,7 @@ export class App {
     this.state = r.state;
     this.sel = { mode: 'idle' };
     this.hint = '';
+    if (this.state.phase !== 'campfire') this.fireSeats = null;
     writeSave(this.state);
     this.play(r.events, prevKraft);
   }
@@ -416,9 +445,9 @@ export class App {
         <p class="sub">Vi lämnade dalen i skymningen.<br>Framför oss låg vägen.</p>
         <div class="title-buttons">
           <button class="btn primary" data-act="new">Börja vandringen</button>
-          ${hasSave ? '<button class="btn" data-act="continue">Fortsätt natten</button>' : ''}
+          ${hasSave ? '<button class="btn" data-act="continue">Fortsätt vandringen</button>' : ''}
         </div>
-        <p class="small">Första kapitlet: <em>Vägen om natten</em> · ca 10 minuter</p>
+        <p class="small">Första kapitlet: <em>från dalen till åkrarna</em> · ca 20 minuter</p>
         <details class="howto">
           <summary>Hur man spelar</summary>
           <ul>
@@ -440,6 +469,9 @@ export class App {
     const s = this.state;
     if (!s) return this.renderTitle();
     if (s.phase === 'oath') return this.renderOath(s);
+    if (s.phase === 'map') return this.renderMap(s);
+    if (s.phase === 'campfire') return this.renderCampfire(s);
+    if (s.phase === 'over') return this.renderEnd(s);
     this.renderGame(s, hurt);
   }
 
@@ -538,16 +570,17 @@ export class App {
     log.scrollTop = log.scrollHeight;
     if (s.phase !== 'play') this.deckView = null;
     q('.modal-root').innerHTML =
-      s.phase === 'lastMoment' ? this.lastMomentHtml(s) : s.phase === 'over' ? this.endHtml(s) : this.deckView ? this.deckHtml(s, this.deckView) : '';
+      s.phase === 'lastMoment' ? this.lastMomentHtml(s) : this.deckView ? this.deckHtml(s, this.deckView) : this.mapOpen ? this.mapModalHtml(s) : '';
   }
 
   // ------------------------------------------------------------ parts
 
   private topbarHtml(s: GameState): string {
     return `
-      <div class="tb-title">Ingen lämnas kvar <span class="muted">· Vägen om natten</span></div>
+      <div class="tb-title">Ingen lämnas kvar <span class="muted">· ${esc(encounterOf(s).title)}</span></div>
       <div class="tb-stats">
         <span class="stat">Timme <b>${s.turn}</b>/${s.maxTurn}</span>
+        <button class="btn small" data-act="map-open">Kartan</button>
         <button class="btn small" data-act="mute">${this.sound.muted ? 'Ljud av' : 'Ljud på'}</button>
       </div>`;
   }
@@ -812,27 +845,81 @@ export class App {
       </div>`;
   }
 
-  private endHtml(s: GameState): string {
-    const o = s.outcome!;
-    const safe = o.safe.map((id) => animal(s, id));
-    const lost = s.verses.filter((v) => v.kind === 'memorial');
-    const last = [...s.log].reverse().find((e) => e.kind === 'narrate');
+  // ------------------------------------------------------------ between places
+
+  private renderMap(s: GameState) {
+    this.mounted = false;
+    this.mapOpen = false;
+    const here = place(s.journey.at);
+    const onward = pathsFrom(here.id).map((p) => ({ path: p, to: place(p.to) }));
+    const known = (id: string) => s.journey.visited.includes(id);
+    this.root.innerHTML = `
+      <div class="screen between map-screen">
+        <div class="map-paper">${mapSvg(s, true)}</div>
+        <aside class="between-side">
+          <p class="muted small">Kvarns minne av vägen</p>
+          <h2>${esc(here.name)}</h2>
+          <div class="onward">
+            ${onward.map(({ path, to }) => `<button class="btn primary" data-act="travel" data-to="${to.id}">Gå mot ${esc(known(to.id) ? to.name : to.fogName)}</button>${path.note ? `<p class="muted small">${esc(path.note)}</p>` : ''}`).join('')}
+          </div>
+          <h3>Vi som går</h3>
+          <ul class="roster">${rosterHtml(s)}</ul>
+          ${memorialHtml(s)}
+          <section class="log between-log">${this.logHtml(s.log.slice(-14))}</section>
+          <button class="btn small mute-btn" data-act="mute">${this.sound.muted ? 'Ljud av' : 'Ljud på'}</button>
+        </aside>
+      </div>`;
+    const log = this.root.querySelector<HTMLElement>('.between-log');
+    if (log) log.scrollTop = log.scrollHeight;
+  }
+
+  private mapModalHtml(s: GameState): string {
     return `
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="end-title">
-        <div class="modal-card end">
-          <h2 id="end-title">${o.fallen ? 'Eden föll' : 'Gryning'}</h2>
-          <p class="lead-text">${esc(last?.text ?? '')}</p>
-          ${safe.length ? `<div class="end-cast">${safe.map((a) => `<div>${silhouette(a.species)}<span>${esc(a.name)}${a.count !== undefined ? ` ×${a.count}` : ''}</span></div>`).join('')}</div>` : ''}
-          <h3>Vår dikt</h3>
-          <div class="end-poem">
-            ${s.verses.filter((v) => v.kind === 'oath').map((v) => `<p>${esc(v.flipped ? v.flippedText! : v.text)}</p>`).join('')}
-            ${lost.map((v) => `<p class="mem">${esc(v.text)}</p>`).join('')}
-          </div>
-          ${lost.length ? '<p class="muted small">Minnesstenen står kvar vid vägen.</p>' : ''}
-          <div class="title-buttons">
-            <button class="btn primary" data-act="new">Gå igen</button>
-            <button class="btn" data-act="title">Till början</button>
-          </div>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="map-title">
+        <div class="modal-card map-modal">
+          <div class="deck-head"><h2 id="map-title">Kartan</h2><button class="btn small" data-act="map-close">Stäng</button></div>
+          <div class="map-paper">${mapSvg(s, false)}</div>
+        </div>
+      </div>`;
+  }
+
+  private renderCampfire(s: GameState) {
+    this.mounted = false;
+    if (!this.fireSeats) {
+      const plan = defaultPlan(s);
+      this.fireSeats = seatsFromPlan(s, plan);
+      this.fireMourning = plan.mourning;
+    }
+    this.root.innerHTML = `
+      <div class="screen between fire-screen">
+        <div class="fire-wrap">
+          <h2>${esc(place(s.journey.at).name)} <span class="muted">· lägerelden</span></h2>
+          ${fireSceneSvg(s, this.fireSeats)}
+          ${memorialHtml(s)}
+        </div>
+        <aside class="between-side">${firePanelHtml(s, this.fireSeats, this.fireMourning)}</aside>
+      </div>`;
+  }
+
+  private renderEnd(s: GameState) {
+    this.mounted = false;
+    const o = s.outcome!;
+    const survivors = o.safe.map((id) => animal(s, id));
+    const last = [...s.log].reverse().filter((e) => e.kind === 'narrate').slice(0, 2).reverse();
+    this.root.innerHTML = `
+      <div class="screen end-screen">
+        <h2>${o.fallen ? 'Eden föll' : esc(place(s.journey.at).name)}</h2>
+        ${last.map((e) => `<p class="lead-text">${esc(e.text)}</p>`).join('')}
+        ${survivors.length ? `<h3>Vi som gick vidare</h3><ul class="roster">${rosterHtml(s)}</ul>` : ''}
+        ${memorialHtml(s)}
+        <h3>Vår dikt</h3>
+        <div class="end-poem">
+          ${s.verses.filter((v) => v.kind === 'oath').map((v) => `<p>${esc(v.flipped ? v.flippedText! : v.text)}</p>`).join('')}
+        </div>
+        ${o.fallen ? '' : '<p class="muted">Fortsättning följer: åkrarna, gårdshundarna, och skogen långt bortom.</p>'}
+        <div class="title-buttons">
+          <button class="btn primary" data-act="new">Gå igen</button>
+          <button class="btn" data-act="title">Till början</button>
         </div>
       </div>`;
   }

@@ -1,7 +1,8 @@
 import { CAST, START_BONDS } from '../data/animals';
 import { TRAITS, TRAIT_IDS } from '../data/traits';
 import { shuffle, type RngHolder } from './rng';
-import { ROAD, planRoad } from './encounters/road';
+import { START_PLACE } from '../data/journey';
+import { ROAD } from './encounters/road';
 import { bondKey } from './rules';
 import { VERSES } from '../data/verses';
 import type { Animal, Card, GameState, Verse, VerseId } from './types';
@@ -33,6 +34,7 @@ export function createGame(seed: number): GameState {
       traits,
       belief: def.belief,
       injuries: [],
+      grief: [],
       count: def.swarm,
       zone: ROAD.zones.find((z) => z.start)!.id,
       status: 'active',
@@ -48,10 +50,10 @@ export function createGame(seed: number): GameState {
   const bonds: Record<string, number> = {};
   for (const [a, b, v] of START_BONDS) bonds[bondKey(a, b)] = v;
 
-  const { trafficPlan, moonPlan } = planRoad(h, ROAD.maxTurn);
-
   return {
-    version: 2,
+    version: 3,
+    journey: { at: START_PLACE, visited: [START_PLACE] },
+    unmourned: [],
     encounterId: 'road',
     seed,
     rng: h.rng,
@@ -67,8 +69,9 @@ export function createGame(seed: number): GameState {
     hand: [],
     discard: [],
     nextUid: uid,
-    trafficPlan,
-    moonPlan,
+    // Planned when each encounter starts.
+    trafficPlan: [],
+    moonPlan: [],
     revealed: [],
     peekNext: false,
     darkRevealed: false,

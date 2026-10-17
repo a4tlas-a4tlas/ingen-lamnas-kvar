@@ -23,7 +23,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   const out: Status[] = [];
   if (a.status === 'safe') {
     out.push({ key: 'safe', icon: '✓', label: 'över', explain: `${a.name} är i säkerhet på andra sidan.`, tone: 'good' });
-    return out;
+    return [...out, ...lasting(s, a)];
   }
   if (a.status !== 'active') return out;
 
@@ -67,12 +67,23 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
       ? { key: 'culvert', icon: '◌', label: 'kan krypa ut', tone: 'info', explain: `${a.name} har krupit genom ${zone.name} och kan ta sig ut nu.` }
       : { key: 'culvert', icon: '◌', label: 'kryper', tone: 'info', explain: `${a.name} kryper genom ${zone.name}. Bilar når inte hit. Ute om en timme.` });
   }
-  for (const k of a.injuries) out.push(injuryStatus(a, k));
+  out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
       explain: `${a.name}s tro är låg. Sjunker den till ${huntsAt(s, a)} kan ${a.name} glömma eden och börja jaga.` });
   } else if (a.belief <= 3 && a.intent.kind === 'follow') {
     out.push({ key: 'doubt', icon: '✶', label: 'tvivlar', tone: 'warn', explain: `${a.name}s tro är låg (${a.belief}). Snart kan ${a.name} frysa, fly eller rusa på egen hand.` });
+  }
+  return out;
+}
+
+/** What an animal carries between places: injuries and grief. */
+function lasting(s: GameState, a: Animal): Status[] {
+  const out = a.injuries.map((k) => injuryStatus(a, k));
+  if (a.grief.length) {
+    const names = a.grief.map((id) => animal(s, id).name).join(' och ');
+    out.push({ key: 'grief', icon: '❦', label: `sörjer ${names}`, tone: 'warn',
+      explain: `${a.name} bär ${names} med sig. Sorgen gör att ${a.name} tvivlar lättare.` });
   }
   return out;
 }

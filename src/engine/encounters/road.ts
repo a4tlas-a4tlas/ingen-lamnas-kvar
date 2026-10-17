@@ -6,6 +6,7 @@ import type { EncounterDef } from './types';
 export const ROAD: EncounterDef = {
   id: 'road',
   title: 'Vägen om natten',
+  crossed: 'kom över vägen',
   night: true,
   maxTurn: 10,
   zones: [

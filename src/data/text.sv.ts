@@ -33,6 +33,7 @@ export const HOPE_LINES: Record<HopeReason, string[]> = {
   hunt: ['{name} lovade ju.', 'Det var ju en av oss.', 'Jag vågar inte sova bredvid {name}.'],
   memory: ['Jag saknar {name}.', '{name} hade velat att vi gick vidare.'],
   laugh: ['Minns ni ängen hemma?', 'Det låter nästan som förr.'],
+  fire: ['Elden värmer. Det är nästan som hemma.', 'I natt sover vi tätt intill varandra.'],
 };
 
 export const KRAFT_OUT_LINES = ['Vi orkar inte mer den här timmen.', 'Benen bär inte längre. Inte nu.', 'Vi måste vila en stund.'];

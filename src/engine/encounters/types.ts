@@ -25,6 +25,8 @@ export interface ZoneDef {
 export interface EncounterDef {
   id: EncounterId;
   title: string;
+  /** "Fem av oss {crossed}." */
+  crossed: string;
   night: boolean;
   maxTurn: number;
   zones: ZoneDef[];
