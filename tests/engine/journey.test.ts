@@ -43,6 +43,12 @@ describe('the journey', () => {
     let s = acrossTheRoad();
     s = run(s, { type: 'travel', to: 'granbacken' });
     s = run(s, { type: 'restAtFire', ...defaultPlan(s) });
+    s = run(s, { type: 'travel', to: 'garden' });
+    expect(s.encounterId).toBe('farm');
+    for (const a of s.animals) if (a.status === 'active') a.zone = 'godsel';
+    s.kraft = 99;
+    for (const a of s.animals.filter((x) => x.status === 'active')) s = run(s, { type: 'lead', target: a.id, zone: 'stenmuren' });
+    expect(s.phase).toBe('map');
     s = run(s, { type: 'travel', to: 'akrarna' });
     expect(s.phase).toBe('over');
     expect(s.outcome?.safe).toHaveLength(6);

@@ -1,7 +1,7 @@
 /** Zones are defined per encounter (see encounters/); ids are plain strings. */
 export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
-export type EncounterId = 'road';
+export type EncounterId = 'road' | 'farm';
 
 /**
  * Lasting harm from an injuring hit. Halt and broken never heal; bleeding and
@@ -56,7 +56,9 @@ export type Intent =
   | { kind: 'flee' }
   | { kind: 'bolt' }
   | { kind: 'leave' }
-  | { kind: 'hunt'; target: string };
+  | { kind: 'hunt'; target: string }
+  /** A hungry predator by the farm goes for the hens instead of one of us. */
+  | { kind: 'raid' };
 
 export interface Animal {
   id: string;
@@ -85,6 +87,15 @@ export interface Animal {
   protectedBy?: string;
   braced: boolean;
   flying: boolean;
+}
+
+/** The farm's dogs can never be beaten, only misled. */
+export interface Dog {
+  id: string;
+  name: string;
+  zone: ZoneId;
+  /** Where the dog is heading this hour (telegraphed). */
+  target: ZoneId | null;
 }
 
 export interface Verse {
@@ -163,7 +174,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 3;
+  version: 4;
   journey: Journey;
   /** The dead not yet mourned by a fire. */
   unmourned: string[];
@@ -186,6 +197,16 @@ export interface GameState {
   moonPlan: boolean[];
   /** Hidden zones (the culvert) that have been found this encounter. */
   revealed: ZoneId[];
+  // The farm.
+  dogs: Dog[];
+  dogsAwake: boolean;
+  /** How strongly each zone smells of us, 0–3. */
+  scent: Record<ZoneId, number>;
+  /** Barking wakes the farm: at 5 the farmer comes out. */
+  alarm: number;
+  farmerOut: boolean;
+  /** The zone the farmer's flashlight will sweep this hour. */
+  farmerSweep: ZoneId | null;
   peekNext: boolean;
   darkRevealed: boolean;
   hitQueue: Hit[];
@@ -198,6 +219,7 @@ export type Action =
   | { type: 'swear'; verses: VerseId[] }
   | { type: 'play'; uid: number; target?: string; zone?: ZoneId }
   | { type: 'lead'; target: string; zone: ZoneId }
+  | { type: 'lure'; target: string; zone: ZoneId }
   | { type: 'endTurn' }
   | { type: 'travel'; to: string }
   | { type: 'restAtFire'; watch?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice> }

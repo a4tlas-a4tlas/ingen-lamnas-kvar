@@ -1,6 +1,34 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-test('a whole run: oath, map, road, campfire, onward', async ({ page }) => {
+/** Lead whoever can move toward the goal (the topmost lit zone), a few times per hour. Lure the dogs once. */
+async function leadForward(page: Page, seen: Set<string>) {
+  for (let n = 0; n < 3; n++) {
+    const movers = page.locator('.token.can-move');
+    if (!(await movers.count())) return;
+    await movers.first().dispatchEvent('click'); // crowded zones overlap; the tap itself is what we test
+    const lure = page.getByRole('button', { name: /Locka hundarna/ });
+    if (!seen.has('lure') && (await lure.count()) && (await lure.isEnabled())) {
+      await lure.click();
+      seen.add('lure');
+    }
+    const zones = page.locator('.zone.target');
+    const count = await zones.count();
+    if (!count) {
+      await page.keyboard.press('Escape');
+      return;
+    }
+    let best = 0;
+    let top = Infinity;
+    for (let i = 0; i < count; i++) {
+      const box = await zones.nth(i).boundingBox();
+      if (box && box.y < top) { top = box.y; best = i; }
+    }
+    await zones.nth(best).dispatchEvent('click');
+    if (await page.locator('.end-screen, .map-screen, [data-act="lm-letgo"]').count()) return;
+  }
+}
+
+test('a whole run: oath, map, road, campfire, farm, onward', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
@@ -53,11 +81,17 @@ test('a whole run: oath, map, road, campfire, onward', async ({ page }) => {
       continue;
     }
     const end = page.getByRole('button', { name: 'Låt timmen gå' });
+    if (!(await end.isEnabled())) {
+      await page.waitForTimeout(200);
+      continue;
+    }
+    if (await page.locator('.scene.farm').count()) seen.add('farm');
+    await leadForward(page, seen);
+    if (await page.locator('.end-screen, .map-screen, [data-act="lm-letgo"]').count()) continue;
     if (await end.isEnabled()) await end.click();
-    else await page.waitForTimeout(200);
   }
   await expect(page.locator('.end-screen')).toBeVisible({ timeout: 10_000 });
   await expect(page.locator('.end-screen h2')).toHaveText(/Åkrarna|Eden föll/);
-  if ((await page.locator('.end-screen h2').textContent()) === 'Åkrarna') expect([...seen].sort()).toEqual(['fire', 'map']);
+  if ((await page.locator('.end-screen h2').textContent()) === 'Åkrarna') expect([...seen]).toEqual(expect.arrayContaining(['farm', 'fire', 'map']));
   expect(errors).toEqual([]);
 });

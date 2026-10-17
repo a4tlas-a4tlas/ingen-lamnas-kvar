@@ -247,6 +247,21 @@ export function leadTargets(s: GameState): string[] {
     .map((a) => a.id);
 }
 
+// ---------------------------------------------------------------- the farm
+
+/** The fox and the owl can show themselves to the dogs and draw them away. */
+export function canLure(s: GameState, a: Animal): boolean {
+  return s.encounterId === 'farm' && s.dogsAwake && canMove(a) && (a.species === 'fox' || a.species === 'owl') && !hasInjury(a, 'broken');
+}
+
+/** Where a lure can be laid: up to two steps away, anywhere on the farm but the wall. */
+export function lureZones(s: GameState, a: Animal): ZoneId[] {
+  if (!canLure(s, a)) return [];
+  return encounterOf(s).zones
+    .filter((z) => !z.goal && z.id !== a.zone && canEnter(s, a, z.id) && zoneDistance(s, a.zone, z.id) <= 2)
+    .map((z) => z.id);
+}
+
 /** Who can throw themselves in the way during the last moment. */
 export function lastMomentShields(s: GameState): string[] {
   if (!s.pending) return [];

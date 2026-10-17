@@ -178,7 +178,7 @@ Feedback: the night didn't end by getting everyone across, and the states (fryse
   - the discard pile, most recent first
   - the whole deck grouped by animal, with where each card is (in hand, draw pile or discard), and what became of the dead (only the memory remains) and of those who left
 
-## Milestone 2 – death, legacy and the campfire (in progress)
+## Milestone 2 – death, legacy and the campfire (done)
 Design from the milestone 2 interview, part 1. The run becomes: oath → map → Vägen om natten → map → campfire → map → Gårdshundarna → end.
 
 ### Step 1: injuries and generalised encounters (done)
@@ -222,3 +222,35 @@ Design from the milestone 2 interview, part 1. The run becomes: oath → map →
   - **Rest:** bleeding and shock heal for all but the watcher. The fire gives +1 hope.
   - A suggested seating is filled in (a calm watcher who doesn't need rest, and the closest pairs). The player changes it per animal: Vakt / Glöd 1 / Glöd 2 / Mörkret.
 - **Minnesstenen** shows the names and verses of the fallen on the map, at the fire and on the end screen.
+
+### Step 3: Gårdshundarna, the farm at dawn (done)
+- **The run:** … → Granbacken → map → **Gården** ("Ett hus? Kvarn minns inte.") → map → Åkrarna.
+- **The board** (`src/engine/encounters/farm.ts`), 8 hours, daylight (so the moon verse has no effect):
+  - Snåret (the thicket, start, cover)
+  - Högt gräs (tall grass, cover, breaks scent)
+  - Gårdsplanen (the yard, open, the kennel)
+  - Hönshuset (the hen house)
+  - Bäcken (the stream, breaks scent)
+  - Gödselstacken (the manure heap, breaks scent)
+  - Stenmuren (the stone wall, the goal)
+  - **The barn stands between the yard and the wall,** so every way over is three steps: grass → stream → wall, or yard → manure heap → wall.
+- **Scent (0–3):** fades by 1 every hour, and +2 in every zone where we end the hour. Grass, the stream and the manure heap hide it. It shows as paw prints (hover explains).
+- **Two dogs (Rapp and Tass)** sleep for the first hour.
+  - Then each hour they follow the strongest trail (the second dog takes the second strongest) and run up to 2 steps.
+  - The zone where they stop is marked "Rapp · skadar". They bite everyone there who isn't in the air: an injuring hit that gives bleeding.
+  - The dogs can never be fought.
+- **The alarm (0–5)** sits in the HUD:
+  - +1 when the dogs bite
+  - +1 for each lure
+  - +3 when a predator takes a hen
+  - **When it's full, the farmer comes out.** Each hour the flashlight aims at the open zone with the most of us ("Ficklampan · dödar"), and whoever stands there is killed (the last moment applies). Cover protects.
+- **Locka hundarna** (lure the dogs, ◆1): select the fox or the owl and press the button. The bait moves up to 2 steps, the dogs turn toward it, and the alarm gets +1. If the bait then gets away, the dogs bite nothing.
+- **The hen house:** a predator within one step of it, with belief ≤ its hunt line + 2, goes for the hens instead of one of us (⚑ "går mot hönsen"). It gets +2 belief, and the alarm gets +3. It's the lesser evil.
+- The forecast "När timmen går" shows where each dog ends up and whom it bites, the hen raid, the alarm, and the flashlight's victims.
+- Balance (lead-only bot, 200 whole runs, verse *Ingen lämnas kvar*):
+  - 4.6 of 6 reach the farm
+  - 3.4 cross the wall
+  - 0.4 die on the farm
+  - the farmer comes out in about 1 run in 3
+  - about 1.5 survivors reach Åkrarna injured
+  - Before the barn blocked the yard, a straight rush crossed 4.1 with almost no losses.

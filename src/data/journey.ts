@@ -32,14 +32,17 @@ export const PLACES: Place[] = [
     arrive: 'Asfalten ligger svart framför oss. Ljusen kommer och går.' },
   { id: 'granbacken', kind: 'campfire', name: 'Granbacken', fogName: 'Ett skydd under granarna?', x: 60, y: 52,
     arrive: 'Under de täta granarna når vinden inte in. Här kan vi vila.' },
-  { id: 'akrarna', kind: 'end', name: 'Åkrarna', fogName: 'Åkrarna – fortsättning följer', x: 44, y: 30,
-    arrive: 'Bortom backen breder åkrarna ut sig, gråa i gryningen. Där börjar nästa del av vägen.' },
+  { id: 'garden', kind: 'encounter', encounter: 'farm', name: 'Gården', fogName: 'Ett hus? Kvarn minns inte.', x: 40, y: 37,
+    arrive: 'En gård i gryningen. Röda väggar, en stenmur, och två hundar som sover vid kojan.' },
+  { id: 'akrarna', kind: 'end', name: 'Åkrarna', fogName: 'Åkrarna – fortsättning följer', x: 58, y: 23,
+    arrive: 'Bortom muren låg åkrarna, gråa och vida. Där börjar nästa del av vägen.' },
 ];
 
 export const PATHS: Path[] = [
   { from: 'dalen', to: 'vagen' },
   { from: 'vagen', to: 'granbacken' },
-  { from: 'granbacken', to: 'akrarna' },
+  { from: 'granbacken', to: 'garden' },
+  { from: 'garden', to: 'akrarna' },
 ];
 
 /** The forest we're walking toward: always on the map, always in fog. */

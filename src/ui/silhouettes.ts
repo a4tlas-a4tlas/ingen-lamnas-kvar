@@ -85,3 +85,17 @@ export function speciesColor(species: Species): string {
 export function silhouette(species: Species, color = shapes[species].paper): string {
   return `<svg class="sil" viewBox="0 0 64 48" aria-hidden="true" style="color:${color}" fill="currentColor">${shapes[species].svg}</svg>`;
 }
+
+/** The farm dogs: not one of us, so drawn darker and heavier. */
+export function dogSilhouette(): string {
+  return `<svg class="sil dog-sil" viewBox="0 0 64 48" aria-hidden="true" fill="currentColor">
+    <path d="M12 26 Q4 16 6 12 Q10 20 16 24 Z"/>
+    <ellipse cx="29" cy="28" rx="17" ry="8.5"/>
+    <path d="M40 22 Q44 12 52 14 L61 20 L60 25 L50 27 Z"/>
+    <path d="M47 15 L49 9 L52 15 Z"/>
+    <rect x="15" y="32" width="4" height="12" rx="1.5"/><rect x="22" y="33" width="4" height="11" rx="1.5"/>
+    <rect x="34" y="33" width="4" height="11" rx="1.5"/><rect x="40" y="32" width="4" height="12" rx="1.5"/>
+    <circle cx="52" cy="18" r="1.3" fill="#e4c070"/>
+    <path d="M55 24 l2 2 l2 -2" stroke="#efe3c8" stroke-width="1" fill="none"/>
+  </svg>`;
+}

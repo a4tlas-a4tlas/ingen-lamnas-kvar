@@ -8,6 +8,7 @@ export function intentLine(name: string, intent: Intent, targetName?: string): s
     case 'bolt': return `${name} darrar. Snart springer ${name} utan oss.`;
     case 'leave': return `${name} tror inte längre på oss.`;
     case 'hunt': return `${name} betraktar ${targetName ?? 'någon'} lite för länge.`;
+    case 'raid': return `${name} vädrar hönsen. Det är svårt att tänka på något annat.`;
   }
 }
 
