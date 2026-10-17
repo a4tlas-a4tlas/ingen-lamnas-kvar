@@ -142,3 +142,12 @@ Feedback: the cards themselves were fine, but it was still hard to see who a car
 - **Colour identity per animal:** each animal's paper colour (fox red-brown, badger grey, toad olive, owl brown, mice beige) is its identity. Every card's top is a band in the owner's colour, with the owner's silhouette in ink and their name. The animal's name tag on the board is the same colour.
 - **The hand is grouped by animal:** each animal's cards sit together (display only).
 - The card type is now a small coloured word (● Rörelse, ● Skydd …) instead of a competing colour stripe.
+
+### Layout: one screen
+Feedback: the UI should fit on one screen. On desktop the road now fills the screen height on the left. Everything else sits in a panel to its right, with no page scrolling at 1280×720 and up:
+- the actions and hint
+- the hand, as a grid
+- the info panel for the selected animal
+- the poem and the night's log, side by side, each scrolling on its own
+
+On phones and narrow windows the layout stays stacked, and the hand scrolls sideways.

@@ -349,7 +349,7 @@ export class App {
     this.root.innerHTML = `
       <div class="game">
         <header class="topbar"></header>
-        <main class="board">
+        <main class="stage">
           <div class="scene">
             ${sceneSvg()}
             <div class="moon"><div class="cloud"></div></div>
@@ -360,14 +360,16 @@ export class App {
             <div class="sweeps"></div>
             <div class="tokens"></div>
           </div>
+        </main>
+        <section class="panel">
           <div class="actions"></div>
           <div class="hand"></div>
           <div class="inspect-slot"></div>
-        </main>
-        <aside class="side">
-          <section class="poem"></section>
-          <section class="log" aria-live="polite"></section>
-        </aside>
+          <div class="chronicle">
+            <section class="poem"></section>
+            <section class="log" aria-live="polite"></section>
+          </div>
+        </section>
         <div class="modal-root"></div>
       </div>`;
     this.mounted = true;
@@ -458,7 +460,7 @@ export class App {
         } else {
           const [top, bottom] = BANDS[a.zone];
           y = (top + bottom) / 2 + (a.zone === 'dike' ? -2 : 0);
-          x = 24 + ((i + 0.5) * 68) / group.length;
+          x = 19 + ((i + 0.5) * 76) / group.length;
         }
         el.style.left = `${x}%`;
         el.style.top = `${y}%`;
