@@ -1,6 +1,7 @@
 import { DEATH_CAUSE, LEAVE_CAUSE, ZONE_NAMES, intentLine } from '../data/text.sv';
 import { VERSES } from '../data/verses';
 import { random, shuffle } from './rng';
+import { OATH_VERSES, oathVerse } from './setup';
 import {
   ON_ROAD,
   ROAD_LANES,
@@ -114,15 +115,8 @@ function swear(c: Ctx, verses: VerseId[]) {
   const s = c.s;
   if (s.phase !== 'oath') fail('Eden är redan svuren.');
   const unique = [...new Set(verses)];
-  if (unique.length !== 3 || unique.some((v) => !VERSES[v])) fail('Välj tre verser.');
-  s.verses = unique.map((id) => ({
-    id,
-    kind: 'oath',
-    base: id,
-    text: VERSES[id].text,
-    flippedText: VERSES[id].flippedText,
-    flipped: false,
-  }));
+  if (unique.length !== OATH_VERSES || unique.some((v) => !VERSES[v])) fail('Välj ett löfte.');
+  s.verses = unique.map(oathVerse);
   shuffle(s, s.draw);
   narrate(c, 'I dalens sista natt svor vi eden:');
   for (const v of s.verses) narrate(c, `”${v.text}”`);

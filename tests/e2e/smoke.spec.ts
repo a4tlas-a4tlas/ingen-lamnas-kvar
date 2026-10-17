@@ -13,11 +13,19 @@ test('swear the oath and live through the night', async ({ page }) => {
 
   const verses = page.locator('.verse-card');
   await expect(verses).toHaveCount(6);
-  for (let i = 0; i < 3; i++) await verses.nth(i).click();
-  await page.getByRole('button', { name: 'Svär eden (3/3)' }).click();
+  await verses.nth(1).click();
+  await verses.nth(0).click(); // picking another replaces it: only one oath
+  await expect(page.locator('.verse-card.chosen')).toHaveCount(1);
+  await page.getByRole('button', { name: /Svär eden/ }).click();
   await expect(page.locator('.token')).toHaveCount(6);
 
   // Lead one animal, then let the hours pass, letting go whenever asked.
+  // The deck checker shows every card, grouped by animal.
+  await page.getByRole('button', { name: 'Hela leken' }).click();
+  await expect(page.locator('.deck-animal')).toHaveCount(6);
+  await expect(page.locator('.deck .card.mini')).toHaveCount(18);
+  await page.getByRole('button', { name: 'Stäng' }).click();
+
   // Tap an animal that can move, then a lit zone.
   await page.locator('.token.can-move').first().click();
   await expect(page.locator('.inspect')).toBeVisible();

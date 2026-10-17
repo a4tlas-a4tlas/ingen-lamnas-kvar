@@ -169,3 +169,11 @@ Feedback: the night didn't end by getting everyone across, and the states (fryse
 - Balance with 6 animals: a lead-only bot saves on average 4.0 of 6 animals, and a hunt happens about 1.5 times per night.
 - **Hopp and Kraft live in the play area:** two large paper tags in the sky of the scene (Hopp to the left, Kraft to the right, the moon between them). They scale with the screen. Low hope (under 4) turns the tag red, with "Lågt hopp – vi drar 4 kort". Hovering a tag explains it.
 - **Speech bubbles when hope sinks:** the engine reports *why* hope moved (`hope` event with a reason: death, flip, hunt, leave, dawn, memory, laugh). The UI lets the animal most affected speak about it: the one closest to the dead, a prey animal when a predator hunts, and so on. The bubble carries a "−1 hopp" tag, and the Hopp tag shakes. A laugh gives a gentle bubble with "+1 hopp". When kraft runs out, an animal says so ("Vi orkar inte mer den här timmen").
+
+### Playtest round 5 → changes
+- **One oath, not three.** In the glen we swear a single verse, chosen from the six. The rest of the poem is meant to grow during the journey: verses the animals propose, newcomers' verses, places that speak (milestones 2–4). The engine's `OATH_VERSES` is 1.
+  - Balance, lead-only bot over 300 nights: 3.4–4.0 of 6 animals saved, depending on the verse. "Vi jagar inte varandra" protects the most, and "Vi går när månen gömmer sig" the least, because the bot ignores the moon.
+- **Deck checker ("Leken"):** buttons under the hand open three views:
+  - the draw pile, sorted per animal so the order stays secret
+  - the discard pile, most recent first
+  - the whole deck grouped by animal, with where each card is (in hand, draw pile or discard), and what became of the dead (only the memory remains) and of those who left
