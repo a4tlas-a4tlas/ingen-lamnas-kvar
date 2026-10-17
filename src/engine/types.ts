@@ -1,5 +1,16 @@
-export type ZoneId = 'dike' | 'lane1' | 'median' | 'lane2' | 'farDike' | 'culvert';
+/** Zones are defined per encounter (see encounters/); ids are plain strings. */
+export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
+export type EncounterId = 'road';
+
+/**
+ * Lasting harm from an injuring hit. Halt and broken never heal; bleeding and
+ * shock heal by the campfire.
+ */
+export type InjuryKind = 'halt' | 'broken' | 'bleeding' | 'shock';
+
+/** Every danger is telegraphed as one or the other. */
+export type Severity = 'injure' | 'kill';
 export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice' | 'adder';
 /** Only small animals fit through the culvert. */
 export type Size = 'small' | 'medium' | 'large';
@@ -60,14 +71,14 @@ export interface Animal {
   hunger: number;
   traits: TraitId[];
   belief: number;
-  wounds: number;
-  /** Swarms (a mouse family) shrink instead of taking wounds. */
+  injuries: InjuryKind[];
+  /** Swarms (a mouse family) lose members instead of taking injuries. */
   count?: number;
   zone: ZoneId;
   status: Status;
   intent: Intent;
-  /** End-of-turns spent inside the culvert; 1 is needed to crawl out. */
-  culvertTime: number;
+  /** End-of-turns spent in a slow zone (the culvert); 1 is needed to get out. */
+  slowTime: number;
   // Per-turn flags.
   protectedBy?: string;
   braced: boolean;
@@ -93,16 +104,19 @@ export interface Card {
 
 export interface Strike {
   lane: LaneId;
-  wounds: number;
+  severity: Severity;
   vehicle: 'bil' | 'lastbil' | 'mörk bil';
   dark: boolean;
 }
 
 export interface Hit {
   victim: string;
-  wounds: number;
-  dark: boolean;
-  lane: LaneId;
+  severity: Severity;
+  /** Sudden hits (a car without lights) give no last moment. */
+  sudden: boolean;
+  zone: ZoneId;
+  /** What hit, for narration: "bil", "lastbil", "hund" … */
+  source: string;
 }
 
 export interface LogEntry {
@@ -135,7 +149,8 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 1;
+  version: 2;
+  encounterId: EncounterId;
   seed: number;
   rng: number;
   phase: Phase;
@@ -152,7 +167,8 @@ export interface GameState {
   nextUid: number;
   trafficPlan: Strike[][];
   moonPlan: boolean[];
-  culvertRevealed: boolean;
+  /** Hidden zones (the culvert) that have been found this encounter. */
+  revealed: ZoneId[];
   peekNext: boolean;
   darkRevealed: boolean;
   hitQueue: Hit[];

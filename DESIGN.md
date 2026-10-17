@@ -177,3 +177,29 @@ Feedback: the night didn't end by getting everyone across, and the states (fryse
   - the draw pile, sorted per animal so the order stays secret
   - the discard pile, most recent first
   - the whole deck grouped by animal, with where each card is (in hand, draw pile or discard), and what became of the dead (only the memory remains) and of those who left
+
+## Milestone 2 – death, legacy and the campfire (in progress)
+Design from the milestone 2 interview, part 1. The run becomes: oath → map → Vägen om natten → map → campfire → map → Gårdshundarna → end.
+
+### Step 1: injuries and generalised encounters (done)
+- **The danger decides, telegraphed in advance:**
+  - car = *skadar* (injures)
+  - truck = *dödar* (kills)
+  - dark car = kills suddenly, with no last moment
+- **A killing hit gives the last moment:**
+  - *Kasta sig emellan*: the shielder pushes the victim away and takes an injury instead of dying.
+  - *Bryt en vers*: the victim survives with an injury.
+  - *Låt gå*: the victim dies.
+- **Injuries are lasting states, not counters.** They don't kill by themselves:
+  - ≀ **haltar** (limping): 1 step at a time, and leading costs ◆2. Never heals.
+  - ⌁ **bruten vinge/tass** (broken wing/paw): no flying, and the species card is blocked. Never heals.
+  - ❢ **blöder** (bleeding): −1 belief every hour. Heals at the campfire.
+  - ≋ **chock** (shock): doubts and freezes much more easily. Heals at the campfire.
+- **Where injuries come from:**
+  - vehicles → halt or broken
+  - bites → bleeding
+  - seeing someone die in your own zone → shock
+- **Swarms** lose 1 member to an injuring hit and 3 to a killing one.
+- **Predators:** a first bite causes bleeding, and an attack on an already injured animal kills.
+- **Encounters are data** (`src/engine/encounters/`): zones with layout rectangles and flags (`start`, `goal`, `road`, `exposed`, `hidden`, `smallOnly`, `slow`), plus paths toward the goal. Movement, bolting and fleeing, distances, the culvert rule and the board layout all come from this data, so a new encounter is mostly a new definition.
+- Balance (lead-only bot, 300 nights): 3.2–4.0 of 6 saved depending on the verse, and about 0.9 survivors per night carry an injury onward.

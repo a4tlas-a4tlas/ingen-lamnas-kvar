@@ -1,22 +1,4 @@
-import type { HopeReason, Intent, ZoneId } from '../engine/types';
-
-export const ZONE_NAMES: Record<ZoneId, string> = {
-  dike: 'diket',
-  lane1: 'första körfältet',
-  median: 'mittremsan',
-  lane2: 'andra körfältet',
-  farDike: 'andra diket',
-  culvert: 'trumman',
-};
-
-export const ZONE_LABELS: Record<ZoneId, string> = {
-  dike: 'Diket',
-  lane1: 'Körfält 1',
-  median: 'Mittremsan',
-  lane2: 'Körfält 2',
-  farDike: 'Andra diket',
-  culvert: 'Trumman',
-};
+import type { HopeReason, InjuryKind, Intent } from '../engine/types';
 
 export function intentLine(name: string, intent: Intent, targetName?: string): string | null {
   switch (intent.kind) {
@@ -54,3 +36,11 @@ export const HOPE_LINES: Record<HopeReason, string[]> = {
 };
 
 export const KRAFT_OUT_LINES = ['Vi orkar inte mer den här timmen.', 'Benen bär inte längre. Inte nu.', 'Vi måste vila en stund.'];
+
+/** Said when an injury happens. {name} is the one hurt. */
+export const INJURY_LINES: Record<InjuryKind, string> = {
+  halt: '{name} träffas. Ett ben bär inte längre som förut.',
+  broken: '{name} träffas. Något går av med ett ljud vi aldrig glömmer.',
+  bleeding: '{name} blöder. Det slutar inte.',
+  shock: '{name} såg det hända. Något i {name} stannade kvar där.',
+};

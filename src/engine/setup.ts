@@ -1,37 +1,16 @@
 import { CAST, START_BONDS } from '../data/animals';
 import { TRAITS, TRAIT_IDS } from '../data/traits';
-import { random, randInt, pick, shuffle, type RngHolder } from './rng';
+import { shuffle, type RngHolder } from './rng';
+import { ROAD, planRoad } from './encounters/road';
 import { bondKey } from './rules';
 import { VERSES } from '../data/verses';
-import type { Animal, Card, GameState, LaneId, Strike, Verse, VerseId } from './types';
-
-export const MAX_TURN = 10;
+import type { Animal, Card, GameState, Verse, VerseId } from './types';
 
 /** We swear a single verse in the glen; later verses come from the journey. */
 export const OATH_VERSES = 1;
 
 export function oathVerse(id: VerseId): Verse {
   return { id, kind: 'oath', base: id, text: VERSES[id].text, flippedText: VERSES[id].flippedText, flipped: false };
-}
-
-function rollTraffic(h: RngHolder, turn: number, darkTurn: number): Strike[] {
-  const lanes: LaneId[] = ['lane1', 'lane2'];
-  const strikes: Strike[] = [];
-  const car = (lane: LaneId): Strike =>
-    random(h) < 0.18 + turn * 0.02
-      ? { lane, wounds: 2, vehicle: 'lastbil', dark: false }
-      : { lane, wounds: 1, vehicle: 'bil', dark: false };
-
-  if (turn === 1) strikes.push(car(pick(h, lanes)));
-  else {
-    const r = random(h);
-    if (r < 0.12) {
-      // A quiet hour. Tempting.
-    } else if (turn >= 2 && r < 0.55) strikes.push(car('lane1'), car('lane2'));
-    else strikes.push(car(pick(h, lanes)));
-  }
-  if (turn === darkTurn) strikes.push({ lane: pick(h, lanes), wounds: 2, vehicle: 'mörk bil', dark: true });
-  return strikes;
 }
 
 export function createGame(seed: number): GameState {
@@ -53,12 +32,12 @@ export function createGame(seed: number): GameState {
       hunger: def.hunger ?? 0,
       traits,
       belief: def.belief,
-      wounds: 0,
+      injuries: [],
       count: def.swarm,
-      zone: 'dike',
+      zone: ROAD.zones.find((z) => z.start)!.id,
       status: 'active',
       intent: { kind: 'follow' },
-      culvertTime: 0,
+      slowTime: 0,
       braced: false,
       flying: false,
     });
@@ -69,21 +48,16 @@ export function createGame(seed: number): GameState {
   const bonds: Record<string, number> = {};
   for (const [a, b, v] of START_BONDS) bonds[bondKey(a, b)] = v;
 
-  const darkTurn = 4 + randInt(h, 4);
-  const trafficPlan: Strike[][] = [];
-  const moonPlan: boolean[] = [];
-  for (let t = 1; t <= MAX_TURN; t++) {
-    trafficPlan.push(rollTraffic(h, t, darkTurn));
-    moonPlan.push(random(h) < 0.4);
-  }
+  const { trafficPlan, moonPlan } = planRoad(h, ROAD.maxTurn);
 
   return {
-    version: 1,
+    version: 2,
+    encounterId: 'road',
     seed,
     rng: h.rng,
     phase: 'oath',
     turn: 0,
-    maxTurn: MAX_TURN,
+    maxTurn: ROAD.maxTurn,
     kraft: 0,
     hope: 6,
     animals,
@@ -95,7 +69,7 @@ export function createGame(seed: number): GameState {
     nextUid: uid,
     trafficPlan,
     moonPlan,
-    culvertRevealed: false,
+    revealed: [],
     peekNext: false,
     darkRevealed: false,
     hitQueue: [],
