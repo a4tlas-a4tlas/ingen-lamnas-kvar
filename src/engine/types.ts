@@ -1,6 +1,6 @@
 export type ZoneId = 'dike' | 'lane1' | 'median' | 'lane2' | 'farDike' | 'culvert';
 export type LaneId = 'lane1' | 'lane2';
-export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice';
+export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice' | 'adder';
 /** Only small animals fit through the culvert. */
 export type Size = 'small' | 'medium' | 'large';
 export type TraitId =
@@ -33,6 +33,7 @@ export type CardKind =
   | 'bitaIhop'
   | 'skratt'
   | 'taEmot'
+  | 'giftIReserv'
   | 'minne';
 
 /** active = still on the road side, safe = reached the far ditch. */
@@ -55,6 +56,8 @@ export interface Animal {
   size: Size;
   /** Fliers take to the air whenever they move, and can't be hit while airborne. */
   flier: boolean;
+  /** Hungry predators forget the oath earlier: added to the belief level they hunt at. */
+  hunger: number;
   traits: TraitId[];
   belief: number;
   wounds: number;

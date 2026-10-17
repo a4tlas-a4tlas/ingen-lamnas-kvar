@@ -2,7 +2,7 @@
 // of what letting the hour pass will do. Shared by tokens, the info panel and
 // the forecast box so they always say the same thing.
 import { ZONE_NAMES } from '../data/text.sv';
-import { animal, backZone, boltZone, huntThreshold, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
+import { animal, backZone, boltZone, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
 import type { Animal, GameState, ZoneId } from '../engine/types';
 
 export type Tone = 'bad' | 'warn' | 'good' | 'info';
@@ -69,9 +69,9 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
     out.push({ key: 'wounds', icon: '⁄', label: `sår ${a.wounds}/3`, tone: a.wounds >= 2 ? 'bad' : 'warn',
       explain: a.wounds >= 2 ? `${a.name} är svårt skadad: ett sår till kan döda. Att leda kostar ◆2.` : `${a.name} är skadad. Vid tre sår dör ${a.name}.` });
   }
-  if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntThreshold(s) + 1) {
+  if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
-      explain: `${a.name}s tro är låg. Sjunker den till ${huntThreshold(s)} kan ${a.name} glömma eden och börja jaga.` });
+      explain: `${a.name}s tro är låg. Sjunker den till ${huntsAt(s, a)} kan ${a.name} glömma eden och börja jaga.` });
   } else if (a.belief <= 3 && a.intent.kind === 'follow') {
     out.push({ key: 'doubt', icon: '✶', label: 'tvivlar', tone: 'warn', explain: `${a.name}s tro är låg (${a.belief}). Snart kan ${a.name} frysa, fly eller rusa på egen hand.` });
   }

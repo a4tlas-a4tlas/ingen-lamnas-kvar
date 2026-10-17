@@ -40,6 +40,18 @@ export function huntThreshold(s: GameState): number {
   return v === 'intact' ? 1 : v === 'flipped' ? 5 : 3;
 }
 
+/** The belief at or below which this predator forgets the oath and hunts. */
+export function huntsAt(s: GameState, a: Animal): number {
+  return huntThreshold(s) + a.hunger;
+}
+
+const SIZE_RANK: Record<Animal['size'], number> = { small: 0, medium: 1, large: 2 };
+
+/** Predators only hunt prey their own size or smaller. */
+export function canPrey(pred: Animal, prey: Animal): boolean {
+  return pred.predator && !prey.predator && SIZE_RANK[prey.size] <= SIZE_RANK[pred.size];
+}
+
 export function handSize(s: GameState): number {
   return s.hope >= 4 ? 5 : s.hope >= 1 ? 4 : 3;
 }

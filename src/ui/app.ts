@@ -35,7 +35,8 @@ type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | {
 
 const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
 function chipHtml(st: Status, withLabel: boolean): string {
-  return `<span class="chip tone-${st.tone}" title="${esc(`${st.label}: ${st.explain}`)}">${st.icon}${withLabel ? ` ${esc(st.label)}` : ''}</span>`;
+  const tip = `data-tip-icon="${esc(st.icon)}" data-tip-title="${esc(st.label)}" data-tip="${esc(st.explain)}"`;
+  return `<span class="chip tone-${st.tone}${st.intent ? ' intent' : ''}" ${tip} aria-label="${esc(`${st.label}: ${st.explain}`)}">${st.icon}${withLabel ? ` ${esc(st.label)}` : ''}</span>`;
 }
 
 const kindName = (id: string) => CAST.find((d) => d.id === id)?.kindName ?? '';
@@ -69,11 +70,22 @@ export class App {
   private busy = false;
   private hint = '';
   private sound = new Sound();
+  private tip = document.createElement('div');
 
   constructor(private root: HTMLElement) {
     root.addEventListener('click', (e) => this.onClick(e));
-    root.addEventListener('pointerover', (e) => this.highlightOwner(e, true));
-    root.addEventListener('pointerout', (e) => this.highlightOwner(e, false));
+    root.addEventListener('pointerover', (e) => {
+      this.highlightOwner(e, true);
+      this.showTip(e);
+    });
+    root.addEventListener('pointerout', (e) => {
+      this.highlightOwner(e, false);
+      if ((e.target as HTMLElement).closest('[data-tip]')) this.tip.hidden = true;
+    });
+    this.tip.className = 'tooltip';
+    this.tip.hidden = true;
+    this.tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(this.tip);
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.cancel();
     });
@@ -159,6 +171,21 @@ export class App {
       case 'lm-letgo':
         return this.dispatch({ type: 'lastMoment', choice: 'letGo' });
     }
+  }
+
+  /** Hovering a status symbol explains what it does. */
+  private showTip(e: Event) {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-tip]');
+    if (!el) return;
+    this.tip.innerHTML = `<b>${esc(el.dataset.tipIcon ?? '')} ${esc(el.dataset.tipTitle ?? '')}</b><span>${esc(el.dataset.tip ?? '')}</span>`;
+    this.tip.hidden = false;
+    const r = el.getBoundingClientRect();
+    const w = this.tip.offsetWidth;
+    const h = this.tip.offsetHeight;
+    const left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+    const top = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
+    this.tip.style.left = `${left + window.scrollX}px`;
+    this.tip.style.top = `${top + window.scrollY}px`;
   }
 
   private highlightOwner(e: Event, on: boolean) {
@@ -299,7 +326,7 @@ export class App {
             <li>Du är <b>Eden</b> – löftet som håller djuren samman. Du har ingen kropp, bara ord.</li>
             <li>Varje timme visar vägen var ljusen kommer. Djuren visar också vad <em>de själva</em> tänker göra.</li>
             <li>Tryck på ett djur med ljus ring för att <b>leda</b> det (◆1), eller spela kort. Varje kort tillhör ett djur. Få alla till andra diket innan gryningen.</li>
-            <li><b>Tillstånd</b> syns ovanför djuren: <span class="chip tone-bad">❄︎ fryser</span> kan inte flyttas, <span class="chip tone-warn">↩︎ vill tillbaka</span> backar och <span class="chip tone-warn">» tänker rusa</span> springer ut på egen hand när timmen går, <span class="chip tone-bad">⚠︎ jagar</span> rovdjuret anfaller, <span class="chip tone-bad">✕ lämnar oss</span> försvinner. <b>Trösta</b> bryter dem. Rutan <i>När timmen går</i> visar vad som kommer att hända.</li>
+            <li><b>Tillstånd</b> syns som symboler ovanför djuren – håll muspekaren över en symbol, eller tryck på djuret, för att se vad den gör: <span class="chip tone-bad">❄︎ fryser</span> kan inte flyttas, <span class="chip tone-warn">↩︎ vill tillbaka</span> backar och <span class="chip tone-warn">» tänker rusa</span> springer ut på egen hand när timmen går, <span class="chip tone-bad">⚠︎ jagar</span> rovdjuret anfaller, <span class="chip tone-bad">✕ lämnar oss</span> försvinner. <b>Trösta</b> bryter dem. Rutan <i>När timmen går</i> visar vad som kommer att hända.</li>
             <li>Bara små djur får plats i trumman. Ugglan flyger när den flyttas, och kan inte träffas i luften.</li>
             <li>Djuren slåss aldrig. De gömmer sig, bär varandra, tröstar – och offrar.</li>
             <li><b>Tro</b> håller dem kvar. Rovdjur vars tro sviker minns vad de är.</li>
@@ -310,6 +337,7 @@ export class App {
   }
 
   private render(hurt?: Set<string>) {
+    this.tip.hidden = true;
     const s = this.state;
     if (!s) return this.renderTitle();
     if (s.phase === 'oath') return this.renderOath(s);
@@ -490,7 +518,7 @@ export class App {
       el.setAttribute('aria-label', `${a.name}, tro ${a.belief}`);
       const statuses = s.phase === 'over' ? [] : animalStatuses(s, a);
       el.innerHTML = `
-        <span class="chips">${statuses.map((st) => chipHtml(st, !!st.intent || st.key === 'safe' || st.key === 'culvert')).join('')}</span>
+        <span class="chips">${statuses.map((st) => chipHtml(st, false)).join('')}</span>
         ${silhouette(a.species)}
         <span class="tname">${esc(a.name)}${a.count !== undefined ? ` <i>×${a.count}</i>` : ''}</span>
         <span class="tstats"><span class="belief" title="Tro">✶${a.belief}</span></span>`;

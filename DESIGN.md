@@ -163,3 +163,7 @@ Feedback: the night didn't end by getting everyone across, and the states (fryse
 
   Own-will states show their name on the board. The info panel lists every state with what it means and how to break it.
 - **"När timmen går" (forecast):** before you let the hour pass, it shows what will happen: who backs off or rushes out, who attacks, which car hits whom and how hard, whether a hit is deadly, and when dawn is near. Dark cars stay hidden until the owl has scouted.
+- **Symbols, then a hover explanation:** on the board the states are clear symbols only, and the danger states are larger. Hovering a symbol shows a tooltip with its name, what it does and how to break it. On touch screens, tap the animal to see the same text in the info panel.
+- **A new predator: Sicksack the huggorm (adder).** Sicksack is small (fits through the culvert alongside the mice) and *hungry*: `hunger` 2 means it turns to hunting at 2 more belief than the others, so even while "Vi jagar inte varandra" holds. Its card *Gift i reserv* (venom in reserve) is a promise not to bite: Sicksack +2 belief, prey in the same zone −1 belief.
+- **Predators only hunt their own size or smaller**, so nobody hunts the badger.
+- Balance with 6 animals: a lead-only bot saves on average 4.0 of 6 animals, and a hunt happens about 1.5 times per night.

@@ -50,6 +50,15 @@ const shapes: Record<Species, { paper: string; svg: string }> = {
       <path d="M25 31 l3 3 l4 -3 l4 3 l3 -3 M25 37 l3 3 l4 -3 l4 3 l3 -3" stroke="${CUT}" stroke-width="1" fill="none"/>
       <path d="M26 44 l-2 3 M29 44 l0 3 M35 44 l0 3 M38 44 l2 3" stroke="currentColor" stroke-width="1.6"/>`,
   },
+  adder: {
+    paper: '#7d8ea6',
+    svg: `
+      <path d="M5 38 C12 30 18 44 26 37 S38 27 45 33 S53 33 56 27" stroke="currentColor" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="57.5" cy="25.5" rx="5.5" ry="4"/>
+      <path d="M9 36 l2.5 -2.5 l2.5 2.5 l2.5 -2.5 l2.5 2.5 M22 37 l2.5 -2.5 l2.5 2.5 l2.5 -2.5 M33 33 l2.5 -2.5 l2.5 2.5 l2.5 -2.5 l2.5 2.5 M45 32 l2.5 -2.5 l2.5 2.5" stroke="${CUT}" stroke-width="1.3" fill="none"/>
+      <circle cx="59" cy="24.5" r="1.1" fill="${CUT}"/>
+      <path d="M62.5 26 l1.5 -1 M62.5 26 l1.5 1" stroke="${CUT}" stroke-width="0.8"/>`,
+  },
   mice: {
     paper: '#cdb894',
     svg: [

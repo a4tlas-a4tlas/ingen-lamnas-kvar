@@ -185,7 +185,7 @@ describe('the road', () => {
     for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
     // No need to let the hour pass: the night ends when the last one is over.
     expect(s.phase).toBe('over');
-    expect(s.outcome?.safe).toHaveLength(5);
+    expect(s.outcome?.safe).toHaveLength(6);
   });
 
   it('walking onto asphalt in moonlight breaks the moon verse', () => {
@@ -241,5 +241,35 @@ describe('reasons shown to the player', () => {
     s.kraft = 0;
     expect(cardBlockReason(s, { uid: 2, kind: 'bitaIhop', owner: 'ljung' })).toBe('Behöver ◆1.');
     expect(leadBlockReason(s, get(s, 'kvarn'))).toMatch(/kostar/);
+  });
+});
+
+describe('Sicksack the adder', () => {
+  it('is hungrier than the others: hunts even while the truce verse holds', () => {
+    let s = calmGame([...ALL3]);
+    get(s, 'sicksack').belief = 3;
+    get(s, 'sotfot').belief = 3;
+    s = run(s, { type: 'endTurn' });
+    expect(get(s, 'sicksack').intent.kind).toBe('hunt');
+    expect(get(s, 'sotfot').intent.kind).not.toBe('hunt');
+  });
+
+  it('only hunts prey its own size or smaller', () => {
+    let s = calmGame(['ingenLamnas', 'denStarke', 'manen']);
+    for (const a of s.animals) if (a.id !== 'sicksack' && a.id !== 'ljung') a.zone = 'farDike';
+    for (const a of s.animals) if (a.zone === 'farDike') a.status = 'safe';
+    get(s, 'sicksack').belief = 1;
+    s = run(s, { type: 'endTurn' });
+    expect(get(s, 'sicksack').intent.kind).not.toBe('hunt');
+  });
+
+  it('fits through the culvert, and its promise scares the prey nearby', () => {
+    let s = calmGame([...ALL3]);
+    s.culvertRevealed = true;
+    expect(leadZones(s, get(s, 'sicksack'))).toContain('culvert');
+    s.hand.push({ uid: 950, kind: 'giftIReserv', owner: 'sicksack' });
+    s = run(s, { type: 'play', uid: 950 });
+    expect(get(s, 'sicksack').belief).toBe(10);
+    expect(get(s, 'frona').belief).toBe(7);
   });
 });

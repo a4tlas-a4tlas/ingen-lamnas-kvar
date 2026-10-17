@@ -41,5 +41,6 @@ export const CARDS: Record<CardKind, CardDef> = {
   bitaIhop: { name: 'Bita ihop', cost: 1, target: 'none', tag: 'guard', text: 'Nästa sår på {o} denna timme uteblir.' },
   skratt: { name: 'Ett skratt i mörkret', cost: 1, target: 'none', tag: 'comfort', text: 'Alla i samma zon som {o} får +1 tro. +1 hopp.' },
   taEmot: { name: 'Ta emot', cost: 1, target: 'animal', tag: 'guard', text: '{o} tar träffen åt ett djur i samma zon denna timme.' },
+  giftIReserv: { name: 'Gift i reserv', cost: 0, target: 'none', tag: 'comfort', text: '{o} lovar att inte bita: {o} får +2 tro. Bytesdjuren i samma zon får −1 tro.' },
   minne: { name: 'Minnet', cost: 0, target: 'none', tag: 'memory', text: 'Vi minns {o}. Alla får +2 tro, men −1 hopp. Försvinner efteråt.' },
 };

@@ -16,7 +16,8 @@ import {
   cardTarget,
   cardZones,
   handSize,
-  huntThreshold,
+  huntsAt,
+  canPrey,
   isActive,
   isFrozen,
   isLethal,
@@ -211,9 +212,9 @@ function chooseIntent(c: Ctx, a: Animal): Intent {
   if (a.elder && elderVerse) return { kind: 'follow' };
   if (a.belief <= 0) return { kind: 'leave' };
 
-  if (a.predator && a.belief <= huntThreshold(s)) {
+  if (a.predator && a.belief <= huntsAt(s, a)) {
     const prey = s.animals
-      .filter((p) => isActive(p) && !p.predator && zoneDistance(s, a.zone, p.zone) <= 1)
+      .filter((p) => isActive(p) && canPrey(a, p) && zoneDistance(s, a.zone, p.zone) <= 1)
       .sort((x, y) => bond(s, a.id, x.id) - bond(s, a.id, y.id));
     if (prey.length) return { kind: 'hunt', target: prey[0].id };
   }
@@ -383,6 +384,11 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
     case 'taEmot':
       tgt!.protectedBy = o.id;
       line(c, o.id, `${o.name} ställer sig framför ${tgt!.name}.`);
+      break;
+    case 'giftIReserv':
+      changeBelief(c, o, 2);
+      s.animals.filter((x) => isPresent(x) && !x.predator && x.zone === o.zone).forEach((x) => changeBelief(c, x, -1));
+      line(c, o.id, `${o.name} lovar att inte bita. De små i närheten tror inte riktigt på det.`);
       break;
     case 'minne':
       s.animals.filter(isPresent).forEach((x) => changeBelief(c, x, 2));
