@@ -188,8 +188,8 @@ Design from the milestone 2 interview, part 1. The run becomes: oath → map →
   - dark car = kills suddenly, with no last moment
 - **A killing hit gives the last moment:**
   - *Kasta sig emellan*: the shielder pushes the victim away and takes an injury instead of dying.
-  - *Bryt en vers*: the victim survives with an injury.
   - *Låt gå*: the victim dies.
+- **Verses can't be spent to save a life.** They are lasting modifiers and storytelling. They still flip by themselves when something happens (someone is left behind, a predator hunts, the elder dies).
 - **Injuries are lasting states, not counters.** They don't kill by themselves:
   - ≀ **haltar** (limping): 1 step at a time, and leading costs ◆2. Never heals.
   - ⌁ **bruten vinge/tass** (broken wing/paw): no flying, and the species card is blocked. Never heals.

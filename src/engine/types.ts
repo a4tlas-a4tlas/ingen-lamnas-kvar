@@ -183,5 +183,4 @@ export type Action =
   | { type: 'lead'; target: string; zone: ZoneId }
   | { type: 'endTurn' }
   | { type: 'lastMoment'; choice: 'shield'; by: string }
-  | { type: 'lastMoment'; choice: 'verse'; verse: string }
   | { type: 'lastMoment'; choice: 'letGo' };

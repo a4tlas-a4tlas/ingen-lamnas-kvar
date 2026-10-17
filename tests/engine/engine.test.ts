@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../../src/engine/setup';
 import { step } from '../../src/engine/step';
-import { cardBlockReason, cardCost, cardZones, leadBlockReason, leadCost, leadZones, verseStatus } from '../../src/engine/rules';
+import { cardBlockReason, cardZones, leadBlockReason, leadCost, leadZones, verseStatus } from '../../src/engine/rules';
 import type { Action, GameState } from '../../src/engine/types';
 import { calmGame, car, get, run, truck } from './helpers';
 
@@ -97,13 +97,12 @@ describe('the last moment', () => {
     expect(s.pending?.victim).toBe('kvarn');
   });
 
-  it('breaking a verse saves the animal and rewrites the verse', () => {
-    let s = lethal();
-    s = run(s, { type: 'lastMoment', choice: 'verse', verse: 'denStarke' });
-    expect(get(s, 'kvarn').status).toBe('active');
-    expect(get(s, 'kvarn').injuries).toHaveLength(1);
-    expect(verseStatus(s, 'denStarke')).toBe('flipped');
-    expect(cardCost(s, { uid: 0, kind: 'bara', owner: 'ljung' })).toBe(2);
+  it('verses cannot be spent to save a life', () => {
+    const s = lethal();
+    const r = step(s, { type: 'lastMoment', choice: 'verse', verse: 'denStarke' } as unknown as Action);
+    expect(r.events[0].kind).toBe('error');
+    expect(r.state.phase).toBe('lastMoment');
+    expect(verseStatus(r.state, 'denStarke')).toBe('intact');
   });
 
   it('letting go kills, flips "Ingen lämnas kvar" and leaves a memory', () => {

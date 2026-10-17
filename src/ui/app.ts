@@ -206,8 +206,6 @@ export class App {
         return this.pickZone(el.dataset.zone as ZoneId);
       case 'lm-shield':
         return this.dispatch({ type: 'lastMoment', choice: 'shield', by: el.dataset.animal! });
-      case 'lm-verse':
-        return this.dispatch({ type: 'lastMoment', choice: 'verse', verse: el.dataset.verse! });
       case 'lm-letgo':
         return this.dispatch({ type: 'lastMoment', choice: 'letGo' });
     }
@@ -793,7 +791,6 @@ export class App {
     const h = s.pending!;
     const v = animal(s, h.victim);
     const shields = lastMomentShields(s).map((id) => animal(s, id));
-    const verses = s.verses.filter((x) => x.kind === 'oath' && !x.flipped);
     // Whoever throws themselves in the way is injured, not killed (a last mouse can still be lost).
     const lethalFor = (a: Animal) => isLethal(a, { severity: 'injure' });
     return `
@@ -806,12 +803,10 @@ export class App {
             ${shields.map((a) => `<button class="btn option" data-act="lm-shield" data-animal="${a.id}">
               <b>${esc(a.name)} kastar sig emellan</b>
               <span>${lethalFor(a) ? `Det blir ${esc(a.name)}s död.` : `${esc(a.name)} knuffar undan ${esc(v.name)} och skadas själv – en skada som stannar.`} Bandet dem emellan stärks.</span></button>`).join('')}
-            ${verses.map((x) => `<button class="btn option" data-act="lm-verse" data-verse="${x.id}">
-              <b>Bryt ”${esc(x.text)}”</b>
-              <span>${esc(v.name)} överlever, men skadas. Versen blir ”${esc(x.flippedText!)}” – ${esc(VERSES[x.base!].flipCost)}</span></button>`).join('')}
+            ${shields.length ? '' : `<p class="muted">Ingen av oss hinner fram.</p>`}
             <button class="btn option grave" data-act="lm-letgo">
               <b>Låt ${esc(v.name)} gå</b>
-              <span>${verseStatus(s, 'ingenLamnas') === 'intact' ? '”Ingen lämnas kvar” blir ”Någon lämnades kvar”.' : 'Vi har gjort det förut.'}</span></button>
+              <span>${{ intact: '”Ingen lämnas kvar” blir ”Någon lämnades kvar”.', flipped: 'Vi har gjort det förut.', none: `${esc(v.name)} dör.` }[verseStatus(s, 'ingenLamnas')]}</span></button>
           </div>
         </div>
       </div>`;

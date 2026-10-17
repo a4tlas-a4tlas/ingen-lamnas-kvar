@@ -574,21 +574,15 @@ function resolveLastMoment(c: Ctx, action: Extract<Action, { type: 'lastMoment' 
     const pushed: Hit = { ...h, victim: by.id, severity: 'injure' };
     if (isLethal(by, pushed)) die(c, by, 'sacrifice');
     else applyHit(c, by, pushed);
-  } else if (action.choice === 'verse') {
-    const verse = s.verses.find((x) => x.id === action.verse && x.kind === 'oath' && !x.flipped);
-    if (!verse) fail('Den versen finns inte att bryta.');
-    s.pending = undefined;
-    s.phase = 'play';
-    narrate(c, `Vi bröt ett löfte för att ${v.name} skulle få leva.`);
-    flipVerse(c, verse.base!);
-    // Saved, but not unharmed.
-    applyHit(c, v, { ...h, severity: 'injure' });
-  } else {
+  } else if (action.choice === 'letGo') {
     s.pending = undefined;
     s.phase = 'play';
     narrate(c, `Vi lät ${v.name} gå.`);
     die(c, v, 'letGo');
     if (verseStatus(s, 'ingenLamnas') === 'intact') flipVerse(c, 'ingenLamnas');
+  } else {
+    // Verses are lasting modifiers and story, never a price to pay for a life.
+    fail('Det valet finns inte.');
   }
   processHits(c);
 }
