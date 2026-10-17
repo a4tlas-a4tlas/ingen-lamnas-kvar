@@ -1,4 +1,4 @@
-import type { CardKind, Species } from '../engine/types';
+import type { CardKind, Size, Species } from '../engine/types';
 
 export interface AnimalDef {
   id: string;
@@ -7,6 +7,8 @@ export interface AnimalDef {
   /** Swedish species word used in card footers and the memorial. */
   kindName: string;
   predator: boolean;
+  size: Size;
+  flier?: boolean;
   elder?: boolean;
   belief: number;
   swarm?: number;
@@ -16,11 +18,11 @@ export interface AnimalDef {
 // Placeholder cast for the first slice. Roles are not fixed: each animal
 // gets two random personality traits on top of its species card.
 export const CAST: AnimalDef[] = [
-  { id: 'ljung', name: 'Gamla Ljung', species: 'badger', kindName: 'grävling', predator: false, elder: true, belief: 8, speciesCard: 'bara' },
-  { id: 'kvarn', name: 'Kvarn', species: 'toad', kindName: 'padda', predator: false, belief: 7, speciesCard: 'gamlaVagar' },
-  { id: 'sotfot', name: 'Sotfot', species: 'fox', kindName: 'räv', predator: true, belief: 5, speciesCard: 'snabbaTassar' },
-  { id: 'skymning', name: 'Skymning', species: 'owl', kindName: 'uggla', predator: true, belief: 4, speciesCard: 'vingar' },
-  { id: 'frona', name: 'Fröna', species: 'mice', kindName: 'musfamilj', predator: false, belief: 6, swarm: 6, speciesCard: 'smaSteg' },
+  { id: 'ljung', name: 'Gamla Ljung', species: 'badger', kindName: 'grävling', predator: false, size: 'large', elder: true, belief: 8, speciesCard: 'bara' },
+  { id: 'kvarn', name: 'Kvarn', species: 'toad', kindName: 'padda', predator: false, size: 'small', belief: 7, speciesCard: 'gamlaVagar' },
+  { id: 'sotfot', name: 'Sotfot', species: 'fox', kindName: 'räv', predator: true, size: 'medium', belief: 5, speciesCard: 'snabbaTassar' },
+  { id: 'skymning', name: 'Skymning', species: 'owl', kindName: 'uggla', predator: true, size: 'medium', flier: true, belief: 4, speciesCard: 'vingar' },
+  { id: 'frona', name: 'Fröna', species: 'mice', kindName: 'musfamilj', predator: false, size: 'small', belief: 6, swarm: 6, speciesCard: 'smaSteg' },
 ];
 
 /** Starting bonds, -3..3. Pairs not listed start at 0. */

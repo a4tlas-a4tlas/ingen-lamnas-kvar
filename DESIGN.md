@@ -129,3 +129,10 @@ DESIGN.md     (this design, kept living)
 ### Balance notes (slice)
 - A naive bot that only uses *Led* (no cards) and perfectly dodges telegraphed lanes saves on average 3.2 of 5 animals over 300 seeds. About 19% of its nights save everyone.
 - Cards, verses and the culvert should lift a thoughtful player above that. Deaths should still be common.
+
+### Playtest round 1 → changes
+Feedback: it was unclear which animals could move, and the cards weren't clear enough. The scenario itself worked.
+- **Animal-first control:** tap an animal to select it. Animals that can move have a light ring and a dot. Frozen animals are greyed out. Animals in the culvert or already safe show a badge. A selected animal lights up its zones and its own cards, and an info panel says why it can't move, if it can't.
+- **Cards:** each card shows the owner's silhouette and name, a type (Rörelse / Skydd / Tröst / Insikt / Minne) with a colour stripe, and shorter text. Unplayable cards say why ("Sotfot fryser", "Behöver ◆1"). Hovering a card lights up its owner on the board.
+- **Size:** animals are small, medium or large. Only small animals (the toad, the mice) fit through the culvert.
+- **Flight:** fliers (the owl) take off whenever they move. They can be led up to 2 steps and can't be hit while airborne, but a flier sitting still on the road has landed and can be hit. Flying doesn't break "Vi går när månen gömmer sig". The owl's card is now *Spana från ovan* (scout from above): it reveals dark cars and the next hour's traffic.

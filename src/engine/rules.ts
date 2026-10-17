@@ -48,10 +48,11 @@ export function moonHidden(s: GameState): boolean {
   return s.moonPlan[s.turn - 1] ?? false;
 }
 
-/** Zones an animal can step to, both directions (used by leading). */
+/** Zones one step away, both directions. The culvert is only for small animals. */
 export function neighbors(s: GameState, a: Animal): ZoneId[] {
+  const culvert = s.culvertRevealed && a.size === 'small';
   switch (a.zone) {
-    case 'dike': return s.culvertRevealed ? ['lane1', 'culvert'] : ['lane1'];
+    case 'dike': return culvert ? ['lane1', 'culvert'] : ['lane1'];
     case 'lane1': return ['dike', 'median'];
     case 'median': return ['lane1', 'lane2'];
     case 'lane2': return ['median', 'farDike'];
@@ -60,25 +61,25 @@ export function neighbors(s: GameState, a: Animal): ZoneId[] {
   }
 }
 
-function forwardStep(s: GameState, zone: ZoneId, culvertTime: number, ignoreCulvertTime: boolean): ZoneId[] {
+function forwardStep(s: GameState, a: Animal, zone: ZoneId, culvertTime: number): ZoneId[] {
   switch (zone) {
-    case 'dike': return s.culvertRevealed ? ['lane1', 'culvert'] : ['lane1'];
+    case 'dike': return s.culvertRevealed && a.size === 'small' ? ['lane1', 'culvert'] : ['lane1'];
     case 'lane1': return ['median'];
     case 'median': return ['lane2'];
     case 'lane2': return ['farDike'];
-    case 'culvert': return culvertTime >= 1 || ignoreCulvertTime ? ['farDike'] : [];
+    case 'culvert': return culvertTime >= 1 ? ['farDike'] : [];
     case 'farDike': return [];
   }
 }
 
 /** Zones reachable moving forward up to `steps`. Entering the culvert ends the move. */
-export function forwardReach(s: GameState, a: Animal, steps: number, ignoreCulvertTime = false): ZoneId[] {
+export function forwardReach(s: GameState, a: Animal, steps: number): ZoneId[] {
   const out = new Set<ZoneId>();
   let frontier: { zone: ZoneId; time: number }[] = [{ zone: a.zone, time: a.culvertTime }];
   for (let i = 0; i < steps; i++) {
     const next: { zone: ZoneId; time: number }[] = [];
     for (const f of frontier) {
-      for (const z of forwardStep(s, f.zone, f.time, ignoreCulvertTime && i === 0)) {
+      for (const z of forwardStep(s, a, f.zone, f.time)) {
         out.add(z);
         if (z !== 'culvert' && z !== 'farDike') next.push({ zone: z, time: 0 });
       }
@@ -86,6 +87,13 @@ export function forwardReach(s: GameState, a: Animal, steps: number, ignoreCulve
     frontier = next;
   }
   return [...out];
+}
+
+/** Where leading can take an animal. Fliers cover two steps forward in one flight. */
+export function leadZones(s: GameState, a: Animal): ZoneId[] {
+  const zones = new Set(neighbors(s, a));
+  if (a.flier) for (const z of forwardReach(s, a, 2)) if (z !== 'culvert') zones.add(z);
+  return [...zones];
 }
 
 /** Undirected distance between two zones (culvert counts once revealed). */
@@ -125,7 +133,7 @@ export function leadCost(a: Animal): number {
   return a.wounds >= 2 ? 2 : 1;
 }
 
-const canMove = (a: Animal) => isActive(a) && !isFrozen(a);
+export const canMove = (a: Animal) => isActive(a) && !isFrozen(a);
 
 /** Animals a card may target (for animal / animalZone cards). */
 export function cardAnimals(s: GameState, card: Card): string[] {
@@ -138,7 +146,7 @@ export function cardAnimals(s: GameState, card: Card): string[] {
       return others.filter((x) => x.zone === o.zone && !isFrozen(x)).map((x) => x.id);
     case 'hallaSigNara':
       if (!canMove(o)) return [];
-      return others.filter((x) => neighbors(s, o).includes(x.zone)).map((x) => x.id);
+      return others.filter((x) => neighbors(s, o).includes(x.zone) && x.zone !== 'culvert').map((x) => x.id);
     case 'trosta':
       if (!isPresent(o)) return [];
       return others.filter((x) => zoneDistance(s, o.zone, x.zone) <= 1).map((x) => x.id);
@@ -158,8 +166,6 @@ export function cardZones(s: GameState, card: Card): ZoneId[] {
     case 'snabbaTassar':
     case 'rusa':
       return forwardReach(s, o, 2);
-    case 'vingar':
-      return forwardReach(s, o, 1, true);
     case 'smaSteg':
     case 'gaForst':
     case 'bara':
@@ -186,7 +192,7 @@ export function canPlay(s: GameState, card: Card): boolean {
 
 export function leadTargets(s: GameState): string[] {
   return s.animals
-    .filter((a) => canMove(a) && neighbors(s, a).length > 0 && leadCost(a) <= s.kraft)
+    .filter((a) => canMove(a) && leadZones(s, a).length > 0 && leadCost(a) <= s.kraft)
     .map((a) => a.id);
 }
 
@@ -197,4 +203,33 @@ export function lastMomentShields(s: GameState): string[] {
   return s.animals
     .filter((x) => x.id !== v.id && isActive(x) && !isFrozen(x) && zoneDistance(s, x.zone, v.zone) <= 1)
     .map((x) => x.id);
+}
+
+/** Why an animal can't be led right now, in words for the player. Null if it can. */
+export function leadBlockReason(s: GameState, a: Animal): string | null {
+  if (a.status === 'safe') return `${a.name} är i säkerhet.`;
+  if (a.status !== 'active') return `${a.name} är inte längre med oss.`;
+  if (isFrozen(a)) return `${a.name} fryser och kan inte flyttas. Trösta för att bryta det.`;
+  if (leadZones(s, a).length === 0) return a.zone === 'culvert' ? `${a.name} kryper genom trumman – ute om en timme.` : `${a.name} kan inte gå någonstans.`;
+  if (leadCost(a) > s.kraft) return `Att leda ${a.name} kostar ◆${leadCost(a)}.`;
+  return null;
+}
+
+/** Why a card can't be played right now, short. Null if it can. */
+export function cardBlockReason(s: GameState, card: Card): string | null {
+  if (s.phase !== 'play') return 'Inte nu.';
+  if (cardCost(s, card) > s.kraft) return `Behöver ◆${cardCost(s, card)}.`;
+  if (canPlay(s, card)) return null;
+  const o = s.animals.find((x) => x.id === card.owner);
+  if (!o) return 'Kan inte spelas.';
+  const spec = cardTarget(card);
+  const movesOwner = spec === 'zone' || spec === 'animalZone' || card.kind === 'hallaSigNara';
+  if (o.status === 'safe' && movesOwner) return `${o.name} är redan över.`;
+  if (o.status !== 'active' && o.status !== 'safe') return `${o.name} är borta.`;
+  if (isFrozen(o) && movesOwner) return `${o.name} fryser.`;
+  if (spec === 'zone') return o.zone === 'culvert' ? `${o.name} kryper i trumman.` : `${o.name} kan inte gå dit.`;
+  if (card.kind === 'bara') return `Ingen att bära bredvid ${o.name}.`;
+  if (card.kind === 'taEmot') return `Ingen bredvid ${o.name}.`;
+  if (spec === 'animal') return `Ingen inom räckhåll för ${o.name}.`;
+  return 'Kan inte spelas nu.';
 }

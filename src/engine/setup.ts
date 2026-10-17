@@ -40,6 +40,8 @@ export function createGame(seed: number): GameState {
       species: def.species,
       predator: def.predator,
       elder: def.elder ?? false,
+      size: def.size,
+      flier: def.flier ?? false,
       traits,
       belief: def.belief,
       wounds: 0,

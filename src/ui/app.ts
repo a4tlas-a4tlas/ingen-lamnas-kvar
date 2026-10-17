@@ -1,5 +1,5 @@
 import { CAST } from '../data/animals';
-import { CARDS } from '../data/cards';
+import { CARDS, TAG_NAMES } from '../data/cards';
 import { ZONE_LABELS, intentLabel } from '../data/text.sv';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -8,16 +8,18 @@ import { randomSeed } from '../engine/rng';
 import {
   animal,
   bond,
-  canPlay,
+  cardBlockReason,
   cardAnimals,
   cardCost,
   cardTarget,
   cardZones,
   isPresent,
   lastMomentShields,
+  leadBlockReason,
+  leadCost,
   leadTargets,
+  leadZones,
   moonHidden,
-  neighbors,
   verseStatus,
 } from '../engine/rules';
 import { createGame } from '../engine/setup';
@@ -65,6 +67,8 @@ export class App {
 
   constructor(private root: HTMLElement) {
     root.addEventListener('click', (e) => this.onClick(e));
+    root.addEventListener('pointerover', (e) => this.highlightOwner(e, true));
+    root.addEventListener('pointerout', (e) => this.highlightOwner(e, false));
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.cancel();
     });
@@ -124,8 +128,9 @@ export class App {
         const card = s.hand.find((c) => c.uid === Number(el.dataset.uid));
         if (!card) return;
         if (this.sel.mode === 'card' && this.sel.uid === card.uid) return this.cancel();
-        if (!canPlay(s, card)) {
-          this.hint = cardCost(s, card) > s.kraft ? 'Vi har inte kraft nog.' : 'Det kortet kan inte spelas just nu.';
+        const blocked = cardBlockReason(s, card);
+        if (blocked) {
+          this.hint = blocked;
           return this.render();
         }
         if (cardTarget(card) === 'none') return this.dispatch({ type: 'play', uid: card.uid });
@@ -133,10 +138,6 @@ export class App {
         this.hint = '';
         return this.render();
       }
-      case 'lead':
-        this.sel = this.sel.mode === 'lead' ? { mode: 'idle' } : { mode: 'lead' };
-        this.hint = '';
-        return this.render();
       case 'end':
         this.sel = { mode: 'idle' };
         return this.dispatch({ type: 'endTurn' });
@@ -153,6 +154,12 @@ export class App {
       case 'lm-letgo':
         return this.dispatch({ type: 'lastMoment', choice: 'letGo' });
     }
+  }
+
+  private highlightOwner(e: Event, on: boolean) {
+    const card = (e.target as HTMLElement).closest<HTMLElement>('.card[data-owner]');
+    if (!card) return;
+    this.root.querySelector(`.token[data-animal="${card.dataset.owner}"]`)?.classList.toggle('card-owner', on);
   }
 
   private cancel() {
@@ -174,7 +181,6 @@ export class App {
       if ((spec === 'animal' || spec === 'animalZone') && this.sel.mode === 'card' && !this.sel.animal) return cardAnimals(s, card);
       return [];
     }
-    if (this.sel.mode === 'lead' && !this.sel.animal) return leadTargets(s);
     return [];
   }
 
@@ -187,28 +193,28 @@ export class App {
       if (spec === 'animalZone' && this.sel.mode === 'card' && this.sel.animal) return cardZones(s, card);
       return [];
     }
-    if (this.sel.mode === 'lead' && this.sel.animal) return neighbors(s, animal(s, this.sel.animal));
+    if (this.sel.mode === 'lead' && this.sel.animal) return leadZones(s, animal(s, this.sel.animal));
     return [];
   }
 
   private pickAnimal(id: string) {
     const s = this.state!;
-    if (!this.targetAnimals().includes(id)) {
-      // Tapping an animal that stands in a highlighted zone picks that zone.
-      const zone = animal(s, id).zone;
-      if (this.targetZones().includes(zone)) return this.pickZone(zone);
-      this.inspect = this.inspect === id ? null : id;
-      return this.render();
-    }
     const card = this.selectedCard();
-    if (card && this.sel.mode === 'card') {
+    if (card && this.sel.mode === 'card' && this.targetAnimals().includes(id)) {
       if (cardTarget(card) === 'animal') return this.dispatch({ type: 'play', uid: card.uid, target: id });
       this.sel = { ...this.sel, animal: id };
-    } else if (this.sel.mode === 'lead') {
-      this.sel = { mode: 'lead', animal: id };
-      const zones = neighbors(s, animal(s, id));
-      if (zones.length === 1) return this.dispatch({ type: 'lead', target: id, zone: zones[0] });
+      return this.render();
     }
+    // While a card moves its owner, tapping an animal in a lit zone picks that zone.
+    const zone = animal(s, id).zone;
+    if (card && this.targetZones().includes(zone)) return this.pickZone(zone);
+
+    // Otherwise tapping an animal selects it: we see it, and lead it if it can go.
+    this.hint = '';
+    this.inspect = id;
+    if (this.sel.mode === 'lead' && this.sel.animal === id) this.sel = { mode: 'idle' };
+    else if (s.phase === 'play' && leadTargets(s).includes(id)) this.sel = { mode: 'lead', animal: id };
+    else this.sel = { mode: 'idle' };
     this.render();
   }
 
@@ -287,7 +293,8 @@ export class App {
           <ul>
             <li>Du är <b>Eden</b> – löftet som håller djuren samman. Du har ingen kropp, bara ord.</li>
             <li>Varje timme visar vägen var ljusen kommer. Djuren visar också vad <em>de själva</em> tänker göra.</li>
-            <li>Spela kort för ◆ kraft, eller <b>led</b> ett djur ett steg. Få alla till andra diket innan gryningen.</li>
+            <li>Tryck på ett djur med ljus ring för att <b>leda</b> det (◆1), eller spela kort. Varje kort tillhör ett djur. Få alla till andra diket innan gryningen.</li>
+            <li>Bara små djur får plats i trumman. Ugglan flyger när den flyttas, och kan inte träffas i luften.</li>
             <li>Djuren slåss aldrig. De gömmer sig, bär varandra, tröstar – och offrar.</li>
             <li><b>Tro</b> håller dem kvar. Rovdjur vars tro sviker minns vad de är.</li>
             <li>Bryts ett löfte skrivs historien om: <em>”Ingen lämnas kvar”</em> blir <em>”Någon lämnades kvar”</em>.</li>
@@ -355,6 +362,7 @@ export class App {
           </div>
           <div class="actions"></div>
           <div class="hand"></div>
+          <div class="inspect-slot"></div>
         </main>
         <aside class="side">
           <section class="poem"></section>
@@ -378,6 +386,7 @@ export class App {
     this.updateTokens(s, q('.tokens'), hurt);
     q('.actions').innerHTML = this.actionsHtml(s);
     q('.hand').innerHTML = this.handHtml(s);
+    q('.inspect-slot').innerHTML = this.inspect && s.phase !== 'over' ? this.inspectHtml(s, animal(s, this.inspect)) : '';
     q('.poem').innerHTML = this.poemHtml(s);
     const log = q('.log');
     log.innerHTML = this.logHtml(s.log);
@@ -427,6 +436,7 @@ export class App {
     for (const a of s.animals) if (isPresent(a)) byZone.set(a.zone, [...(byZone.get(a.zone) ?? []), a]);
     const selAnimal = this.sel.mode !== 'idle' ? this.sel.animal : undefined;
     const selCard = this.selectedCard();
+    const movable = new Set(s.phase === 'play' && !this.busy && this.sel.mode !== 'card' ? leadTargets(s) : []);
 
     for (const a of s.animals) {
       let el = layer.querySelector<HTMLElement>(`[data-animal="${a.id}"]`);
@@ -460,13 +470,20 @@ export class App {
       el.classList.toggle('selected', selAnimal === a.id || selCard?.owner === a.id);
       el.classList.toggle('inspecting', this.inspect === a.id);
       el.classList.toggle('pending', s.pending?.victim === a.id);
+      el.classList.toggle('can-move', movable.has(a.id));
+      el.classList.toggle('airborne', a.flying && a.status === 'active');
+      el.classList.toggle('frozen', a.status === 'active' && a.intent.kind === 'freeze');
       if (hurt?.has(a.id)) {
         el.classList.remove('hurt');
         void el.offsetWidth;
         el.classList.add('hurt');
       }
       el.setAttribute('aria-label', `${a.name}, tro ${a.belief}`);
+      const state =
+        a.status === 'safe' ? 'över' :
+        a.zone === 'culvert' && a.status === 'active' ? (a.culvertTime >= 1 ? 'kan krypa ut' : 'kryper') : '';
       el.innerHTML = `
+        ${state ? `<span class="tstate">${state}</span>` : ''}
         ${showIntent ? `<span class="intent ${a.intent.kind}">${esc(intentLabel(a.intent, target))}</span>` : ''}
         ${silhouette(a.species)}
         <span class="tname">${esc(a.name)}${a.count !== undefined ? ` <i>×${a.count}</i>` : ''}</span>
@@ -482,23 +499,20 @@ export class App {
         const o = animal(s, card.owner).name;
         const spec = cardTarget(card);
         hint =
-          spec === 'zone' ? `Välj vart ${o} ska gå.` :
-          spec === 'animal' ? 'Välj ett djur.' :
+          spec === 'zone' ? `Välj en upplyst zon för ${o}.` :
+          spec === 'animal' ? 'Välj ett upplyst djur.' :
           this.sel.mode === 'card' && this.sel.animal ? `Välj vart ${o} ska bära ${animal(s, this.sel.animal).name}.` : `Välj vem ${o} ska bära.`;
-      } else if (this.sel.mode === 'lead') {
-        hint = this.sel.animal ? `Välj vart vi leder ${animal(s, this.sel.animal).name}.` : 'Välj ett djur att leda ett steg.';
-      } else hint = 'Spela ett kort, eller led ett djur ett steg. Tryck på ett djur för att se det.';
+      } else if (this.sel.mode === 'lead' && this.sel.animal) {
+        const a = animal(s, this.sel.animal);
+        hint = `Välj en upplyst zon för ${a.name} (◆${leadCost(a)})${a.flier ? ' – flyger upp till 2 steg' : ''}, eller spela ett av ${a.name}s kort.`;
+      } else hint = 'Tryck på ett djur med ljus ring för att leda det (◆1), eller spela ett kort.';
     }
-    const canLead = !this.busy && s.phase === 'play' && leadTargets(s).length > 0;
-    const ins = this.inspect ? this.inspectHtml(s, animal(s, this.inspect)) : '';
     return `
       <div class="action-row">
-        <button class="btn ${this.sel.mode === 'lead' ? 'active' : ''}" data-act="lead" ${canLead ? '' : 'disabled'}>Led ett djur <span class="cost-chip">◆1</span></button>
         <button class="btn primary" data-act="end" ${s.phase === 'play' && !this.busy ? '' : 'disabled'}>Låt timmen gå</button>
         ${this.sel.mode !== 'idle' ? '<button class="btn small" data-act="cancel">Avbryt</button>' : ''}
       </div>
-      <p class="hint">${esc(hint)}</p>
-      ${ins}`;
+      <p class="hint">${esc(hint)}</p>`;
   }
 
   private inspectHtml(s: GameState, a: Animal): string {
@@ -512,23 +526,30 @@ export class App {
         <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(a.id)}${a.predator ? ' · rovdjur' : ''}${a.elder ? ' · den äldste' : ''}</span></div>
         <div class="muted">${a.traits.map((t) => `${TRAITS[t].name} – ${TRAITS[t].note}`).join(' · ')}</div>
         <div>Tro ${a.belief} · Sår ${a.wounds}/3${a.wounds >= 2 ? ' (att leda kostar ◆2)' : ''}${a.count !== undefined ? ` · ${a.count} kvar` : ''}${a.zone === 'culvert' ? ` · i trumman ${a.culvertTime} timme` : ''}</div>
+        ${a.status === 'active' ? `<div class="reason">${esc(leadBlockReason(s, a) ?? (a.flier ? `${a.name} kan ledas – flyger upp till 2 steg och kan inte träffas i luften.` : `${a.name} kan ledas ett steg.`))}</div>` : ''}
         <div class="bonds">${bonds}</div>
       </div>`;
   }
 
   private handHtml(s: GameState): string {
     if (s.phase === 'over') return '';
+    const leading = this.sel.mode === 'lead' ? this.sel.animal : undefined;
     return s.hand
       .map((c) => {
         const def = CARDS[c.kind];
         const owner = animal(s, c.owner);
-        const playable = canPlay(s, c);
+        const blocked = cardBlockReason(s, c);
         const selected = this.sel.mode === 'card' && this.sel.uid === c.uid;
-        return `<button class="card ${c.kind === 'minne' ? 'memory' : ''} ${playable ? '' : 'unplayable'} ${selected ? 'selected' : ''}" data-act="card" data-uid="${c.uid}">
-          <span class="ccost">${cardCost(s, c)}</span>
+        const classes = ['card', `tag-${def.tag}`, blocked ? 'unplayable' : '', selected ? 'selected' : '', leading === c.owner ? 'owned' : ''];
+        return `<button class="${classes.join(' ')}" data-act="card" data-uid="${c.uid}" data-owner="${c.owner}">
+          <span class="chead">
+            <span class="ccost" title="Kraft">${cardCost(s, c)}</span>
+            <span class="cowner">${silhouette(owner.species)}<span>${c.kind === 'minne' ? 'Minnet av ' : ''}${esc(owner.name)}</span></span>
+          </span>
           <span class="cname">${esc(def.name)}</span>
+          <span class="ctag">${TAG_NAMES[def.tag]}</span>
           <span class="ctext">${esc(def.text.replace(/\{o\}/g, owner.name))}</span>
-          <span class="cowner">${esc(owner.name)}${c.kind === 'minne' ? '' : ` · ${kindName(owner.id)}`}</span>
+          ${blocked ? `<span class="creason">${esc(blocked)}</span>` : ''}
         </button>`;
       })
       .join('') + `<div class="piles muted">Dra ${s.draw.length} · Kasta ${s.discard.length}</div>`;
