@@ -11,7 +11,7 @@ describe('determinism', () => {
   it('replays identically from the same seed and actions', () => {
     const play = () => {
       let s: GameState = createGame(1234);
-      const actions: Action[] = [{ type: 'swear', verses: [...ALL3] }];
+      const actions: Action[] = [{ type: 'swear', verses: [ALL3[0]] }];
       for (const a of actions) s = step(s, a).state;
       for (let i = 0; i < 12 && s.phase !== 'over'; i++) {
         const a: Action = s.phase === 'lastMoment' ? { type: 'lastMoment', choice: 'letGo' } : { type: 'endTurn' };
@@ -28,8 +28,8 @@ describe('determinism', () => {
     expect(s.animals.every((a) => a.traits.length === 2)).toBe(true);
   });
 
-  it('rejects an oath without exactly three verses', () => {
-    const r = step(createGame(1), { type: 'swear', verses: ['ingenLamnas'] });
+  it('rejects an oath that is not exactly one verse', () => {
+    const r = step(createGame(1), { type: 'swear', verses: ['ingenLamnas', 'manen'] });
     expect(r.events[0].kind).toBe('error');
     expect(r.state.phase).toBe('oath');
   });

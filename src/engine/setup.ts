@@ -2,9 +2,17 @@ import { CAST, START_BONDS } from '../data/animals';
 import { TRAITS, TRAIT_IDS } from '../data/traits';
 import { random, randInt, pick, shuffle, type RngHolder } from './rng';
 import { bondKey } from './rules';
-import type { Animal, Card, GameState, LaneId, Strike } from './types';
+import { VERSES } from '../data/verses';
+import type { Animal, Card, GameState, LaneId, Strike, Verse, VerseId } from './types';
 
 export const MAX_TURN = 10;
+
+/** We swear a single verse in the glen; later verses come from the journey. */
+export const OATH_VERSES = 1;
+
+export function oathVerse(id: VerseId): Verse {
+  return { id, kind: 'oath', base: id, text: VERSES[id].text, flippedText: VERSES[id].flippedText, flipped: false };
+}
 
 function rollTraffic(h: RngHolder, turn: number, darkTurn: number): Strike[] {
   const lanes: LaneId[] = ['lane1', 'lane2'];

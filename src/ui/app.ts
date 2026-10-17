@@ -23,7 +23,7 @@ import {
   moonHidden,
   verseStatus,
 } from '../engine/rules';
-import { createGame } from '../engine/setup';
+import { OATH_VERSES, createGame } from '../engine/setup';
 import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { BANDS, CULVERT_X, sceneSvg } from './scene';
@@ -35,6 +35,33 @@ const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
 type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | { mode: 'lead'; animal?: string };
 
 const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
+type DeckView = 'draw' | 'discard' | 'all';
+
+/** Cards sorted by the animal they belong to, so each one's cards sit together. */
+function byOwner(s: GameState, cards: Card[]): Card[] {
+  const order = (c: Card) => s.animals.findIndex((a) => a.id === c.owner);
+  return [...cards].sort((a, b) => order(a) - order(b) || a.kind.localeCompare(b.kind) || a.uid - b.uid);
+}
+
+/** One card face, shared by the hand and the deck checker. */
+function cardFaceHtml(s: GameState, c: Card, o: { tag: 'button' | 'div'; attrs?: string; classes?: string[]; footer?: string }): string {
+  const def = CARDS[c.kind];
+  const owner = animal(s, c.owner);
+  const memory = c.kind === 'minne';
+  const classes = ['card', `tag-${def.tag}`, memory ? 'memory' : '', ...(o.classes ?? [])].filter(Boolean).join(' ');
+  return `<${o.tag} class="${classes}" ${o.attrs ?? ''} data-owner="${c.owner}" style="--owner:${memory ? '#2a2e3b' : speciesColor(owner.species)}">
+    <span class="cband">
+      ${silhouette(owner.species, memory ? 'var(--paper)' : 'var(--ink)')}
+      <span class="cowner">${memory ? 'Minnet av ' : ''}${esc(owner.name)}</span>
+      <span class="ccost" title="Kraft">${cardCost(s, c)}</span>
+    </span>
+    <span class="cname">${esc(def.name)}</span>
+    <span class="ctag">${TAG_NAMES[def.tag]}</span>
+    <span class="ctext">${esc(def.text.replace(/\{o\}/g, owner.name))}</span>
+    ${o.footer ?? ''}
+  </${o.tag}>`;
+}
+
 function chipHtml(st: Status, withLabel: boolean): string {
   const tip = `data-tip-icon="${esc(st.icon)}" data-tip-title="${esc(st.label)}" data-tip="${esc(st.explain)}"`;
   return `<span class="chip tone-${st.tone}${st.intent ? ' intent' : ''}" ${tip} aria-label="${esc(`${st.label}: ${st.explain}`)}">${st.icon}${withLabel ? ` ${esc(st.label)}` : ''}</span>`;
@@ -67,6 +94,7 @@ export class App {
   private sel: Sel = { mode: 'idle' };
   private inspect: string | null = null;
   private oathPick: VerseId[] = [];
+  private deckView: DeckView | null = null;
   private mounted = false;
   private busy = false;
   private hint = '';
@@ -88,7 +116,11 @@ export class App {
     this.tip.setAttribute('role', 'tooltip');
     document.body.appendChild(this.tip);
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.cancel();
+      if (e.key !== 'Escape') return;
+      if (this.deckView) {
+        this.deckView = null;
+        if (this.state) this.render();
+      } else this.cancel();
     });
     this.renderTitle();
   }
@@ -125,8 +157,7 @@ export class App {
         break;
       case 'verse-toggle': {
         const v = el.dataset.verse as VerseId;
-        if (this.oathPick.includes(v)) this.oathPick = this.oathPick.filter((x) => x !== v);
-        else if (this.oathPick.length < 3) this.oathPick.push(v);
+        this.oathPick = this.oathPick.includes(v) ? [] : [v];
         this.render();
         break;
       }
@@ -161,6 +192,12 @@ export class App {
         return this.dispatch({ type: 'endTurn' });
       case 'cancel':
         return this.cancel();
+      case 'deck':
+        this.deckView = el.dataset.pile as DeckView;
+        return this.render();
+      case 'deck-close':
+        this.deckView = null;
+        return this.render();
       case 'animal':
         return this.pickAnimal(el.dataset.animal!);
       case 'zone':
@@ -412,7 +449,7 @@ export class App {
     this.root.innerHTML = `
       <div class="screen oath-screen">
         <h2>Eden</h2>
-        <p class="lead-text">I dalens sista natt svär vi tre löften. Välj dem med omsorg – de binder oss, och om de bryts skrivs vår historia om.</p>
+        <p class="lead-text">I dalens sista natt svär vi ett enda löfte. Välj det med omsorg – det binder oss, och om det bryts skrivs vår historia om.</p>
         <div class="verse-grid">
           ${VERSE_IDS.map((id) => {
             const v = VERSES[id];
@@ -434,7 +471,7 @@ export class App {
               <div class="muted">${a.traits.map((t) => TRAITS[t].name).join(', ')} · tro ${a.belief}</div>
             </div>`).join('')}
         </div>
-        <button class="btn primary swear" data-act="swear" ${n === 3 ? '' : 'disabled'}>Svär eden (${n}/3)</button>
+        <button class="btn primary swear" data-act="swear" ${n === OATH_VERSES ? '' : 'disabled'}>${n ? `Svär eden: ”${esc(VERSES[this.oathPick[0]].text)}”` : 'Välj ett löfte'}</button>
       </div>`;
   }
 
@@ -463,6 +500,7 @@ export class App {
           <div class="actions"></div>
           <div class="forecast" aria-live="polite"></div>
           <div class="hand"></div>
+          <div class="piles"></div>
           <div class="inspect-slot"></div>
           <div class="chronicle">
             <section class="poem"></section>
@@ -489,12 +527,15 @@ export class App {
     q('.actions').innerHTML = this.actionsHtml(s);
     q('.forecast').innerHTML = s.phase === 'play' ? this.forecastHtml(s) : '';
     q('.hand').innerHTML = this.handHtml(s);
+    q('.piles').innerHTML = s.phase === 'over' ? '' : this.pilesHtml(s);
     q('.inspect-slot').innerHTML = this.inspect && s.phase !== 'over' ? this.inspectHtml(s, animal(s, this.inspect)) : '';
     q('.poem').innerHTML = this.poemHtml(s);
     const log = q('.log');
     log.innerHTML = this.logHtml(s.log);
     log.scrollTop = log.scrollHeight;
-    q('.modal-root').innerHTML = s.phase === 'lastMoment' ? this.lastMomentHtml(s) : s.phase === 'over' ? this.endHtml(s) : '';
+    if (s.phase !== 'play') this.deckView = null;
+    q('.modal-root').innerHTML =
+      s.phase === 'lastMoment' ? this.lastMomentHtml(s) : s.phase === 'over' ? this.endHtml(s) : this.deckView ? this.deckHtml(s, this.deckView) : '';
   }
 
   // ------------------------------------------------------------ parts
@@ -656,30 +697,75 @@ export class App {
   private handHtml(s: GameState): string {
     if (s.phase === 'over') return '';
     const leading = this.sel.mode === 'lead' ? this.sel.animal : undefined;
-    // Group by animal so each one's cards sit together; the engine's order is untouched.
-    const order = (c: Card) => s.animals.findIndex((a) => a.id === c.owner);
-    const cards = [...s.hand].sort((a, b) => order(a) - order(b) || a.uid - b.uid);
-    return cards
+    const cards = byOwner(s, s.hand)
       .map((c) => {
-        const def = CARDS[c.kind];
-        const owner = animal(s, c.owner);
-        const memory = c.kind === 'minne';
         const blocked = cardBlockReason(s, c);
         const selected = this.sel.mode === 'card' && this.sel.uid === c.uid;
-        const classes = ['card', `tag-${def.tag}`, memory ? 'memory' : '', blocked ? 'unplayable' : '', selected ? 'selected' : '', leading === c.owner ? 'owned' : ''];
-        return `<button class="${classes.filter(Boolean).join(' ')}" data-act="card" data-uid="${c.uid}" data-owner="${c.owner}" style="--owner:${memory ? '#2a2e3b' : speciesColor(owner.species)}">
-          <span class="cband">
-            ${silhouette(owner.species, memory ? 'var(--paper)' : 'var(--ink)')}
-            <span class="cowner">${memory ? 'Minnet av ' : ''}${esc(owner.name)}</span>
-            <span class="ccost" title="Kraft">${cardCost(s, c)}</span>
-          </span>
-          <span class="cname">${esc(def.name)}</span>
-          <span class="ctag">${TAG_NAMES[def.tag]}</span>
-          <span class="ctext">${esc(def.text.replace(/\{o\}/g, owner.name))}</span>
-          ${blocked ? `<span class="creason">${esc(blocked)}</span>` : ''}
-        </button>`;
+        return cardFaceHtml(s, c, {
+          tag: 'button',
+          attrs: `data-act="card" data-uid="${c.uid}"`,
+          classes: [blocked ? 'unplayable' : '', selected ? 'selected' : '', leading === c.owner ? 'owned' : ''],
+          footer: blocked ? `<span class="creason">${esc(blocked)}</span>` : '',
+        });
       })
-      .join('') + `<div class="piles muted">Dra ${s.draw.length} · Kasta ${s.discard.length}</div>`;
+      .join('');
+    return cards;
+  }
+
+  private pilesHtml(s: GameState): string {
+    return `
+      <button class="btn small" data-act="deck" data-pile="draw">Dragbunten <b>${s.draw.length}</b></button>
+      <button class="btn small" data-act="deck" data-pile="discard">Kasthögen <b>${s.discard.length}</b></button>
+      <button class="btn small" data-act="deck" data-pile="all">Hela leken</button>`;
+  }
+
+  /** The deck checker: what's left to draw, what's been played, and every card by animal. */
+  private deckHtml(s: GameState, view: DeckView): string {
+    const face = (c: Card, where?: string) =>
+      cardFaceHtml(s, c, { tag: 'div', classes: ['mini'], footer: where ? `<span class="cwhere">${where}</span>` : '' });
+    const tabs = (['draw', 'discard', 'all'] as DeckView[])
+      .map((v) => {
+        const label = v === 'draw' ? `Dragbunten (${s.draw.length})` : v === 'discard' ? `Kasthögen (${s.discard.length})` : `Hela leken (${s.draw.length + s.hand.length + s.discard.length})`;
+        return `<button class="tab ${v === view ? 'active' : ''}" data-act="deck" data-pile="${v}" aria-pressed="${v === view}">${label}</button>`;
+      })
+      .join('');
+    let body: string;
+    if (view === 'draw') {
+      body = s.draw.length
+        ? `<p class="muted small">Ordningen är hemlig – korten visas sorterade per djur. När dragbunten tar slut blandas kasthögen in.</p><div class="deck-grid">${byOwner(s, s.draw).map((c) => face(c)).join('')}</div>`
+        : '<p class="muted">Dragbunten är tom. Nästa gång vi drar blandas kasthögen in.</p>';
+    } else if (view === 'discard') {
+      body = s.discard.length
+        ? `<p class="muted small">Senast spelade först.</p><div class="deck-grid">${[...s.discard].reverse().map((c) => face(c)).join('')}</div>`
+        : '<p class="muted">Kasthögen är tom.</p>';
+    } else {
+      const where = new Map<number, string>();
+      s.draw.forEach((c) => where.set(c.uid, 'i dragbunten'));
+      s.hand.forEach((c) => where.set(c.uid, 'i handen'));
+      s.discard.forEach((c) => where.set(c.uid, 'i kasthögen'));
+      const all = [...s.draw, ...s.hand, ...s.discard];
+      body = s.animals
+        .map((a) => {
+          const cards = byOwner(s, all.filter((c) => c.owner === a.id));
+          const gone = a.status === 'dead' || a.status === 'left';
+          return `<section class="deck-animal" style="--owner:${speciesColor(a.species)}">
+            <h4>${silhouette(a.species)} ${esc(a.name)} <span class="muted">· ${gone ? (a.status === 'dead' ? 'död – bara minnet finns kvar' : 'lämnade oss – korten är borta') : `${cards.length} kort`}</span></h4>
+            ${cards.length ? `<div class="deck-grid">${cards.map((c) => face(c, where.get(c.uid))).join('')}</div>` : ''}
+          </section>`;
+        })
+        .join('');
+    }
+    return `
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deck-title">
+        <div class="modal-card deck">
+          <div class="deck-head">
+            <h2 id="deck-title">Leken</h2>
+            <button class="btn small" data-act="deck-close">Stäng</button>
+          </div>
+          <div class="tabs">${tabs}</div>
+          ${body}
+        </div>
+      </div>`;
   }
 
   private poemHtml(s: GameState): string {

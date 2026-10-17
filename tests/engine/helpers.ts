@@ -1,4 +1,4 @@
-import { createGame } from '../../src/engine/setup';
+import { createGame, oathVerse } from '../../src/engine/setup';
 import { step } from '../../src/engine/step';
 import type { Action, GameState, Strike, VerseId } from '../../src/engine/types';
 
@@ -12,9 +12,13 @@ export function run(s: GameState, ...actions: Action[]): GameState {
   return s;
 }
 
-/** A sworn game where nobody doubts, the road is quiet and the moon hides. */
+/**
+ * A sworn game where nobody doubts, the road is quiet and the moon hides.
+ * The oath takes one verse; tests may hold more to exercise verses gained later.
+ */
 export function calmGame(verses: VerseId[], seed = 7): GameState {
-  const s = run(createGame(seed), { type: 'swear', verses });
+  const s = run(createGame(seed), { type: 'swear', verses: [verses[0]] });
+  s.verses = verses.map(oathVerse);
   for (const a of s.animals) {
     a.belief = 8;
     a.intent = { kind: 'follow' };

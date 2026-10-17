@@ -336,7 +336,6 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .bond.b-1, .bond.b-2, .bond.b-3 { color: #ff9a80; }
 
 .hand { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; align-items: stretch; }
-.hand .piles { grid-column: 1 / -1; text-align: left; }
 .card {
   --tag: var(--gold);
   --owner: var(--paper-dim);
@@ -388,7 +387,27 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .ctext { font-size: 0.77em; line-height: 1.22; flex: 1; }
 .creason { font-size: 0.74em; font-style: italic; font-weight: 600; color: #8a2b1d; border-top: 1px solid rgba(0,0,0,0.2); padding-top: 3px !important; margin: 0 10px; padding-left: 0 !important; }
 .memory .creason { color: #ffb4a0; }
-.piles { width: 100%; text-align: center; font-size: 0.8em; }
+.piles { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.piles:empty { display: none; }
+.piles .btn { font-weight: 600; }
+
+/* The deck checker. */
+.modal-card.deck { max-width: 940px; text-align: left; }
+.deck-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.deck-head h2 { margin: 0; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 10px 0 8px; border-bottom: 2px solid rgba(20,26,36,0.15); }
+.tab {
+  background: none; border: 0; padding: 6px 12px; cursor: pointer; font-family: var(--caps); font-weight: 600;
+  color: #5a5040; border-bottom: 3px solid transparent; margin-bottom: -2px;
+}
+.tab.active { color: var(--ink); border-bottom-color: var(--gold); }
+.deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; margin: 6px 0 12px; }
+.card.mini { min-height: 150px; cursor: default; box-shadow: 0 0 0 1px rgba(20,26,36,0.25), 0 3px 8px rgba(0,0,0,0.25); }
+.card.mini:hover { transform: none; }
+.cwhere { font-size: 0.7em; font-style: italic; color: #6b604a; border-top: 1px solid rgba(0,0,0,0.15); padding-top: 3px !important; margin: 0 10px; padding-left: 0 !important; }
+.deck-animal h4 { display: flex; align-items: center; gap: 8px; margin: 12px 0 2px; font-size: 1.05em; }
+.deck-animal h4 .sil { width: 34px; color: var(--owner) !important; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4)); }
+.deck-animal .muted { color: #6b604a; font-family: var(--serif); font-weight: 400; }
 
 /* ---------------------------------------------------------------- poem & log */
 
@@ -454,7 +473,7 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
   .hint { text-align: center; }
   .hand { display: flex; overflow-x: auto; gap: 10px; padding: 4px 2px 8px; scroll-snap-type: x proximity; }
   .hand .card { flex: none; width: 150px; scroll-snap-align: start; }
-  .hand .piles { flex: none; align-self: center; width: auto; padding: 0 8px; }
+  .piles { justify-content: center; }
   .chronicle { grid-template-columns: 1fr; grid-template-rows: none; }
   .log { max-height: 40vh; }
 }
