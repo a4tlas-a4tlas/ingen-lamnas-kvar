@@ -40,6 +40,18 @@ export function huntThreshold(s: GameState): number {
   return v === 'intact' ? 1 : v === 'flipped' ? 5 : 3;
 }
 
+/** The belief at or below which this predator forgets the oath and hunts. */
+export function huntsAt(s: GameState, a: Animal): number {
+  return huntThreshold(s) + a.hunger;
+}
+
+const SIZE_RANK: Record<Animal['size'], number> = { small: 0, medium: 1, large: 2 };
+
+/** Predators only hunt prey their own size or smaller. */
+export function canPrey(pred: Animal, prey: Animal): boolean {
+  return pred.predator && !prey.predator && SIZE_RANK[prey.size] <= SIZE_RANK[pred.size];
+}
+
 export function handSize(s: GameState): number {
   return s.hope >= 4 ? 5 : s.hope >= 1 ? 4 : 3;
 }
@@ -94,6 +106,36 @@ export function leadZones(s: GameState, a: Animal): ZoneId[] {
   const zones = new Set(neighbors(s, a));
   if (a.flier) for (const z of forwardReach(s, a, 2)) if (z !== 'culvert') zones.add(z);
   return [...zones];
+}
+
+/** A car hit costs a swarm 2 (truck: 3) members instead of a wound. */
+export const swarmLoss = (wounds: number) => (wounds === 1 ? 2 : 3);
+
+export function isLethal(a: Animal, wounds: number): boolean {
+  return a.count !== undefined ? a.count - swarmLoss(wounds) <= 0 : a.wounds + wounds >= 3;
+}
+
+/** Where an animal that flees on its own goes: one step back toward the ditch. */
+export function backZone(z: ZoneId): ZoneId | null {
+  switch (z) {
+    case 'lane1': return 'dike';
+    case 'median': return 'lane1';
+    case 'lane2': return 'median';
+    case 'culvert': return 'dike';
+    default: return null;
+  }
+}
+
+/** Where an animal that bolts on its own goes: one step forward, lights or not. */
+export function boltZone(a: Animal): ZoneId | null {
+  switch (a.zone) {
+    case 'dike': return 'lane1';
+    case 'lane1': return 'median';
+    case 'median': return 'lane2';
+    case 'lane2': return 'farDike';
+    case 'culvert': return a.culvertTime >= 1 ? 'farDike' : null;
+    default: return null;
+  }
 }
 
 /** Undirected distance between two zones (culvert counts once revealed). */

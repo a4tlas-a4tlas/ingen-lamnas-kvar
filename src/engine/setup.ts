@@ -42,6 +42,7 @@ export function createGame(seed: number): GameState {
       elder: def.elder ?? false,
       size: def.size,
       flier: def.flier ?? false,
+      hunger: def.hunger ?? 0,
       traits,
       belief: def.belief,
       wounds: 0,

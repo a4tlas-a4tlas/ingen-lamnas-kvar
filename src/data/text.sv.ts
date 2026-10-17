@@ -1,4 +1,4 @@
-import type { Intent, ZoneId } from '../engine/types';
+import type { HopeReason, Intent, ZoneId } from '../engine/types';
 
 export const ZONE_NAMES: Record<ZoneId, string> = {
   dike: 'diket',
@@ -17,17 +17,6 @@ export const ZONE_LABELS: Record<ZoneId, string> = {
   farDike: 'Andra diket',
   culvert: 'Trumman',
 };
-
-export function intentLabel(intent: Intent, targetName?: string): string {
-  switch (intent.kind) {
-    case 'follow': return 'följer';
-    case 'freeze': return 'fryser';
-    case 'flee': return 'vill tillbaka';
-    case 'bolt': return 'tänker rusa';
-    case 'leave': return 'tänker lämna oss';
-    case 'hunt': return `betraktar ${targetName ?? '…'}`;
-  }
-}
 
 export function intentLine(name: string, intent: Intent, targetName?: string): string | null {
   switch (intent.kind) {
@@ -52,3 +41,16 @@ export const LEAVE_CAUSE: Record<string, string> = {
   dawn: 'som blev kvar när gryningen kom',
   doubt: 'som slutade tro på oss',
 };
+
+/** What an animal says when hope moves. {name} is the one it's about. */
+export const HOPE_LINES: Record<HopeReason, string[]> = {
+  death: ['Inte {name}. Inte {name} också.', 'Vi borde ha väntat.', 'Jag hörde {name} ropa.', 'Säg att {name} bara gömmer sig.'],
+  leave: ['Kommer {name} tillbaka?', 'Varför gick {name}?', 'Vi lovade ju varandra.'],
+  dawn: ['Vi kunde inte vänta på {name}.', 'Förlåt, {name}.'],
+  flip: ['Vi lovade ju.', 'Det var inte så vi sa.', 'Vad är ett löfte värt nu?'],
+  hunt: ['{name} lovade ju.', 'Det var ju en av oss.', 'Jag vågar inte sova bredvid {name}.'],
+  memory: ['Jag saknar {name}.', '{name} hade velat att vi gick vidare.'],
+  laugh: ['Minns ni ängen hemma?', 'Det låter nästan som förr.'],
+};
+
+export const KRAFT_OUT_LINES = ['Vi orkar inte mer den här timmen.', 'Benen bär inte längre. Inte nu.', 'Vi måste vila en stund.'];

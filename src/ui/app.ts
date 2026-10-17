@@ -1,6 +1,6 @@
 import { CAST } from '../data/animals';
 import { CARDS, TAG_NAMES } from '../data/cards';
-import { ZONE_LABELS, intentLabel } from '../data/text.sv';
+import { HOPE_LINES, KRAFT_OUT_LINES, ZONE_LABELS } from '../data/text.sv';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
 import { Sound } from '../audio/sound';
@@ -12,6 +12,7 @@ import {
   cardAnimals,
   cardCost,
   cardTarget,
+  handSize,
   cardZones,
   isPresent,
   lastMomentShields,
@@ -27,12 +28,18 @@ import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { BANDS, CULVERT_X, sceneSvg } from './scene';
 import { silhouette, speciesColor } from './silhouettes';
+import { animalStatuses, forecast, type Status } from './status';
 
 const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
 
 type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | { mode: 'lead'; animal?: string };
 
 const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
+function chipHtml(st: Status, withLabel: boolean): string {
+  const tip = `data-tip-icon="${esc(st.icon)}" data-tip-title="${esc(st.label)}" data-tip="${esc(st.explain)}"`;
+  return `<span class="chip tone-${st.tone}${st.intent ? ' intent' : ''}" ${tip} aria-label="${esc(`${st.label}: ${st.explain}`)}">${st.icon}${withLabel ? ` ${esc(st.label)}` : ''}</span>`;
+}
+
 const kindName = (id: string) => CAST.find((d) => d.id === id)?.kindName ?? '';
 
 function loadSave(): GameState | null {
@@ -64,11 +71,22 @@ export class App {
   private busy = false;
   private hint = '';
   private sound = new Sound();
+  private tip = document.createElement('div');
 
   constructor(private root: HTMLElement) {
     root.addEventListener('click', (e) => this.onClick(e));
-    root.addEventListener('pointerover', (e) => this.highlightOwner(e, true));
-    root.addEventListener('pointerout', (e) => this.highlightOwner(e, false));
+    root.addEventListener('pointerover', (e) => {
+      this.highlightOwner(e, true);
+      this.showTip(e);
+    });
+    root.addEventListener('pointerout', (e) => {
+      this.highlightOwner(e, false);
+      if ((e.target as HTMLElement).closest('[data-tip]')) this.tip.hidden = true;
+    });
+    this.tip.className = 'tooltip';
+    this.tip.hidden = true;
+    this.tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(this.tip);
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.cancel();
     });
@@ -156,6 +174,21 @@ export class App {
     }
   }
 
+  /** Hovering a status symbol explains what it does. */
+  private showTip(e: Event) {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-tip]');
+    if (!el) return;
+    this.tip.innerHTML = `<b>${esc(el.dataset.tipIcon ?? '')} ${esc(el.dataset.tipTitle ?? '')}</b><span>${esc(el.dataset.tip ?? '')}</span>`;
+    this.tip.hidden = false;
+    const r = el.getBoundingClientRect();
+    const w = this.tip.offsetWidth;
+    const h = this.tip.offsetHeight;
+    const left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+    const top = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
+    this.tip.style.left = `${left + window.scrollX}px`;
+    this.tip.style.top = `${top + window.scrollY}px`;
+  }
+
   private highlightOwner(e: Event, on: boolean) {
     const card = (e.target as HTMLElement).closest<HTMLElement>('.card[data-owner]');
     if (!card) return;
@@ -229,6 +262,7 @@ export class App {
 
   private dispatch(action: Action) {
     if (!this.state) return;
+    const prevKraft = this.state.kraft;
     const r = step(this.state, action);
     const err = r.events.find((e) => e.kind === 'error');
     if (err && err.kind === 'error') {
@@ -239,11 +273,11 @@ export class App {
     this.sel = { mode: 'idle' };
     this.hint = '';
     writeSave(this.state);
-    this.play(r.events);
+    this.play(r.events, prevKraft);
   }
 
   /** Cars sweep first; the board updates once they have passed. */
-  private play(events: GameEvent[]) {
+  private play(events: GameEvent[], prevKraft: number) {
     const cars = events.filter((e): e is Extract<GameEvent, { kind: 'car' }> => e.kind === 'car');
     const after = () => {
       for (const e of events) {
@@ -255,6 +289,7 @@ export class App {
       const hurt = new Set(events.flatMap((e) => (e.kind === 'hit' || e.kind === 'death' ? [e.who] : [])));
       this.busy = false;
       this.render(hurt);
+      this.speak(events, prevKraft);
     };
     if (!cars.length || !this.mounted) return after();
     this.busy = true;
@@ -272,6 +307,65 @@ export class App {
       }, i * 350);
     });
     window.setTimeout(after, 900 + (cars.length - 1) * 350);
+  }
+
+  /** When hope moves, or kraft runs out, an animal says something about it. */
+  private speak(events: GameEvent[], prevKraft: number) {
+    const s = this.state;
+    if (!s || !this.mounted) return;
+    const present = s.animals.filter(isPresent);
+    const pickAny = () => present[Math.floor(Math.random() * present.length)];
+    const pickLine = (lines: string[], name = '') => lines[Math.floor(Math.random() * lines.length)].replace(/\{name\}/g, name);
+    const bubbles: { who?: Animal; text: string; tag: string; tone: 'bad' | 'good' | 'warn' }[] = [];
+
+    for (const e of events) {
+      if (e.kind !== 'hope') continue;
+      const about = e.who ? animal(s, e.who) : undefined;
+      let who: Animal | undefined;
+      if (e.reason === 'death' || e.reason === 'leave' || e.reason === 'dawn') {
+        who = [...present].sort((a, b) => bond(s, b.id, about!.id) - bond(s, a.id, about!.id))[0];
+      } else if (e.reason === 'hunt') {
+        who = present.find((a) => !a.predator) ?? pickAny();
+      } else if (e.reason === 'laugh') {
+        who = about && isPresent(about) ? about : pickAny();
+      } else who = pickAny();
+      bubbles.push({ who, text: pickLine(HOPE_LINES[e.reason], about?.name), tag: `${e.delta > 0 ? '+' : '−'}${Math.abs(e.delta)} hopp`, tone: e.delta > 0 ? 'good' : 'bad' });
+    }
+    if (s.phase === 'play' && s.kraft === 0 && prevKraft > 0) {
+      const active = present.filter((a) => a.status === 'active');
+      bubbles.push({ who: active[Math.floor(Math.random() * active.length)], text: pickLine(KRAFT_OUT_LINES), tag: 'kraften är slut', tone: 'warn' });
+    }
+
+    const hopeDelta = events.reduce((t, e) => t + (e.kind === 'hope' ? e.delta : 0), 0);
+    const meter = this.root.querySelector<HTMLElement>('.meter.hope');
+    if (meter && hopeDelta) {
+      meter.classList.add(hopeDelta < 0 ? 'drop' : 'rise');
+      const f = document.createElement('span');
+      f.className = `float ${hopeDelta < 0 ? 'bad' : 'good'}`;
+      f.textContent = `${hopeDelta > 0 ? '+' : '−'}${Math.abs(hopeDelta)}`;
+      meter.appendChild(f);
+    }
+
+    const layer = this.root.querySelector<HTMLElement>('.bubbles');
+    if (!layer) return;
+    bubbles.slice(0, 4).forEach((b, i) => {
+      window.setTimeout(() => {
+        const el = document.createElement('div');
+        const token = b.who ? this.root.querySelector<HTMLElement>(`.token[data-animal="${b.who.id}"]`) : null;
+        const x = token ? parseFloat(token.style.left) : 22;
+        const y = token ? parseFloat(token.style.top) : 12;
+        el.className = `bubble ${y < 40 ? 'below' : ''}`;
+        // Bubbles that show at the same time stack instead of overlapping.
+        const lift = layer.querySelectorAll('.bubble').length * 9;
+        el.style.top = `${y < 40 ? y + 6 + lift : y - 7 - lift}%`;
+        el.innerHTML = `${b.who ? `<b>${esc(b.who.name)}</b> ` : ''}${esc(b.text)}<span class="chip tone-${b.tone}">${esc(b.tag)}</span>`;
+        layer.appendChild(el);
+        // Keep the whole bubble inside the scene, even for animals at the edge.
+        const half = el.offsetWidth / 2 + 6;
+        el.style.left = `${Math.max(half, Math.min(layer.clientWidth - half, (x / 100) * layer.clientWidth))}px`;
+        window.setTimeout(() => el.remove(), 4600);
+      }, i * 900);
+    });
   }
 
   // ------------------------------------------------------------ screens
@@ -294,6 +388,7 @@ export class App {
             <li>Du är <b>Eden</b> – löftet som håller djuren samman. Du har ingen kropp, bara ord.</li>
             <li>Varje timme visar vägen var ljusen kommer. Djuren visar också vad <em>de själva</em> tänker göra.</li>
             <li>Tryck på ett djur med ljus ring för att <b>leda</b> det (◆1), eller spela kort. Varje kort tillhör ett djur. Få alla till andra diket innan gryningen.</li>
+            <li><b>Tillstånd</b> syns som symboler ovanför djuren – håll muspekaren över en symbol, eller tryck på djuret, för att se vad den gör: <span class="chip tone-bad">❄︎ fryser</span> kan inte flyttas, <span class="chip tone-warn">↩︎ vill tillbaka</span> backar och <span class="chip tone-warn">» tänker rusa</span> springer ut på egen hand när timmen går, <span class="chip tone-bad">⚠︎ jagar</span> rovdjuret anfaller, <span class="chip tone-bad">✕ lämnar oss</span> försvinner. <b>Trösta</b> bryter dem. Rutan <i>När timmen går</i> visar vad som kommer att hända.</li>
             <li>Bara små djur får plats i trumman. Ugglan flyger när den flyttas, och kan inte träffas i luften.</li>
             <li>Djuren slåss aldrig. De gömmer sig, bär varandra, tröstar – och offrar.</li>
             <li><b>Tro</b> håller dem kvar. Rovdjur vars tro sviker minns vad de är.</li>
@@ -304,6 +399,7 @@ export class App {
   }
 
   private render(hurt?: Set<string>) {
+    this.tip.hidden = true;
     const s = this.state;
     if (!s) return this.renderTitle();
     if (s.phase === 'oath') return this.renderOath(s);
@@ -359,10 +455,13 @@ export class App {
             <div class="telegraph"></div>
             <div class="sweeps"></div>
             <div class="tokens"></div>
+            <div class="hud"></div>
+            <div class="bubbles" aria-live="polite"></div>
           </div>
         </main>
         <section class="panel">
           <div class="actions"></div>
+          <div class="forecast" aria-live="polite"></div>
           <div class="hand"></div>
           <div class="inspect-slot"></div>
           <div class="chronicle">
@@ -379,6 +478,7 @@ export class App {
     if (!this.mounted) this.mountGame();
     const q = <T extends HTMLElement>(sel: string) => this.root.querySelector<T>(sel)!;
     q('.topbar').innerHTML = this.topbarHtml(s);
+    q('.hud').innerHTML = this.hudHtml(s);
     const scene = q('.scene');
     scene.classList.toggle('culvert-open', s.culvertRevealed);
     q('.moon').classList.toggle('hidden', moonHidden(s));
@@ -387,6 +487,7 @@ export class App {
     q('.telegraph').innerHTML = this.telegraphHtml(s);
     this.updateTokens(s, q('.tokens'), hurt);
     q('.actions').innerHTML = this.actionsHtml(s);
+    q('.forecast').innerHTML = s.phase === 'play' ? this.forecastHtml(s) : '';
     q('.hand').innerHTML = this.handHtml(s);
     q('.inspect-slot').innerHTML = this.inspect && s.phase !== 'over' ? this.inspectHtml(s, animal(s, this.inspect)) : '';
     q('.poem').innerHTML = this.poemHtml(s);
@@ -399,14 +500,32 @@ export class App {
   // ------------------------------------------------------------ parts
 
   private topbarHtml(s: GameState): string {
-    const pips = (n: number, max: number, on: string, off: string) => on.repeat(Math.max(0, n)) + off.repeat(Math.max(0, max - n));
     return `
       <div class="tb-title">Ingen lämnas kvar <span class="muted">· Vägen om natten</span></div>
       <div class="tb-stats">
         <span class="stat">Timme <b>${s.turn}</b>/${s.maxTurn}</span>
-        <span class="stat" title="Hopp: under 4 drar vi färre kort.">Hopp <span class="pips hope">${pips(s.hope, 10, '●', '○')}</span></span>
-        <span class="stat" title="Kraft att spela kort och leda.">Kraft <span class="pips kraft">${pips(s.kraft, Math.max(3, s.kraft), '◆', '◇')}</span></span>
         <button class="btn small" data-act="mute">${this.sound.muted ? 'Ljud av' : 'Ljud på'}</button>
+      </div>`;
+  }
+
+  /** Hope and kraft live in the sky of the scene, where the eye already is. */
+  private hudHtml(s: GameState): string {
+    const pips = (n: number, max: number, cls: string) =>
+      Array.from({ length: max }, (_, i) => `<span class="pip ${cls} ${i < n ? 'on' : ''}"></span>`).join('');
+    const hand = handSize(s);
+    const low = hand < 5;
+    const maxKraft = Math.max(3, s.kraft);
+    const hopeTip = `data-tip-icon="●" data-tip-title="Hopp ${s.hope}/10" data-tip="Gruppens hopp. Sjunker när någon dör eller lämnas, när ett rovdjur jagar och när ett löfte bryts. Under 4 drar vi färre kort varje timme."`;
+    const kraftTip = `data-tip-icon="◆" data-tip-title="Kraft ${s.kraft}" data-tip="Kraft att spela kort och leda djur den här timmen. Fylls på till 3 varje timme – månens vers kan ge eller ta en."`;
+    return `
+      <div class="meter hope ${low ? 'low' : ''}" ${hopeTip}>
+        <span class="mlabel">Hopp <b>${s.hope}</b></span>
+        <span class="mpips">${pips(s.hope, 10, 'hope')}</span>
+        ${low ? `<span class="mnote">Lågt hopp – vi drar ${hand} kort</span>` : ''}
+      </div>
+      <div class="meter kraft ${s.kraft === 0 ? 'empty' : ''}" ${kraftTip}>
+        <span class="mlabel">Kraft <b>${s.kraft}</b></span>
+        <span class="mpips">${pips(s.kraft, maxKraft, 'kraft')}</span>
       </div>`;
   }
 
@@ -465,8 +584,6 @@ export class App {
         el.style.left = `${x}%`;
         el.style.top = `${y}%`;
       }
-      const target = a.intent.kind === 'hunt' ? animal(s, a.intent.target).name : undefined;
-      const showIntent = a.status === 'active' && a.intent.kind !== 'follow' && s.phase !== 'over';
       el.classList.toggle('gone', !isPresent(a));
       el.classList.toggle('safe', a.status === 'safe');
       el.classList.toggle('target', targets.includes(a.id));
@@ -482,16 +599,17 @@ export class App {
         el.classList.add('hurt');
       }
       el.setAttribute('aria-label', `${a.name}, tro ${a.belief}`);
-      const state =
-        a.status === 'safe' ? 'över' :
-        a.zone === 'culvert' && a.status === 'active' ? (a.culvertTime >= 1 ? 'kan krypa ut' : 'kryper') : '';
+      const statuses = s.phase === 'over' ? [] : animalStatuses(s, a);
       el.innerHTML = `
-        ${state ? `<span class="tstate">${state}</span>` : ''}
-        ${showIntent ? `<span class="intent ${a.intent.kind}">${esc(intentLabel(a.intent, target))}</span>` : ''}
+        <span class="chips">${statuses.map((st) => chipHtml(st, false)).join('')}</span>
         ${silhouette(a.species)}
         <span class="tname">${esc(a.name)}${a.count !== undefined ? ` <i>×${a.count}</i>` : ''}</span>
-        <span class="tstats"><span class="belief" title="Tro">✶${a.belief}</span>${a.wounds ? `<span class="wounds" title="Sår">${'⁄'.repeat(a.wounds)}</span>` : ''}${a.flying ? '<span class="flag">flyger</span>' : ''}${a.braced ? '<span class="flag">biter ihop</span>' : ''}${a.protectedBy ? '<span class="flag">skyddad</span>' : ''}</span>`;
+        <span class="tstats"><span class="belief" title="Tro">✶${a.belief}</span></span>`;
     }
+  }
+
+  private forecastHtml(s: GameState): string {
+    return `<h3>När timmen går</h3><ul>${forecast(s).map((f) => `<li class="tone-${f.tone}">${esc(f.text)}</li>`).join('')}</ul>`;
   }
 
   private actionsHtml(s: GameState): string {
@@ -529,6 +647,7 @@ export class App {
         <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(a.id)}${a.predator ? ' · rovdjur' : ''}${a.elder ? ' · den äldste' : ''}</span></div>
         <div class="muted">${a.traits.map((t) => `${TRAITS[t].name} – ${TRAITS[t].note}`).join(' · ')}</div>
         <div>Tro ${a.belief} · Sår ${a.wounds}/3${a.wounds >= 2 ? ' (att leda kostar ◆2)' : ''}${a.count !== undefined ? ` · ${a.count} kvar` : ''}${a.zone === 'culvert' ? ` · i trumman ${a.culvertTime} timme` : ''}</div>
+        <ul class="status-list">${animalStatuses(s, a).map((st) => `<li>${chipHtml(st, true)}<span>${esc(st.explain)}</span></li>`).join('') || `<li class="muted">${a.status === 'active' ? `${esc(a.name)} följer oss. Inga särskilda tillstånd.` : ''}</li>`}</ul>
         ${a.status === 'active' ? `<div class="reason">${esc(leadBlockReason(s, a) ?? (a.flier ? `${a.name} kan ledas – flyger upp till 2 steg och kan inte träffas i luften.` : `${a.name} kan ledas ett steg.`))}</div>` : ''}
         <div class="bonds">${bonds}</div>
       </div>`;

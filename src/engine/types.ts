@@ -1,6 +1,6 @@
 export type ZoneId = 'dike' | 'lane1' | 'median' | 'lane2' | 'farDike' | 'culvert';
 export type LaneId = 'lane1' | 'lane2';
-export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice';
+export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice' | 'adder';
 /** Only small animals fit through the culvert. */
 export type Size = 'small' | 'medium' | 'large';
 export type TraitId =
@@ -33,6 +33,7 @@ export type CardKind =
   | 'bitaIhop'
   | 'skratt'
   | 'taEmot'
+  | 'giftIReserv'
   | 'minne';
 
 /** active = still on the road side, safe = reached the far ditch. */
@@ -55,6 +56,8 @@ export interface Animal {
   size: Size;
   /** Fliers take to the air whenever they move, and can't be hit while airborne. */
   flier: boolean;
+  /** Hungry predators forget the oath earlier: added to the belief level they hunt at. */
+  hunger: number;
   traits: TraitId[];
   belief: number;
   wounds: number;
@@ -108,6 +111,9 @@ export interface LogEntry {
   who?: string;
 }
 
+/** Why hope moved, so the UI can let an animal speak about it. */
+export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh';
+
 /** Side effects the UI and audio react to; the log keeps the readable text. */
 export type GameEvent =
   | { kind: 'log'; entry: LogEntry }
@@ -116,6 +122,7 @@ export type GameEvent =
   | { kind: 'death'; who: string }
   | { kind: 'flip'; verse: string }
   | { kind: 'safe'; who: string }
+  | { kind: 'hope'; delta: number; reason: HopeReason; who?: string }
   | { kind: 'error'; text: string };
 
 export type Phase = 'oath' | 'play' | 'lastMoment' | 'over';

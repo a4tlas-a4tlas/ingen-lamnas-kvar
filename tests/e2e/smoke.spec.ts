@@ -15,7 +15,7 @@ test('swear the oath and live through the night', async ({ page }) => {
   await expect(verses).toHaveCount(6);
   for (let i = 0; i < 3; i++) await verses.nth(i).click();
   await page.getByRole('button', { name: 'Svär eden (3/3)' }).click();
-  await expect(page.locator('.token')).toHaveCount(5);
+  await expect(page.locator('.token')).toHaveCount(6);
 
   // Lead one animal, then let the hours pass, letting go whenever asked.
   // Tap an animal that can move, then a lit zone.

@@ -9,6 +9,7 @@ export interface AnimalDef {
   predator: boolean;
   size: Size;
   flier?: boolean;
+  hunger?: number;
   elder?: boolean;
   belief: number;
   swarm?: number;
@@ -22,6 +23,7 @@ export const CAST: AnimalDef[] = [
   { id: 'kvarn', name: 'Kvarn', species: 'toad', kindName: 'padda', predator: false, size: 'small', belief: 7, speciesCard: 'gamlaVagar' },
   { id: 'sotfot', name: 'Sotfot', species: 'fox', kindName: 'räv', predator: true, size: 'medium', belief: 5, speciesCard: 'snabbaTassar' },
   { id: 'skymning', name: 'Skymning', species: 'owl', kindName: 'uggla', predator: true, size: 'medium', flier: true, belief: 4, speciesCard: 'vingar' },
+  { id: 'sicksack', name: 'Sicksack', species: 'adder', kindName: 'huggorm', predator: true, size: 'small', hunger: 2, belief: 4, speciesCard: 'giftIReserv' },
   { id: 'frona', name: 'Fröna', species: 'mice', kindName: 'musfamilj', predator: false, size: 'small', belief: 6, swarm: 6, speciesCard: 'smaSteg' },
 ];
 
@@ -36,4 +38,7 @@ export const START_BONDS: [string, string, number][] = [
   ['sotfot', 'skymning', 1],
   ['sotfot', 'frona', -1],
   ['skymning', 'frona', -2],
+  ['sicksack', 'frona', -2],
+  ['sicksack', 'kvarn', -1],
+  ['sicksack', 'ljung', 1],
 ];

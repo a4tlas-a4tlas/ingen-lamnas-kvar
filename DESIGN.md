@@ -151,3 +151,21 @@ Feedback: the UI should fit on one screen. On desktop the road now fills the scr
 - the poem and the night's log, side by side, each scrolling on its own
 
 On phones and narrow windows the layout stays stacked, and the hand scrolls sideways.
+
+### Playtest round 3 → changes
+Feedback: the night didn't end by getting everyone across, and the states (fryser and so on) need to be clearer.
+- **The night ends when the last animal is across.** There's no need to let the hour pass.
+- **Status chips:** every state has one name, symbol and colour, used the same way everywhere:
+  - red = danger: ❄ fryser, ✕ lämnar oss, ⚠ jagar, ⁄ deep wounds
+  - gold = warning: ↩ vill tillbaka, » tänker rusa, ✶ tvivlar
+  - green = protection: ⇡ flyger, ⛨ skyddas av, ◈ biter ihop, ✓ över
+  - blue = ◌ kryper (in the culvert)
+
+  Own-will states show their name on the board. The info panel lists every state with what it means and how to break it.
+- **"När timmen går" (forecast):** before you let the hour pass, it shows what will happen: who backs off or rushes out, who attacks, which car hits whom and how hard, whether a hit is deadly, and when dawn is near. Dark cars stay hidden until the owl has scouted.
+- **Symbols, then a hover explanation:** on the board the states are clear symbols only, and the danger states are larger. Hovering a symbol shows a tooltip with its name, what it does and how to break it. On touch screens, tap the animal to see the same text in the info panel.
+- **A new predator: Sicksack the huggorm (adder).** Sicksack is small (fits through the culvert alongside the mice) and *hungry*: `hunger` 2 means it turns to hunting at 2 more belief than the others, so even while "Vi jagar inte varandra" holds. Its card *Gift i reserv* (venom in reserve) is a promise not to bite: Sicksack +2 belief, prey in the same zone −1 belief.
+- **Predators only hunt their own size or smaller**, so nobody hunts the badger.
+- Balance with 6 animals: a lead-only bot saves on average 4.0 of 6 animals, and a hunt happens about 1.5 times per night.
+- **Hopp and Kraft live in the play area:** two large paper tags in the sky of the scene (Hopp to the left, Kraft to the right, the moon between them). They scale with the screen. Low hope (under 4) turns the tag red, with "Lågt hopp – vi drar 4 kort". Hovering a tag explains it.
+- **Speech bubbles when hope sinks:** the engine reports *why* hope moved (`hope` event with a reason: death, flip, hunt, leave, dawn, memory, laugh). The UI lets the animal most affected speak about it: the one closest to the dead, a prey animal when a predator hunts, and so on. The bubble carries a "−1 hopp" tag, and the Hopp tag shakes. A laugh gives a gentle bubble with "+1 hopp". When kraft runs out, an animal says so ("Vi orkar inte mer den här timmen").

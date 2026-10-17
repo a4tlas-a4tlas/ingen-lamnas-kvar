@@ -5,7 +5,9 @@ import {
   ON_ROAD,
   ROAD_LANES,
   animal,
+  backZone,
   beliefFloor,
+  boltZone,
   bond,
   bondKey,
   canPlay,
@@ -14,15 +16,18 @@ import {
   cardTarget,
   cardZones,
   handSize,
-  huntThreshold,
+  huntsAt,
+  canPrey,
   isActive,
   isFrozen,
+  isLethal,
   isPresent,
   lastMomentShields,
   leadCost,
   leadTargets,
   leadZones,
   moonHidden,
+  swarmLoss,
   verseStatus,
   zoneDistance,
 } from './rules';
@@ -33,6 +38,7 @@ import type {
   GameEvent,
   GameState,
   Hit,
+  HopeReason,
   Intent,
   LogEntry,
   VerseId,
@@ -59,8 +65,8 @@ export function step(prev: GameState, action: Action): { state: GameState; event
   try {
     switch (action.type) {
       case 'swear': swear(c, action.verses); break;
-      case 'play': playCard(c, action.uid, action.target, action.zone); break;
-      case 'lead': lead(c, action.target, action.zone); break;
+      case 'play': playCard(c, action.uid, action.target, action.zone); endIfAllAcross(c); break;
+      case 'lead': lead(c, action.target, action.zone); endIfAllAcross(c); break;
       case 'endTurn': endTurn(c); break;
       case 'lastMoment': resolveLastMoment(c, action); break;
     }
@@ -91,8 +97,10 @@ function changeBelief(c: Ctx, a: Animal, d: number) {
   a.belief = Math.max(beliefFloor(c.s), Math.min(10, a.belief + d));
 }
 
-function changeHope(c: Ctx, d: number) {
+function changeHope(c: Ctx, d: number, reason: HopeReason, who?: string) {
+  const before = c.s.hope;
   c.s.hope = Math.max(0, Math.min(10, c.s.hope + d));
+  if (c.s.hope !== before) c.ev.push({ kind: 'hope', delta: c.s.hope - before, reason, who });
 }
 
 function addBond(c: Ctx, a: Animal, b: Animal, d: number) {
@@ -136,24 +144,24 @@ function flipVerse(c: Ctx, id: VerseId) {
   const present = s.animals.filter(isPresent);
   switch (id) {
     case 'ingenLamnas':
-      changeHope(c, -2);
+      changeHope(c, -2, 'flip');
       present.forEach((a) => changeBelief(c, a, -1));
       break;
     case 'viJagarInte':
-      changeHope(c, -1);
+      changeHope(c, -1, 'flip');
       present.filter((a) => !a.predator).forEach((a) => changeBelief(c, a, -1));
       break;
     case 'denAldste':
-      changeHope(c, -1);
+      changeHope(c, -1, 'flip');
       present.forEach((a) => changeBelief(c, a, -1));
       break;
     case 'ingenEnsam':
-      changeHope(c, -1);
+      changeHope(c, -1, 'flip');
       for (const k of Object.keys(s.bonds)) s.bonds[k] = Math.max(-3, s.bonds[k] - 1);
       break;
     case 'denStarke':
     case 'manen':
-      changeHope(c, -1);
+      changeHope(c, -1, 'flip');
       break;
   }
 }
@@ -207,9 +215,9 @@ function chooseIntent(c: Ctx, a: Animal): Intent {
   if (a.elder && elderVerse) return { kind: 'follow' };
   if (a.belief <= 0) return { kind: 'leave' };
 
-  if (a.predator && a.belief <= huntThreshold(s)) {
+  if (a.predator && a.belief <= huntsAt(s, a)) {
     const prey = s.animals
-      .filter((p) => isActive(p) && !p.predator && zoneDistance(s, a.zone, p.zone) <= 1)
+      .filter((p) => isActive(p) && canPrey(a, p) && zoneDistance(s, a.zone, p.zone) <= 1)
       .sort((x, y) => bond(s, a.id, x.id) - bond(s, a.id, y.id));
     if (prey.length) return { kind: 'hunt', target: prey[0].id };
   }
@@ -242,27 +250,6 @@ function rollIntents(c: Ctx) {
     const target = a.intent.kind === 'hunt' ? animal(c.s, a.intent.target).name : undefined;
     const text = intentLine(a.name, a.intent, target);
     if (text) line(c, a.id, text);
-  }
-}
-
-function backZone(z: ZoneId): ZoneId | null {
-  switch (z) {
-    case 'lane1': return 'dike';
-    case 'median': return 'lane1';
-    case 'lane2': return 'median';
-    case 'culvert': return 'dike';
-    default: return null;
-  }
-}
-
-function boltZone(a: Animal): ZoneId | null {
-  switch (a.zone) {
-    case 'dike': return 'lane1';
-    case 'lane1': return 'median';
-    case 'median': return 'lane2';
-    case 'lane2': return 'farDike';
-    case 'culvert': return a.culvertTime >= 1 ? 'farDike' : null;
-    default: return null;
   }
 }
 
@@ -394,16 +381,21 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       break;
     case 'skratt':
       s.animals.filter((x) => isPresent(x) && x.zone === o.zone).forEach((x) => changeBelief(c, x, 1));
-      changeHope(c, 1);
+      changeHope(c, 1, 'laugh', o.id);
       line(c, o.id, `${o.name} skrattar till i mörkret. Det låter nästan som hemma.`);
       break;
     case 'taEmot':
       tgt!.protectedBy = o.id;
       line(c, o.id, `${o.name} ställer sig framför ${tgt!.name}.`);
       break;
+    case 'giftIReserv':
+      changeBelief(c, o, 2);
+      s.animals.filter((x) => isPresent(x) && !x.predator && x.zone === o.zone).forEach((x) => changeBelief(c, x, -1));
+      line(c, o.id, `${o.name} lovar att inte bita. De små i närheten tror inte riktigt på det.`);
+      break;
     case 'minne':
       s.animals.filter(isPresent).forEach((x) => changeBelief(c, x, 2));
-      changeHope(c, -1);
+      changeHope(c, -1, 'memory', o.id);
       narrate(c, `Vi minns ${o.name}. Det gör ont, och det håller oss uppe.`);
       break;
   }
@@ -476,12 +468,6 @@ function resolveIntents(c: Ctx) {
         break;
     }
   }
-}
-
-const swarmLoss = (wounds: number) => (wounds === 1 ? 2 : 3);
-
-function isLethal(a: Animal, wounds: number): boolean {
-  return a.count !== undefined ? a.count - swarmLoss(wounds) <= 0 : a.wounds + wounds >= 3;
 }
 
 function processHits(c: Ctx) {
@@ -589,7 +575,7 @@ function hunt(c: Ctx, pred: Animal, prey: Animal) {
   addBond(c, pred, prey, -3);
   s.animals.filter((x) => isPresent(x) && x !== pred && x !== prey).forEach((x) => changeBelief(c, x, -1));
   changeBelief(c, pred, 1);
-  changeHope(c, -1);
+  changeHope(c, -1, 'hunt', pred.id);
   if (verseStatus(s, 'viJagarInte') === 'intact') flipVerse(c, 'viJagarInte');
   if ((prey.count !== undefined && prey.count <= 0) || prey.wounds >= 3) die(c, prey, 'hunt');
 }
@@ -624,7 +610,7 @@ function die(c: Ctx, a: Animal, cause: keyof typeof DEATH_CAUSE) {
   removeCards(s, a.id);
   s.discard.push({ uid: s.nextUid++, kind: 'minne', owner: a.id, memoryOf: a.id });
   s.verses.push({ id: `minne-${a.id}`, kind: 'memorial', text: `För ${a.name}, ${DEATH_CAUSE[cause]}.`, flipped: false });
-  changeHope(c, -1);
+  changeHope(c, -1, 'death', a.id);
   grieve(c, a);
   if (a.elder && verseStatus(s, 'denAldste') === 'intact') flipVerse(c, 'denAldste');
   if (a.count !== undefined && cause !== 'hunt' && verseStatus(s, 'denStarke') === 'intact') flipVerse(c, 'denStarke');
@@ -636,7 +622,7 @@ function leaveGroup(c: Ctx, a: Animal, cause: 'dawn' | 'doubt') {
   removeCards(s, a.id);
   s.verses.push({ id: `minne-${a.id}`, kind: 'memorial', text: `För ${a.name}, ${LEAVE_CAUSE[cause]}.`, flipped: false });
   narrate(c, cause === 'dawn' ? `${a.name} hann inte över. Vi kunde inte vänta.` : `${a.name} vände om, ut i mörkret. Vi såg ${a.name} aldrig igen.`);
-  changeHope(c, -1);
+  changeHope(c, -1, cause === 'dawn' ? 'dawn' : 'leave', a.id);
   grieve(c, a);
   if (a.elder && verseStatus(s, 'denAldste') === 'intact') flipVerse(c, 'denAldste');
   if (cause === 'dawn' && verseStatus(s, 'ingenLamnas') === 'intact') flipVerse(c, 'ingenLamnas');
@@ -655,13 +641,19 @@ function finishTurn(c: Ctx) {
   startTurn(c);
 }
 
+/** The night ends the moment the last of us reaches the far side. */
+function endIfAllAcross(c: Ctx) {
+  if (c.s.phase === 'play' && !c.s.animals.some(isActive)) endEncounter(c);
+}
+
 function endEncounter(c: Ctx) {
   const s = c.s;
   const ids = (st: Animal['status']) => s.animals.filter((a) => a.status === st).map((a) => a.id);
   s.phase = 'over';
   s.outcome = { safe: ids('safe'), dead: ids('dead'), left: ids('left'), fallen: ids('safe').length === 0 };
   if (s.outcome.fallen) narrate(c, 'Ingen av oss nådde andra sidan. Eden föll i diket.');
-  else narrate(c, `Vi var ${num(s.animals.length)}. ${capitalize(num(s.outcome.safe.length))} av oss såg gryningen från andra sidan.`);
+  else if (s.outcome.safe.length === s.animals.length) narrate(c, `Vi var ${num(s.animals.length)}. Alla ${num(s.animals.length)} kom över vägen.`);
+  else narrate(c, `Vi var ${num(s.animals.length)}. ${capitalize(num(s.outcome.safe.length))} av oss kom över vägen.`);
 }
 
 const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);

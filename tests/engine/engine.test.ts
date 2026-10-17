@@ -183,9 +183,9 @@ describe('the road', () => {
     for (const a of s.animals) a.zone = 'lane2';
     s.kraft = 99;
     for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
-    s = run(s, { type: 'endTurn' });
+    // No need to let the hour pass: the night ends when the last one is over.
     expect(s.phase).toBe('over');
-    expect(s.outcome?.safe).toHaveLength(5);
+    expect(s.outcome?.safe).toHaveLength(6);
   });
 
   it('walking onto asphalt in moonlight breaks the moon verse', () => {
@@ -241,5 +241,52 @@ describe('reasons shown to the player', () => {
     s.kraft = 0;
     expect(cardBlockReason(s, { uid: 2, kind: 'bitaIhop', owner: 'ljung' })).toBe('Behöver ◆1.');
     expect(leadBlockReason(s, get(s, 'kvarn'))).toMatch(/kostar/);
+  });
+});
+
+describe('Sicksack the adder', () => {
+  it('is hungrier than the others: hunts even while the truce verse holds', () => {
+    let s = calmGame([...ALL3]);
+    get(s, 'sicksack').belief = 3;
+    get(s, 'sotfot').belief = 3;
+    s = run(s, { type: 'endTurn' });
+    expect(get(s, 'sicksack').intent.kind).toBe('hunt');
+    expect(get(s, 'sotfot').intent.kind).not.toBe('hunt');
+  });
+
+  it('only hunts prey its own size or smaller', () => {
+    let s = calmGame(['ingenLamnas', 'denStarke', 'manen']);
+    for (const a of s.animals) if (a.id !== 'sicksack' && a.id !== 'ljung') a.zone = 'farDike';
+    for (const a of s.animals) if (a.zone === 'farDike') a.status = 'safe';
+    get(s, 'sicksack').belief = 1;
+    s = run(s, { type: 'endTurn' });
+    expect(get(s, 'sicksack').intent.kind).not.toBe('hunt');
+  });
+
+  it('fits through the culvert, and its promise scares the prey nearby', () => {
+    let s = calmGame([...ALL3]);
+    s.culvertRevealed = true;
+    expect(leadZones(s, get(s, 'sicksack'))).toContain('culvert');
+    s.hand.push({ uid: 950, kind: 'giftIReserv', owner: 'sicksack' });
+    s = run(s, { type: 'play', uid: 950 });
+    expect(get(s, 'sicksack').belief).toBe(10);
+    expect(get(s, 'frona').belief).toBe(7);
+  });
+});
+
+describe('hope events', () => {
+  it('say why hope sank, so an animal can speak about it', () => {
+    const s = calmGame([...ALL3]);
+    const k = get(s, 'kvarn');
+    k.zone = 'lane1';
+    k.wounds = 2;
+    s.trafficPlan[0] = [car('lane1')];
+    const paused = run(s, { type: 'endTurn' });
+    const r = step(paused, { type: 'lastMoment', choice: 'letGo' });
+    const hope = r.events.filter((e) => e.kind === 'hope');
+    expect(hope).toEqual(expect.arrayContaining([
+      { kind: 'hope', delta: -1, reason: 'death', who: 'kvarn' },
+      { kind: 'hope', delta: -2, reason: 'flip', who: undefined },
+    ]));
   });
 });
