@@ -104,6 +104,15 @@ for (const route of [
     if (await page.locator('.meeting').count()) {
       // The crow at the fire, frame by frame. The river run pays a card; the farm run sends it away.
       const opt = (label: RegExp) => page.locator('.meet-options .btn', { hasText: label });
+      if (await page.locator('.meeting-card.proposal').count()) {
+        // A promise asked of us: the river run promises, the farm run cannot.
+        const answer = opt(route.scene === 'river' ? /Vi lovar/ : /kan vi inte lova/);
+        if (await answer.count()) {
+          await answer.click();
+          seen.add('promise');
+        } else await page.locator('.meet-options .btn').first().click();
+        continue;
+      }
       if (route.scene === 'river') {
         if (await opt(/Vad vill du ha/).count()) await opt(/Vad vill du ha/).click();
         else if (await opt(/Ge ett kort/).count()) {
@@ -145,7 +154,7 @@ for (const route of [
       // At the fork, the voices speak and we take this test's way.
       const fork = page.locator(`.onward .btn.primary[data-to="${route.to}"]`);
       if (await fork.count()) {
-        await expect(page.locator('.voice')).toHaveCount(2);
+        expect(await page.locator('.voice').count()).toBeLessThanOrEqual(2); // fewer if the ones who'd speak are gone
         if (seen.has('scout') || seen.has('crow')) await expect(page.locator('.map-svg text.memory.seen').first()).toBeVisible();
         else await expect(page.locator('.map-svg text.memory').first()).toContainText('Kvarn tror');
         await fork.click();

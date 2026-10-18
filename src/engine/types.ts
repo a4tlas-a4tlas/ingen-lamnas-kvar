@@ -65,6 +65,8 @@ export type Intent =
   | { kind: 'raid' };
 
 export interface Animal {
+  /** What took this animal, if it died: a hit's source, or how it went. */
+  diedOf?: string;
   id: string;
   name: string;
   species: Species;
@@ -102,13 +104,25 @@ export interface Dog {
   target: ZoneId | null;
 }
 
+/** What an animal's promise binds us to – and so what breaks it. */
+export type PromiseRule = 'light' | 'current' | 'noneAlone' | 'together' | 'water' | 'farm' | 'night' | 'stay';
+
+/** A promise an animal asked of us: who asked, what it binds us to, and – for two – who else it is about. */
+export interface Proposal {
+  by: string;
+  rule: PromiseRule;
+  with?: string;
+}
+
 export interface Verse {
   id: string;
-  kind: 'oath' | 'memorial';
+  kind: 'oath' | 'memorial' | 'promise';
   base?: VerseId;
   text: string;
   flippedText?: string;
   flipped: boolean;
+  /** For a promise: who asked it of us, and what it binds. */
+  promise?: Proposal;
 }
 
 export interface Card {
@@ -182,8 +196,10 @@ export interface Journey {
 export type MourningChoice = 'bury' | 'carry';
 
 /** A meeting in frames (the crow at the fire): where we are in it, and what has been said. */
+export type MeetingId = 'crow' | 'proposal';
+
 export interface Meeting {
-  id: 'crow';
+  id: MeetingId;
   frame: string;
   /** Replies already spoken: they aren't offered again. */
   used: string[];
@@ -191,6 +207,9 @@ export interface Meeting {
   told: string[];
   /** Who of us spoke last, to stand facing the crow in the picture. */
   by?: string;
+  /** In a proposal: those who spoke for it, and against it. */
+  backers?: string[];
+  objectors?: string[];
 }
 
 /** What a meeting cost us at tonight's fire: fewer places by the embers, someone apart, someone in the dark. */
@@ -217,7 +236,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 9;
+  version: 10;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;
@@ -272,6 +291,8 @@ export interface GameState {
   /** Newcomers we have met this run – rescued or left behind. Each is met only once. */
   met: string[];
   meeting: Meeting | null;
+  /** A promise an animal waits to ask of us, once the meeting before it is over. */
+  proposal: Proposal | null;
   fireDebt: FireDebt;
   peekNext: boolean;
   darkRevealed: boolean;

@@ -75,7 +75,7 @@ export function createGame(seed: number): GameState {
   for (const [a, b, v] of START_BONDS) bonds[bondKey(a, b)] = v;
 
   return {
-    version: 9,
+    version: 10,
     journey: { at: START_PLACE, visited: [START_PLACE], ...rollMemory(seed) },
     variant: 'normal',
     time: 'night',
@@ -114,6 +114,7 @@ export function createGame(seed: number): GameState {
     rescue: null,
     met: [],
     meeting: null,
+    proposal: null,
     fireDebt: { embers: 0, apart: [], dark: [] },
     peekNext: false,
     darkRevealed: false,

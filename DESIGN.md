@@ -359,7 +359,7 @@ Design from the milestone 3 interview:
 
   The hard variants hurt clearly but aren't hopeless, which makes scouting worth its price.
 
-## Milestone 4 – newcomers and proposed verses (in progress)
+## Milestone 4 – newcomers and proposed verses (done)
 Design from the milestone 4 interview:
 - **Newcomers:** rescued mid-danger, and strangers with an agenda.
 - **The rescue:** built on trust, with a special action card that is always in hand while someone needs saving.
@@ -411,3 +411,40 @@ Design from the milestone 4 interview:
   - A spot that can't take the animal refuses it, with a line why ("Bara den som kan flyga kan spana").
   - Those the crow has placed are locked.
   - The side panel only shows information.
+
+### Step 3: proposed verses – promises the animals ask of us (done)
+- **The meeting system is shared:** `src/data/meetings/` holds a registry with `crow` and `proposal`. Replies can name their speaker by who is with us, so whoever speaks for or against a promise depends on the group.
+- **At the fire,** at most one promise a night (after the crow, if it comes), from the strongest reason:
+  - **A death:** the one who stood closest asks.
+    - after a car, truck or the flashlight: *"Vi går aldrig ut i ljuset"*
+    - after the rapids: *"Vi går aldrig i strid ström"*
+    - after any other death: *"Ingen sitter ensam i mörkret"*
+  - **A bond at 3:** *"{A} och {B} lämnar aldrig varandra"*.
+  - **Fear** (shock, or belief ≤ 3):
+    - Fröna, with water ahead: *"Vi går aldrig över vatten"*
+    - Sotfot, with a farm ahead: *"Vi går aldrig in på en gård"*
+    - otherwise: *"Vi går bara i mörkret"*
+- **The frames:** the one asking stands in the picture, the promise lies on a paper card (what it binds us to, what it gives), and then:
+  - **Eden:** "Vi lovar." or "Det kan vi inte lova."
+  - **A close friend** (bond ≥ 2): "Jag lovar också." If we promise, the friend gets +1 belief.
+  - **The one it would cost:**
+    - Kvarn against water
+    - Sicksack against the farm
+    - Ljung against the light
+    - Skymning against "Ingen sitter ensam"
+    - Fröna against the dark
+
+    If we promise anyway, the objector gets −1 belief. If we refuse, +1.
+  - **A hungry predator mocks it:** the one asking gets −1 belief.
+- **In the last moment** (50%, seeded), the one just saved by someone throwing themselves in the way may ask: *"Jag lämnar dig aldrig, {B}."* It's asked right there, mid-encounter, and nothing else happens until it's answered.
+- **The rule:**
+  - **Accept:** the one asking gets +2 belief.
+  - **Refuse:** they get −2.
+  - **While a promise holds,** its asker never doubts below 3, and the fire gives +1 more hope if every promise is kept.
+  - **Broken,** the words turn ("Vi gick över vattnet."), with −1 hope and −2 belief for the asker.
+- **The breaks hook in:**
+  - hits from the light, and the rapids, in `processHits`
+  - deaths and those left behind, for bonds and crisis promises
+  - sitting alone at the fire
+  - travel: the river, the farm, going by day
+- **Warnings:** the map warns on any path that would break a promise ("⚠ Bryter Frönas löfte"), and so does the fire before someone sits alone. Promises show in the poem in the asker's colour.

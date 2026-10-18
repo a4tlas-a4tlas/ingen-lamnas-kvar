@@ -2,7 +2,8 @@
 // the memorial stone. Pure functions of state (plus the campfire plan).
 import { FOREST, PATHS, PLACES, pathsFrom, type Place } from '../data/journey';
 import { type FirePlan, emberPairs, hungryWatcher, inheritanceLine, living, lockedAtFire, planProblem, sitsAlone } from '../engine/campfire';
-import { CROW, meetingOptions } from '../data/meetings/crow.sv';
+import { currentFrame, labelOf, meetingOptions, speakerOf } from '../data/meetings';
+import { keptPromises } from '../engine/promises';
 import { encounterOf, type EncounterDef, type ZoneDef } from '../engine/encounters';
 import { animal, bond, canFly } from '../engine/rules';
 import { GUIDES, HIT_ROWS, HOUR_STEPS, RESCUE_ROWS, TIME_NAMES, TIME_NOTES, type GuideRow } from '../data/guides.sv';
@@ -278,6 +279,8 @@ export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mo
   for (const id of s.fireDebt.dark) notes.push(`${esc(animal(s, id).name)} gav sin plats vid glöden till kråkan och sitter i mörkret.`);
   if (healers.length) notes.push(`Läker i natt: ${healers.map((a) => esc(a.name)).join(', ')}.`);
   if (alone.length) notes.push(`Sitter ensam i mörkret (−1 tro): ${alone.map((a) => esc(a.name)).join(', ')}.`);
+  const lonely = keptPromises(s).find((v) => v.promise.rule === 'noneAlone');
+  if (alone.length && lonely) notes.push(`⚠ Bryter löftet ”${esc(lonely.text)}” – −1 hopp, och ${esc(animal(s, lonely.promise.by).name)} tappar 2 tro.`);
   const pairText = plan.pairs
     .map((p) => {
       const n = seats[p[0]] === 'ember0' ? 1 : 2;
@@ -326,23 +329,31 @@ export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mo
 /** A meeting in frames: the crow on its branch, who speaks, the words, and our replies. */
 export function meetingHtml(s: GameState, picker = ''): string {
   const m = s.meeting;
-  if (!m) return '';
-  const frame = CROW[m.frame];
+  const frame = currentFrame(s);
+  if (!m || !frame) return '';
   const options = meetingOptions(s);
   const speaker = (by?: string) => (by ? animal(s, by) : undefined);
+  const proposer = m.id === 'proposal' && s.proposal ? animal(s, s.proposal.by) : undefined;
+  const card = frame.card?.(s);
+  // The one asking stands in the picture; whoever answered last faces them (or the crow).
+  const main = proposer
+    ? `<div class="meet-proposer" style="color:${speciesColor(proposer.species)}">${silhouette(proposer.species)}<span>${esc(proposer.name)}</span></div>`
+    : `${crowSilhouette()}<div class="meet-branch"></div>`;
+  const facing = m.by && m.by !== proposer?.id ? speaker(m.by) : undefined;
   return `
     <div class="modal meeting" role="dialog" aria-modal="true" aria-labelledby="meet-title">
-      <div class="modal-card meeting-card" data-frame="${m.frame}">
-        <div class="meet-art">${crowSilhouette()}<div class="meet-branch"></div>
-          ${m.by ? `<div class="meet-speaker" style="color:${speciesColor(animal(s, m.by).species)}">${silhouette(animal(s, m.by).species)}<span>${esc(animal(s, m.by).name)}</span></div>` : ''}</div>
+      <div class="modal-card meeting-card ${m.id}" data-frame="${m.frame}">
+        <div class="meet-art">${main}
+          ${facing ? `<div class="meet-speaker" style="color:${speciesColor(facing.species)}">${silhouette(facing.species)}<span>${esc(facing.name)}</span></div>` : ''}</div>
         <div class="meet-body">
-          <h2 id="meet-title">Kråkan vid elden</h2>
+          <h2 id="meet-title">${m.id === 'proposal' ? 'Ett löfte' : 'Kråkan vid elden'}</h2>
           <p class="meet-text ${frame.speaker === 'story' ? 'story' : ''}">${esc(frame.text(s))}</p>
+          ${card ? `<div class="promise-card"><b>${esc(card.title)}</b>${card.lines.map((l) => `<span>${esc(l)}</span>`).join('')}</div>` : ''}
           ${picker || `<div class="meet-options">${options.map((o) => {
-            const a = speaker(o.by);
+            const a = speaker(speakerOf(s, o));
             const odds = o.chance ? ` <span class="chip tone-warn">${Math.round(o.chance(s) * 100)} % chans</span>` : '';
             return `<button class="btn option meet-option ${a ? 'by-animal' : ''}" data-act="meet" data-option="${o.id}" ${a ? `style="--owner:${speciesColor(a.species)}"` : ''}>
-              ${a ? `${silhouette(a.species)}<b>${esc(a.name)}</b>` : '<b>Eden</b>'}<span>${esc(o.label)}${odds}</span></button>`;
+              ${a ? `${silhouette(a.species)}<b>${esc(a.name)}</b>` : '<b>Eden</b>'}<span>${esc(labelOf(s, o))}${odds}</span></button>`;
           }).join('')}</div>`}
         </div>
       </div>

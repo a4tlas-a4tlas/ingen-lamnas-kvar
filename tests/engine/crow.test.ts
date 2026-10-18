@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultPlan, emberPairs, planProblem } from '../../src/engine/campfire';
-import { meetingOptions } from '../../src/data/meetings/crow.sv';
+import { meetingOptions } from '../../src/data/meetings';
 import { step } from '../../src/engine/step';
 import type { GameState } from '../../src/engine/types';
 import { calmGame, get, run } from './helpers';
