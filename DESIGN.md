@@ -448,3 +448,62 @@ Design from the milestone 4 interview:
   - sitting alone at the fire
   - travel: the river, the farm, going by day
 - **Warnings:** the map warns on any path that would break a promise ("⚠ Bryter Frönas löfte"), and so does the fire before someone sits alone. Promises show in the poem in the asker's colour.
+
+## Milestone 5 – the full journey (in progress)
+Design from the milestone 5 interview:
+- **The run:** 5 regions, 1.5–2 h.
+  - Dalen first, Skogsbrynet last.
+  - In between, after each boss, we choose between **2 regions drawn at random** from Åkrarna, Stadens utkant, Mossen and Höglandet.
+- **Each region is a map like Slay the Spire's,** drawn as Kvarn's sketch: **6 rows and a boss**.
+- **Places come in four kinds:**
+  - **Faror** (dangers, the encounters)
+  - **Möten** (meetings)
+  - **Fynd** (finds)
+  - **Lägereld** (a campfire)
+- **Story parts both give and take:** cards, belief, bonds, hope, injuries and healing, newcomers, knowledge.
+- **There's no clock across the run.** Each region ends with its own boss:
+
+  | Region | Boss |
+  |---|---|
+  | Dalen | Maskinerna |
+  | Åkrarna | Skördetröskan |
+  | Stadens utkant | Natten i staden |
+  | Mossen | Dimman |
+  | Höglandet | Stormen |
+  | Skogsbrynet | **Jägaren**, the final boss |
+
+- **Seasons** wait for later.
+
+### Step 1: Kvarns karta – the region of Dalen (done)
+- **Drawn anew every run** (`src/engine/regions.ts`, seeded with its own RNG stream) from the region's places (`src/data/regions/dalen.ts`):
+
+  | Row | What's there |
+  |---|---|
+  | 1 | **Vägen** (the glen's last night, always first) |
+  | 2–5 | 2–3 places each, mixed danger 42 %, meeting 33 %, find 17 %, fire 8 % (the fire only in rows 3–4) |
+  | 6 | **Granbacken**, the last fire |
+  | 7 | **Åsen**, where the machines wait |
+
+- **Paths run to the nearest places in the next row,** and sometimes to a neighbour too. Every place can be reached.
+- **Every way through keeps these rules** (otherwise it's redrawn):
+  - at least 2 dangers
+  - at least 1 meeting or find
+  - at most one fire along the way
+  - never two finds in a row
+  - never the same danger twice in a row
+  - places side by side differ where they can
+- **Dalen's places:**
+  - **Dangers:** Vägen, Gården, Ån and Landsvägen.
+  - **Story:** *Koltrasten* (a meeting in Björkdungen) and *Det ihåliga trädet* (a find).
+  - **A fire:** Gläntan.
+- **On the map:**
+  - Each place has a symbol for its kind (road, farm, river, two figures, a leaf, the fire, the machines).
+  - Only the places we can go to next are named; the rest lie faded in the fog.
+  - Kvarn's memory, the owl and the crow, day and night, the voices and the promise warnings all work as before, now reaching the next rows.
+- **Meetings and finds** open as frames on the map when we arrive, and nothing else happens until they're answered:
+  - **Koltrasten:**
+    - Listen: +1 hope, and everyone +1 belief.
+    - The owl hunts it: Skymning +2 belief, −1 hope.
+    - Fröna urges us on.
+  - **Det ihåliga trädet:** bleeding and shock heal for everyone but the one who keeps watch (−1 belief).
+- **For now,** Åsen ends the run ("Åsen" on the end screen). Maskinerna come in step 3.

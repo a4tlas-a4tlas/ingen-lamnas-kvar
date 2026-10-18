@@ -28,7 +28,7 @@ export const promiseFloor = (s: GameState, id: string) => keptPromises(s).some((
 
 /** Which encounters still lie ahead of us. */
 const encountersAhead = (s: GameState) =>
-  placesAhead(s.journey.at, 3).map(place).filter((p) => p.kind === 'encounter' && !s.journey.visited.includes(p.id)).map((p) => p.encounter!);
+  placesAhead(s, s.journey.at, 3).map((id) => place(s, id)).filter((p) => p.kind === 'encounter' && !s.journey.visited.includes(p.id)).map((p) => p.encounter!);
 
 /**
  * The promise asked of us at tonight's fire, if any: from a death first, then from
@@ -58,7 +58,7 @@ export function proposalAtFire(s: GameState): Proposal | null {
 
 /** The kept promises a step on the map would break. */
 export function brokenByTravel(s: GameState, to: string, time: TimeOfDay): (Verse & { promise: Proposal })[] {
-  const p = place(to);
+  const p = place(s, to);
   if (p.kind !== 'encounter') return [];
   return keptPromises(s).filter((v) =>
     (v.promise.rule === 'water' && p.encounter === 'river') ||

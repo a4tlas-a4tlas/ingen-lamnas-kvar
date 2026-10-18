@@ -1,14 +1,14 @@
 // HTML for the screens between encounters: the guide's map, the campfire and
 // the memorial stone. Pure functions of state (plus the campfire plan).
-import { FOREST, PATHS, PLACES, pathsFrom, type Place } from '../data/journey';
+import { FOREST, pathsFrom, type Place } from '../data/journey';
 import { type FirePlan, emberPairs, hungryWatcher, inheritanceLine, living, lockedAtFire, planProblem, sitsAlone } from '../engine/campfire';
-import { currentFrame, labelOf, meetingOptions, speakerOf } from '../data/meetings';
+import { MEETINGS, currentFrame, labelOf, meetingOptions, speakerOf } from '../data/meetings';
 import { keptPromises } from '../engine/promises';
 import { encounterOf, type EncounterDef, type ZoneDef } from '../engine/encounters';
 import { animal, bond, canFly } from '../engine/rules';
 import { GUIDES, HIT_ROWS, HOUR_STEPS, RESCUE_ROWS, TIME_NAMES, TIME_NOTES, type GuideRow } from '../data/guides.sv';
 import type { Animal, GameState } from '../engine/types';
-import { crowSilhouette, silhouette, speciesColor } from './silhouettes';
+import { crowSilhouette, sceneArt, silhouette, speciesColor } from './silhouettes';
 import { animalStatuses } from './status';
 
 export const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
@@ -39,8 +39,15 @@ function icon(p: Place): string {
       return '<rect x="-2.2" y="-0.9" width="4.4" height="1.8" rx="0.3" /><path d="M-1.6 0 h0.8 M-0.2 0 h0.8 M1.2 0 h0.6" stroke="var(--map-paper)" stroke-width="0.3" />';
     case 'campfire':
       return '<path d="M0 -2 C1.2 -0.6 1.4 0.6 0 1.5 C-1.4 0.6 -1.2 -0.6 0 -2 Z" fill="var(--map-fire)" /><path d="M-1.6 1.7 L1.6 1.1 M-1.6 1.1 L1.6 1.7" stroke="currentColor" stroke-width="0.35" />';
+    case 'meeting':
+      // Two figures, facing each other.
+      return '<circle cx="-1.1" cy="-0.9" r="0.7" /><path d="M-2 1.6 Q-1.1 -0.4 -0.2 1.6 Z" /><circle cx="1.1" cy="-0.9" r="0.7" /><path d="M0.2 1.6 Q1.1 -0.4 2 1.6 Z" />';
+    case 'find':
+      // A leaf.
+      return '<path d="M-1.8 1.6 Q-2 -1.6 1.8 -1.8 Q1.6 1.4 -1.8 1.6 Z" /><path d="M-1.6 1.4 L1.2 -1.2" stroke="var(--map-paper)" stroke-width="0.3" />';
     case 'end':
-      return '<path d="M-2.2 -1 Q0 -1.6 2.2 -1 M-2.2 0.1 Q0 -0.5 2.2 0.1 M-2.2 1.2 Q0 0.6 2.2 1.2" fill="none" stroke="currentColor" stroke-width="0.35" />';
+      // The machines waiting on the ridge: tracks, a cab, and the arm raised.
+      return '<rect x="-2.6" y="0.7" width="3.6" height="1" rx="0.5" /><rect x="-2" y="-0.9" width="2.2" height="1.5" /><path d="M0.2 -0.5 L1.6 -1.9 L2.6 -0.1 L2 0.6" fill="none" stroke="currentColor" stroke-width="0.45" />';
   }
 }
 
@@ -48,42 +55,48 @@ function pencilPines(): string {
   const out: string[] = [];
   for (let i = 0; i < 13; i++) {
     const x = 6 + i * 5.6 + (i % 2) * 1.4;
-    const y = 12 + (i % 3) * 1.6;
-    out.push(`<path d="M${x} ${y - 7} L${x + 2.4} ${y} L${x - 2.4} ${y} Z M${x} ${y - 4.5} L${x + 3} ${y + 2} L${x - 3} ${y + 2} Z" />`);
+    const y = 7 + (i % 3) * 1;
+    out.push(`<path d="M${x} ${y - 5} L${x + 1.8} ${y} L${x - 1.8} ${y} Z M${x} ${y - 3} L${x + 2.2} ${y + 1.4} L${x - 2.2} ${y + 1.4} Z" />`);
   }
   return out.join('');
 }
 
-/** The guide's pencil map. Unvisited places sit in fog under half-remembered names. */
+/** The guide's pencil map of the region. What lies ahead shows only what kind of place it is; the details are in fog. */
 export function mapSvg(s: GameState, interactive: boolean): string {
   const visited = new Set(s.journey.visited);
   const here = s.journey.at;
-  const reachable = interactive && s.phase === 'map' ? new Set(pathsFrom(here).map((p) => p.to)) : new Set<string>();
-  const byId = new Map(PLACES.map((p) => [p.id, p]));
+  const nodes = s.journey.nodes;
+  const next = new Set(pathsFrom(s, here).map((p) => p.to));
+  const reachable = interactive && s.phase === 'map' && !s.meeting ? next : new Set<string>();
+  const byId = new Map(nodes.map((p) => [p.id, p]));
 
-  const paths = PATHS.map((p) => {
-    const a = byId.get(p.from)!, b = byId.get(p.to)!;
+  const paths = nodes.flatMap((a) => a.next.map((to) => {
+    const b = byId.get(to)!;
     const c = curve(a, b);
-    const walked = visited.has(p.from) && visited.has(p.to);
+    const walked = visited.has(a.id) && visited.has(b.id);
     const paws = walked
-      ? Array.from({ length: 7 }, (_, i) => {
-          const [x, y] = c.at((i + 0.5) / 7);
-          return `<ellipse cx="${x + (i % 2 ? 0.7 : -0.7)}" cy="${y}" rx="0.45" ry="0.6" />`;
+      ? Array.from({ length: 5 }, (_, i) => {
+          const [x, y] = c.at((i + 0.5) / 5);
+          return `<ellipse cx="${x + (i % 2 ? 0.6 : -0.6)}" cy="${y}" rx="0.4" ry="0.55" />`;
         }).join('')
       : '';
     return `<path d="${c.d}" class="${walked ? 'walked' : 'unwalked'}" />${paws ? `<g class="paws">${paws}</g>` : ''}`;
-  }).join('');
+  })).join('');
 
-  const places = PLACES.map((p) => {
+  const places = nodes.map((p) => {
     const known = visited.has(p.id);
-    const cls = ['place', known ? 'known' : 'fog', p.id === here ? 'here' : '', reachable.has(p.id) ? 'reachable' : ''].join(' ');
+    const near = next.has(p.id) || p.id === here;
+    const cls = ['place', known ? 'known' : 'fog', near || known ? '' : 'far', p.id === here ? 'here' : '', reachable.has(p.id) ? 'reachable' : '', `kind-${p.kind}`].join(' ');
     const act = reachable.has(p.id) ? `data-act="travel" data-to="${p.id}" role="button" tabindex="0" aria-label="Gå mot ${esc(known ? p.name : p.fogName)}"` : '';
+    // Only what we know, or what is next, carries a name; further ahead only its kind shows.
+    const label = known ? p.name : near ? p.fogName : '';
+    const memo = near ? memoryLine(s, p.id) : null;
     return `<g class="${cls}" ${act} transform="translate(${mx(p.x)} ${p.y})">
-      ${p.id === here ? '<circle class="ring" r="5.2" />' : ''}
-      <circle class="dot" r="3.4" />
+      ${p.id === here ? '<circle class="ring" r="4.6" />' : ''}
+      <circle class="dot" r="3" />
       <g class="glyph">${icon(p)}</g>
-      <text y="7.4" text-anchor="middle">${esc(known ? p.name : p.fogName)}</text>
-      ${memoryLine(s, p.id) ? `<text class="memory ${s.journey.scouted.includes(p.id) ? 'seen' : ''}" y="10.6" text-anchor="middle">${esc(memoryLine(s, p.id)!)}</text>` : ''}
+      ${label ? `<text y="5.8" text-anchor="middle">${esc(label)}</text>` : ''}
+      ${memo ? `<text class="memory ${s.journey.scouted.includes(p.id) ? 'seen' : ''}" y="8.4" text-anchor="middle">${esc(memo)}</text>` : ''}
     </g>`;
   }).join('');
 
@@ -91,11 +104,11 @@ export function mapSvg(s: GameState, interactive: boolean): string {
     <svg class="map-svg" viewBox="0 0 80 100" role="img" aria-label="Kvarns karta över vägen">
       <defs><filter id="fog" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2" /></filter></defs>
       <g class="pines">${pencilPines()}</g>
-      <text class="forest-name" x="${mx(FOREST.x)}" y="${FOREST.y + 15}" text-anchor="middle">${FOREST.name}</text>
+      <text class="forest-name" x="${mx(FOREST.x)}" y="${FOREST.y}" text-anchor="middle">${FOREST.name}</text>
       <g class="fogbank" filter="url(#fog)">
-        <ellipse cx="40" cy="10" rx="44" ry="10" /><ellipse cx="20" cy="30" rx="16" ry="7" /><ellipse cx="62" cy="34" rx="16" ry="6" />
+        <ellipse cx="40" cy="6" rx="44" ry="7" /><ellipse cx="18" cy="40" rx="14" ry="6" /><ellipse cx="64" cy="30" rx="14" ry="5" />
       </g>
-      <path class="hills" d="M0 96 Q12 86 24 94 Q36 84 48 93 Q60 85 80 95" />
+      <path class="hills" d="M0 98 Q12 90 24 97 Q36 89 48 96 Q60 90 80 98" />
       <g class="trail">${paths}</g>
       ${places}
     </svg>`;
@@ -103,7 +116,7 @@ export function mapSvg(s: GameState, interactive: boolean): string {
 
 /** What we think a place is: Kvarn's guess with a question, or what the owl saw. Null for places without fog, or already known. */
 export function memoryLine(s: GameState, id: string): string | null {
-  const p = PLACES.find((x) => x.id === id);
+  const p = s.journey.nodes.find((x) => x.id === id);
   if (!p?.memory || s.journey.visited.includes(id)) return null;
   if (s.journey.scouted.includes(id)) return `Skymning såg: ${p.memory[s.journey.truth[id] ?? 'normal']} ✓`;
   return `Kvarn tror: ${p.memory[s.journey.guess[id] ?? 'normal']}?`;
@@ -336,9 +349,10 @@ export function meetingHtml(s: GameState, picker = ''): string {
   const proposer = m.id === 'proposal' && s.proposal ? animal(s, s.proposal.by) : undefined;
   const card = frame.card?.(s);
   // The one asking stands in the picture; whoever answered last faces them (or the crow).
+  const def = MEETINGS[m.id];
   const main = proposer
     ? `<div class="meet-proposer" style="color:${speciesColor(proposer.species)}">${silhouette(proposer.species)}<span>${esc(proposer.name)}</span></div>`
-    : `${crowSilhouette()}<div class="meet-branch"></div>`;
+    : def.art === 'crow' ? `${crowSilhouette()}<div class="meet-branch"></div>` : `<div class="meet-thing">${sceneArt(def.art)}</div>`;
   const facing = m.by && m.by !== proposer?.id ? speaker(m.by) : undefined;
   return `
     <div class="modal meeting" role="dialog" aria-modal="true" aria-labelledby="meet-title">
@@ -346,7 +360,7 @@ export function meetingHtml(s: GameState, picker = ''): string {
         <div class="meet-art">${main}
           ${facing ? `<div class="meet-speaker" style="color:${speciesColor(facing.species)}">${silhouette(facing.species)}<span>${esc(facing.name)}</span></div>` : ''}</div>
         <div class="meet-body">
-          <h2 id="meet-title">${m.id === 'proposal' ? 'Ett löfte' : 'Kråkan vid elden'}</h2>
+          <h2 id="meet-title">${esc(def.title)}</h2>
           <p class="meet-text ${frame.speaker === 'story' ? 'story' : ''}">${esc(frame.text(s))}</p>
           ${card ? `<div class="promise-card"><b>${esc(card.title)}</b>${card.lines.map((l) => `<span>${esc(l)}</span>`).join('')}</div>` : ''}
           ${picker || `<div class="meet-options">${options.map((o) => {

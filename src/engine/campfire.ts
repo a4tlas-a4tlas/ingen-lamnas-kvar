@@ -81,7 +81,7 @@ export function defaultPlan(s: GameState): FirePlan {
 
 /** Places ahead that are still only Kvarn's memory. */
 export function unseenAhead(s: GameState): string[] {
-  return placesAhead(s.journey.at, 2).filter((id) => place(id).memory && !s.journey.scouted.includes(id) && !s.journey.visited.includes(id));
+  return placesAhead(s, s.journey.at, 2).filter((id) => place(s, id).memory && !s.journey.scouted.includes(id) && !s.journey.visited.includes(id));
 }
 
 /** The crow comes when there is still something ahead it could tell us. */

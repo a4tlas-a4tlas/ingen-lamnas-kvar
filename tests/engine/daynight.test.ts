@@ -3,12 +3,11 @@ import { defaultPlan } from '../../src/engine/campfire';
 import { ALARM_MAX_NIGHT, alarmMax } from '../../src/engine/encounters/farm';
 import { planRoad } from '../../src/engine/encounters/road';
 import { canLure, moonVisible } from '../../src/engine/rules';
-import { createGame } from '../../src/engine/setup';
 import { step } from '../../src/engine/step';
 import type { GameState } from '../../src/engine/types';
-import { CROW_AWAY, calmGame, get, run } from './helpers';
+import { CROW_AWAY, calmGame, classicGame, get, run } from './helpers';
 
-const sworn = (seed = 3) => run(createGame(seed), { type: 'swear', verses: ['manen'] });
+const sworn = (seed = 3) => run(classicGame(seed), { type: 'swear', verses: ['manen'] });
 
 /** Across the road and through the fire: the map at Granbacken, the farm ahead. */
 function atTheFork(): GameState {

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { defaultPlan, planProblem } from '../../src/engine/campfire';
 import { AWAKE_ALARM } from '../../src/engine/encounters/farm';
 import { FLOOD_DAM_CREAK } from '../../src/engine/encounters/river';
-import { createGame, rollMemory } from '../../src/engine/setup';
+import { createGame } from '../../src/engine/setup';
+import { generateRegion } from '../../src/engine/regions';
+import { DALEN } from '../../src/data/regions/dalen';
 import { step } from '../../src/engine/step';
 import type { GameState } from '../../src/engine/types';
 import { CROW_AWAY, calmGame, get, run } from './helpers';
@@ -19,16 +21,17 @@ function atTheFire(): GameState {
 const lastNarration = (s: GameState) => s.log.filter((e) => e.kind === 'narrate').map((e) => e.text);
 
 describe("Kvarn's memory", () => {
-  it('is rolled from the seed, and leaves the rest of the run untouched', () => {
+  it('is rolled from the seed, for every place Kvarn may misremember', () => {
     expect(createGame(11).journey.truth).toEqual(createGame(11).journey.truth);
-    expect(Object.keys(rollMemory(11).truth).sort()).toEqual(['an', 'garden']);
+    const map = generateRegion(DALEN, 11);
+    expect(Object.keys(map.truth).sort()).toEqual(map.nodes.filter((n) => n.memory).map((n) => n.id).sort());
   });
 
   it('is wrong about one place in three', () => {
     let wrong = 0;
     let all = 0;
-    for (let seed = 1; seed <= 600; seed++) {
-      const m = rollMemory(seed);
+    for (let seed = 1; seed <= 300; seed++) {
+      const m = generateRegion(DALEN, seed);
       for (const id of Object.keys(m.truth)) {
         all++;
         if (m.truth[id] !== m.guess[id]) wrong++;

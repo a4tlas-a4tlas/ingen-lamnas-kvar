@@ -851,3 +851,13 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 @media (max-width: 700px) {
   .meet-proposer { width: 40%; margin: 0; grid-column: 2; grid-row: 1; }
 }
+
+/* ---------------------------------------------------------------- the region map */
+
+.map-svg .place.far { opacity: 0.45; }
+.map-svg .place.far .dot { stroke-dasharray: 1 0.8; }
+.map-svg .place text { font-size: 2.6px; }
+.map-svg .place text.memory { font-size: 2.1px; }
+.meet-thing { position: relative; z-index: 1; width: 80%; align-self: center; justify-self: center; margin-top: 16px; }
+.meet-thing .sil { width: 100%; display: block; }
+@media (max-width: 700px) { .meet-thing { width: 40%; margin: 0; grid-column: 2; grid-row: 1; } }
