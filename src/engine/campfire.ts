@@ -1,7 +1,8 @@
 // Read-only campfire rules, shared by the engine (resolution) and the UI (planning).
 import { TRAITS } from '../data/traits';
 import { bond, canFly, canPrey, huntsAt, isPresent } from './rules';
-import type { Animal, GameState, MourningChoice, TraitId } from './types';
+import { place, placesAhead } from '../data/journey';
+import type { Animal, CrowDeal, GameState, MourningChoice, TraitId } from './types';
 
 /** Two pairs of places by the embers. Whoever has none sits alone in the dark. */
 export const EMBER_PAIRS = 2;
@@ -10,6 +11,8 @@ export interface FirePlan {
   watch?: string;
   /** A flier who flies ahead in the dark to see what Kvarn only remembers. */
   scout?: string;
+  /** The deal struck with the crow, if any. */
+  crow?: CrowDeal;
   pairs: [string, string][];
   mourning: Record<string, MourningChoice>;
 }
@@ -71,6 +74,19 @@ export function defaultPlan(s: GameState): FirePlan {
   return { watch: alive.length >= 2 ? watcher?.id : undefined, pairs, mourning };
 }
 
+/** Places ahead that are still only Kvarn's memory. */
+export function unseenAhead(s: GameState): string[] {
+  return placesAhead(s.journey.at, 2).filter((id) => place(id).memory && !s.journey.scouted.includes(id) && !s.journey.visited.includes(id));
+}
+
+/** The crow comes when there is still something ahead it could tell us. */
+export const crowOffers = (s: GameState) => s.phase === 'campfire' && unseenAhead(s).length > 0;
+
+/** Cards the crow will take: anything but a memory of the dead. */
+export function crowCards(s: GameState) {
+  return [...s.draw, ...s.hand, ...s.discard].filter((c) => c.kind !== 'minne');
+}
+
 /** What's wrong with a plan, in words, or null if it can be carried out. */
 export function planProblem(s: GameState, plan: FirePlan): string | null {
   const ids = new Set(living(s).map((a) => a.id));
@@ -79,6 +95,12 @@ export function planProblem(s: GameState, plan: FirePlan): string | null {
   const seated = plan.pairs.flat();
   if (seated.some((id) => !ids.has(id) || id === plan.watch)) return 'Den som vakar kan inte sitta vid glöden.';
   if (new Set(seated).size !== seated.length) return 'Ingen kan sitta på två platser.';
+  if (plan.crow) {
+    if (!crowOffers(s)) return 'Kråkan har inget att berätta.';
+    if (plan.scout) return `${living(s).find((a) => a.id === plan.scout)?.name ?? 'Någon'} spanar redan – vi behöver inte kråkan.`;
+    if (plan.crow.price === 'ember' && plan.pairs.length > EMBER_PAIRS - 1) return 'Kråkan har tagit en plats vid glöden – bara ett par får plats.';
+    if (plan.crow.price === 'card' && !crowCards(s).some((c) => c.uid === (plan.crow as { uid: number }).uid)) return 'Välj vilket kort kråkan får.';
+  }
   if (plan.scout !== undefined) {
     const sc = living(s).find((a) => a.id === plan.scout);
     if (!sc || !canFly(sc)) return 'Bara den som kan flyga kan spana.';

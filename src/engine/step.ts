@@ -1,8 +1,9 @@
 import { DEATH_CAUSE, INJURY_LINES, LEAVE_CAUSE, intentLine } from '../data/text.sv';
-import { place, pathsFrom, placesAhead } from '../data/journey';
+import { place, pathsFrom } from '../data/journey';
 import { TRAITS } from '../data/traits';
 import { VERSES } from '../data/verses';
-import { closestTo, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone } from './campfire';
+import { closestTo, crowCards, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone, unseenAhead } from './campfire';
+import { CARDS } from '../data/cards';
 import { planRoad } from './encounters/road';
 import { forkVoices, voiceStake } from './voices';
 import { CURRENT, DAM, DAM_MAX, FLOOD_DAM_CREAK, FLOOD_HOURS, FLOOD_HOURS_TOTAL, STONES, aboveTheWater, carriedAway, holdsOnTo, planRiver, swims } from './encounters/river';
@@ -307,16 +308,22 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
 
   // 2½. The scout flies ahead in the dark, and comes back knowing what lies there.
   const scout = plan.scout ? animal(s, plan.scout) : undefined;
-  if (scout) {
-    const ahead = placesAhead(s.journey.at, 2).filter((id) => place(id).memory && !s.journey.scouted.includes(id));
-    for (const id of ahead) {
-      s.journey.scouted.push(id);
-      const p = place(id);
-      const truth = s.journey.truth[id] ?? 'normal';
-      const wrong = s.journey.guess[id] !== truth;
-      narrate(c, `${scout.name} flög före i mörkret. ${p.name}: ${p.memory![truth]}${wrong ? ' – Kvarn mindes fel.' : ', som Kvarn mindes.'}`);
+  if (scout) revealAhead(c, `${scout.name} flög före i mörkret.`, `${scout.name} flög före i mörkret, men såg inget vi inte redan visste.`);
+
+  // Or the crow tells us – for a price.
+  if (plan.crow) {
+    if (plan.crow.price === 'card') {
+      const uid = plan.crow.uid;
+      const card = crowCards(s).find((x) => x.uid === uid)!;
+      for (const pile of [s.draw, s.hand, s.discard]) {
+        const i = pile.findIndex((x) => x.uid === uid);
+        if (i >= 0) pile.splice(i, 1);
+      }
+      narrate(c, `Kråkan tog ${CARDS[card.kind].name} från ${animal(s, card.owner).name} i näbben, och flög upp i granen.`);
+    } else {
+      narrate(c, 'Kråkan satte sig vid glöden, där någon av oss skulle ha suttit.');
     }
-    if (!ahead.length) narrate(c, `${scout.name} flög före i mörkret, men såg inget vi inte redan visste.`);
+    revealAhead(c, 'Kråkan berättade, med huvudet på sned.', 'Kråkan hade inget att berätta.');
   }
 
   // 3. By the embers.
@@ -351,6 +358,20 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
   narrate(c, 'Vid gryningen släckte vi elden och gick vidare.');
   s.clock = 'day';
   s.phase = 'map';
+}
+
+/** Whoever went ahead – the owl or the crow – tells us the truth of the places within two paths. */
+function revealAhead(c: Ctx, opening: string, nothing: string) {
+  const s = c.s;
+  const ahead = unseenAhead(s);
+  for (const id of ahead) {
+    s.journey.scouted.push(id);
+    const p = place(id);
+    const truth = s.journey.truth[id] ?? 'normal';
+    const wrong = s.journey.guess[id] !== truth;
+    narrate(c, `${opening} ${p.name}: ${p.memory![truth]}${wrong ? ' – Kvarn mindes fel.' : ', som Kvarn mindes.'}`);
+  }
+  if (!ahead.length) narrate(c, nothing);
 }
 
 function flipVerse(c: Ctx, id: VerseId) {

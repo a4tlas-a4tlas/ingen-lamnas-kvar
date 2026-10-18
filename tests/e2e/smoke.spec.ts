@@ -104,8 +104,14 @@ for (const route of [
     if (await page.locator('.fire-screen').count()) {
       seen.add('fire');
       // Send the owl ahead to see what Kvarn only remembers; someone else keeps watch.
+      // On the river run, pay the crow with a card instead.
+      const crow = page.getByRole('button', { name: 'Ge ett kort' });
       const scout = page.locator('[data-act="fire-seat"][data-seat="scout"]');
-      if (await scout.count()) {
+      if (route.scene === 'river' && (await crow.count())) {
+        await crow.click();
+        await page.locator('.crow-pick .card').first().click();
+        seen.add('crow');
+      } else if (await scout.count()) {
         await scout.first().click();
         for (const id of ['ljung', 'kvarn', 'frona', 'sotfot', 'sicksack']) {
           if (await page.getByRole('button', { name: 'Låt natten gå' }).isEnabled()) break;
@@ -123,7 +129,7 @@ for (const route of [
       const fork = page.locator(`.onward .btn.primary[data-to="${route.to}"]`);
       if (await fork.count()) {
         await expect(page.locator('.voice')).toHaveCount(2);
-        if (seen.has('scout')) await expect(page.locator('.map-svg text.memory.seen').first()).toBeVisible();
+        if (seen.has('scout') || seen.has('crow')) await expect(page.locator('.map-svg text.memory.seen').first()).toBeVisible();
         else await expect(page.locator('.map-svg text.memory').first()).toContainText('Kvarn tror');
         await fork.click();
       } else await page.locator('.onward .btn').first().click();

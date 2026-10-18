@@ -389,3 +389,12 @@ Design from the milestone 4 interview:
   | Ån | 3.39 | 3.16 | 66% of the time |
 
   The rescue is a real dilemma: on the farm, the hen house lies in the dogs' path.
+
+### Step 2: the crow at the campfire (done)
+- **When it comes:** while some place ahead is still only Kvarn's memory, a crow sits outside the glow: "Jag vet vad som väntar där framme. Men inget är gratis."
+- **The price, you choose:**
+  - **Ge ett kort** (give a card): any card from the deck except memories of the dead, gone for good ("Kråkan tog Bära från Gamla Ljung").
+  - **Ge en plats vid glöden** (give a place by the embers): the crow takes a seat, so only one pair gets the fire tonight.
+  - **Nej tack** (no thanks).
+- **The reveal:** the same as the owl's scouting (`revealAhead` in `step.ts`, shared by both), for every place within two paths. The owl and the crow are never both needed in one night.
+- **UI:** a crow cut-out in the fire scene, an "En kråka i mörkret" section with the three choices, and a card picker built from the deck checker's mini cards, which names the chosen card.

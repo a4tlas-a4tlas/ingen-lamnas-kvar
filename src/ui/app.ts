@@ -34,8 +34,8 @@ import { OATH_VERSES, createGame } from '../engine/setup';
 import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
-import { assignSeat, fireSceneSvg, firePanelHtml, guideHtml, mapSvg, memoryLine, memorialHtml, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
-import { defaultPlan } from '../engine/campfire';
+import { assignSeat, fireSceneSvg, firePanelHtml, guideHtml, mapSvg, memoryLine, type CrowChoice, memorialHtml, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
+import { crowCards, crowOffers, defaultPlan } from '../engine/campfire';
 import { forkVoices, voiceStake } from '../engine/voices';
 import { pathsFrom, place } from '../data/journey';
 import { dogSilhouette, silhouette, speciesColor } from './silhouettes';
@@ -127,6 +127,7 @@ export class App {
   private guideOpen = false;
   private fireSeats: Seats | null = null;
   private fireMourning: Record<string, 'bury' | 'carry'> = {};
+  private fireCrow: CrowChoice = null;
   private mounted = false;
   private busy = false;
   private hint = '';
@@ -171,6 +172,7 @@ export class App {
         this.state = createGame(randomSeed());
         this.oathPick = [];
         this.fireSeats = null;
+        this.fireCrow = null;
         this.mapOpen = false;
         this.mounted = false;
         writeSave(this.state);
@@ -256,9 +258,17 @@ export class App {
         return this.render();
       case 'fire-rest': {
         if (!this.fireSeats) return;
-        const plan = planFromSeats(this.fireSeats, this.fireMourning);
-        return this.dispatch({ type: 'restAtFire', watch: plan.watch, scout: plan.scout, pairs: plan.pairs, mourning: plan.mourning });
+        const plan = planFromSeats(this.fireSeats, this.fireMourning, this.fireCrow);
+        return this.dispatch({ type: 'restAtFire', watch: plan.watch, scout: plan.scout, crow: plan.crow, pairs: plan.pairs, mourning: plan.mourning });
       }
+      case 'crow': {
+        const deal = el.dataset.deal;
+        this.fireCrow = deal === 'card' ? { price: 'card' } : deal === 'ember' ? { price: 'ember' } : null;
+        return this.render();
+      }
+      case 'crow-card':
+        this.fireCrow = { price: 'card', uid: Number(el.dataset.uid) };
+        return this.render();
       case 'rescue-card':
         if (this.sel.mode === 'rescue') return this.cancel();
         this.sel = { mode: 'rescue' };
@@ -386,7 +396,10 @@ export class App {
     this.state = r.state;
     this.sel = { mode: 'idle' };
     this.hint = '';
-    if (this.state.phase !== 'campfire') this.fireSeats = null;
+    if (this.state.phase !== 'campfire') {
+      this.fireSeats = null;
+      this.fireCrow = null;
+    }
     writeSave(this.state);
     this.play(r.events, prevKraft);
   }
@@ -1089,6 +1102,28 @@ export class App {
       </div>`;
   }
 
+  /** A crow outside the glow: it knows what lies ahead, and it wants something for it. */
+  private crowHtml(s: GameState): string {
+    if (!crowOffers(s)) return '';
+    const deal = this.fireCrow;
+    const btn = (key: string, label: string, on: boolean) =>
+      `<button class="seg ${on ? 'on' : ''}" data-act="crow" data-deal="${key}" aria-pressed="${on}">${label}</button>`;
+    const chosen = deal?.price === 'card' ? crowCards(s).find((c) => c.uid === deal.uid) : undefined;
+    const picker = deal?.price === 'card'
+      ? `<p class="small">${chosen ? `Kråkan får <b>${esc(CARDS[chosen.kind].name)}</b> från ${esc(animal(s, chosen.owner).name)} – för alltid.` : 'Vilket kort får kråkan? Det försvinner för alltid.'}</p>
+         <div class="deck-grid crow-pick">${byOwner(s, crowCards(s)).map((c) =>
+           cardFaceHtml(s, c, { tag: 'button', attrs: `data-act="crow-card" data-uid="${c.uid}" aria-pressed="${deal.uid === c.uid}"`, classes: ['mini', deal.uid === c.uid ? 'selected' : ''] })).join('')}</div>`
+      : '';
+    return `<section class="fire-step crow-step">
+      <h3>En kråka i mörkret</h3>
+      <p class="verse-line">”Jag vet vad som väntar där framme. Men inget är gratis.”</p>
+      <p class="muted small">Kråkan berättar sanningen om platserna framför oss – i stället för Kvarns minne.</p>
+      <div class="seg-row">${btn('card', 'Ge ett kort', deal?.price === 'card')}${btn('ember', 'Ge en plats vid glöden', deal?.price === 'ember')}${btn('none', 'Nej tack', !deal)}</div>
+      ${deal?.price === 'ember' ? '<p class="small">Kråkan sätter sig vid glöden: bara ett par får plats i natt.</p>' : ''}
+      ${picker}
+    </section>`;
+  }
+
   /** At a fork, one or two of us speak up for a path. */
   private voicesHtml(s: GameState): string {
     const voices = forkVoices(s);
@@ -1119,10 +1154,10 @@ export class App {
       <div class="screen between fire-screen">
         <div class="fire-wrap">
           <h2>${esc(place(s.journey.at).name)} <span class="muted">· lägerelden</span></h2>
-          ${fireSceneSvg(s, this.fireSeats)}
+          ${fireSceneSvg(s, this.fireSeats, crowOffers(s))}
           ${memorialHtml(s)}
         </div>
-        <aside class="between-side">${firePanelHtml(s, this.fireSeats, this.fireMourning)}</aside>
+        <aside class="between-side">${firePanelHtml(s, this.fireSeats, this.fireMourning, this.fireCrow, this.crowHtml(s))}</aside>
       </div>`;
   }
 

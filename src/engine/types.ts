@@ -181,6 +181,9 @@ export interface Journey {
 
 export type MourningChoice = 'bury' | 'carry';
 
+/** What we give the crow for the way ahead: a card from the deck, or a place by the embers. */
+export type CrowDeal = { price: 'card'; uid: number } | { price: 'ember' };
+
 export interface Rescue {
   /** The newcomer's id in NEWCOMERS. */
   who: string;
@@ -266,6 +269,6 @@ export type Action =
   | { type: 'endTurn' }
   | { type: 'travel'; to: string; wait?: boolean }
   | { type: 'rescue'; by: string }
-  | { type: 'restAtFire'; watch?: string; scout?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice> }
+  | { type: 'restAtFire'; watch?: string; scout?: string; crow?: CrowDeal; pairs: [string, string][]; mourning: Record<string, MourningChoice> }
   | { type: 'lastMoment'; choice: 'shield'; by: string }
   | { type: 'lastMoment'; choice: 'letGo' };

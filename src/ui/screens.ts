@@ -6,7 +6,7 @@ import { encounterOf, type EncounterDef, type ZoneDef } from '../engine/encounte
 import { animal, bond, canFly } from '../engine/rules';
 import { GUIDES, HIT_ROWS, HOUR_STEPS, RESCUE_ROWS, TIME_NAMES, TIME_NOTES, type GuideRow } from '../data/guides.sv';
 import type { Animal, GameState } from '../engine/types';
-import { silhouette, speciesColor } from './silhouettes';
+import { crowSilhouette, silhouette, speciesColor } from './silhouettes';
 import { animalStatuses } from './status';
 
 export const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
@@ -150,10 +150,14 @@ export function seatsFromPlan(s: GameState, plan: FirePlan): Seats {
 }
 
 /** Only full pairs sit by the embers; a lone animal at an ember is as alone as in the dark. */
-export function planFromSeats(seats: Seats, mourning: FirePlan['mourning']): FirePlan {
+/** What we have agreed with the crow so far: the card may not be chosen yet. */
+export type CrowChoice = { price: 'card'; uid?: number } | { price: 'ember' } | null;
+
+export function planFromSeats(seats: Seats, mourning: FirePlan['mourning'], crow: CrowChoice = null): FirePlan {
   const ids = (seat: Seat) => Object.keys(seats).filter((id) => seats[id] === seat);
   const pairs = (['ember0', 'ember1'] as Seat[]).map(ids).filter((p) => p.length === 2) as [string, string][];
-  return { watch: ids('watch')[0], scout: ids('scout')[0], pairs, mourning };
+  const deal = crow ? (crow.price === 'card' ? { price: 'card' as const, uid: crow.uid ?? -1 } : crow) : undefined;
+  return { watch: ids('watch')[0], scout: ids('scout')[0], crow: deal, pairs, mourning };
 }
 
 /** Seat an animal, keeping one watcher and at most two per ember. */
@@ -166,7 +170,7 @@ export function assignSeat(seats: Seats, id: string, seat: Seat): Seats {
   return next;
 }
 
-export function fireSceneSvg(s: GameState, seats: Seats): string {
+export function fireSceneSvg(s: GameState, seats: Seats, crow = false): string {
   const spots: Record<Seat, [number, number][]> = {
     ember0: [[28, 66], [40, 72]],
     ember1: [[60, 72], [72, 66]],
@@ -201,11 +205,12 @@ export function fireSceneSvg(s: GameState, seats: Seats): string {
       <span class="fire-label watch">Vakten</span><span class="fire-label dark">Mörkret</span>
       ${Object.values(seats).includes('scout') ? '<span class="fire-label scout">Spanar</span>' : ''}
       ${tokens}
+      ${crow ? `<div class="fire-crow" aria-hidden="true">${crowSilhouette()}</div>` : ''}
     </div>`;
 }
 
-export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mourning']): string {
-  const plan = planFromSeats(seats, mourning);
+export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mourning'], crow: CrowChoice = null, crowSection = ''): string {
+  const plan = planFromSeats(seats, mourning, crow);
   const problem = planProblem(s, plan);
   const w = plan.watch ? animal(s, plan.watch) : undefined;
   const alone = sitsAlone(s, plan);
@@ -261,6 +266,7 @@ export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mo
       ${pairText ? `<ul class="pair-list">${pairText}</ul>` : ''}
       ${notes.length ? `<ul class="fire-notes">${notes.map((n) => `<li>${n}</li>`).join('')}</ul>` : ''}
     </section>
+    ${crowSection}
     <div class="fire-go">
       <button class="btn primary" data-act="fire-rest" ${problem ? 'disabled' : ''}>Låt natten gå</button>
       <span class="muted small">${problem ? esc(problem) : 'Elden ger +1 hopp. Blödning och chock läker för alla utom vakten och den som spanar.'}</span>
