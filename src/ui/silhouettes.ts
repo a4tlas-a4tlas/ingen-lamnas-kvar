@@ -98,6 +98,17 @@ export function silhouette(species: Species, color = shapes[species].paper): str
   return `<svg class="sil" viewBox="0 0 64 48" aria-hidden="true" style="color:${color}" fill="currentColor">${shapes[species].svg}</svg>`;
 }
 
+/** The crow at the campfire: a stranger, all black but for the eye. */
+export function crowSilhouette(): string {
+  return `<svg class="sil crow-sil" viewBox="0 0 64 48" aria-hidden="true" fill="#0b0d12">
+    <path d="M14 30 Q22 18 36 20 L44 16 L52 18 L46 22 Q48 30 38 34 L26 36 Z"/>
+    <path d="M52 18 L60 20 L52 22 Z"/>
+    <path d="M14 30 L4 34 L16 34 Z"/>
+    <path d="M30 35 l-1 9 M36 34 l1 10" stroke="#0b0d12" stroke-width="1.6"/>
+    <circle cx="47" cy="19" r="1.2" fill="#e4c070"/>
+  </svg>`;
+}
+
 /** The farm dogs: not one of us, so drawn darker and heavier. */
 export function dogSilhouette(): string {
   return `<svg class="sil dog-sil" viewBox="0 0 64 48" aria-hidden="true" fill="currentColor">

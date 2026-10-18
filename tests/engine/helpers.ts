@@ -37,3 +37,9 @@ export const car = (lane: 'lane1' | 'lane2'): Strike => ({ lane, severity: 'inju
 export const truck = (lane: 'lane1' | 'lane2'): Strike => ({ lane, severity: 'kill', vehicle: 'lastbil', dark: false });
 
 export const get = (s: GameState, id: string) => s.animals.find((a) => a.id === id)!;
+
+/** Arriving at the fire, the crow waits for an answer: these turn it away. */
+export const CROW_AWAY: Action[] = [
+  { type: 'respond', option: 'no' },
+  { type: 'respond', option: 'close' },
+];

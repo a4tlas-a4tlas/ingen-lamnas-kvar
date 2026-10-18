@@ -181,6 +181,27 @@ export interface Journey {
 
 export type MourningChoice = 'bury' | 'carry';
 
+/** A meeting in frames (the crow at the fire): where we are in it, and what has been said. */
+export interface Meeting {
+  id: 'crow';
+  frame: string;
+  /** Replies already spoken: they aren't offered again. */
+  used: string[];
+  /** Places the crow told us about. */
+  told: string[];
+  /** Who of us spoke last, to stand facing the crow in the picture. */
+  by?: string;
+}
+
+/** What a meeting cost us at tonight's fire: fewer places by the embers, someone apart, someone in the dark. */
+export interface FireDebt {
+  embers: number;
+  /** Sit apart, telling: no watch, no embers, no rest – but not alone. */
+  apart: string[];
+  /** Sit in the dark by their own choice: alone, and no place by the embers. */
+  dark: string[];
+}
+
 export interface Rescue {
   /** The newcomer's id in NEWCOMERS. */
   who: string;
@@ -196,7 +217,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 8;
+  version: 9;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;
@@ -250,6 +271,8 @@ export interface GameState {
   rescue: Rescue | null;
   /** Newcomers we have met this run – rescued or left behind. Each is met only once. */
   met: string[];
+  meeting: Meeting | null;
+  fireDebt: FireDebt;
   peekNext: boolean;
   darkRevealed: boolean;
   hitQueue: Hit[];
@@ -267,5 +290,6 @@ export type Action =
   | { type: 'travel'; to: string; wait?: boolean }
   | { type: 'rescue'; by: string }
   | { type: 'restAtFire'; watch?: string; scout?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice> }
+  | { type: 'respond'; option: string; uid?: number }
   | { type: 'lastMoment'; choice: 'shield'; by: string }
   | { type: 'lastMoment'; choice: 'letGo' };

@@ -3,7 +3,7 @@ import { defaultPlan } from '../../src/engine/campfire';
 import { dogDestination, farmPath } from '../../src/engine/encounters/farm';
 import { lureZones } from '../../src/engine/rules';
 import type { GameState } from '../../src/engine/types';
-import { calmGame, get, run } from './helpers';
+import { CROW_AWAY, calmGame, get, run } from './helpers';
 
 /** Through the road and the fire, into the farm, with everyone calm and at the thicket. */
 function farmGame(verse: 'ingenLamnas' | 'viJagarInte' | 'manen' = 'ingenLamnas'): GameState {
@@ -11,7 +11,7 @@ function farmGame(verse: 'ingenLamnas' | 'viJagarInte' | 'manen' = 'ingenLamnas'
   for (const a of s.animals) a.zone = 'lane2';
   s.kraft = 99;
   for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
-  s = run(s, { type: 'travel', to: 'granbacken' });
+  s = run(s, { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
   s = run(s, { type: 'restAtFire', ...defaultPlan(s) });
   s.journey.truth = { garden: 'normal', an: 'normal' };
   s = run(s, { type: 'travel', to: 'garden' });

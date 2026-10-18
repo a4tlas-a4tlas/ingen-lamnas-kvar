@@ -1,12 +1,13 @@
 // HTML for the screens between encounters: the guide's map, the campfire and
 // the memorial stone. Pure functions of state (plus the campfire plan).
 import { FOREST, PATHS, PLACES, pathsFrom, type Place } from '../data/journey';
-import { EMBER_PAIRS, type FirePlan, hungryWatcher, inheritanceLine, living, planProblem, sitsAlone } from '../engine/campfire';
+import { type FirePlan, emberPairs, hungryWatcher, inheritanceLine, living, lockedAtFire, planProblem, sitsAlone } from '../engine/campfire';
+import { CROW, meetingOptions } from '../data/meetings/crow.sv';
 import { encounterOf, type EncounterDef, type ZoneDef } from '../engine/encounters';
 import { animal, bond, canFly } from '../engine/rules';
 import { GUIDES, HIT_ROWS, HOUR_STEPS, RESCUE_ROWS, TIME_NAMES, TIME_NOTES, type GuideRow } from '../data/guides.sv';
 import type { Animal, GameState } from '../engine/types';
-import { silhouette, speciesColor } from './silhouettes';
+import { crowSilhouette, silhouette, speciesColor } from './silhouettes';
 import { animalStatuses } from './status';
 
 export const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
@@ -137,12 +138,36 @@ export function rosterHtml(s: GameState): string {
 
 // ---------------------------------------------------------------- the campfire
 
-export type Seat = 'watch' | 'scout' | 'ember0' | 'ember1' | 'dark';
+export type Seat = 'watch' | 'scout' | 'ember0' | 'ember1' | 'dark' | 'apart';
 export type Seats = Record<string, Seat>;
+
+export const SEAT_NAMES: Record<Seat, string> = {
+  watch: 'Vakten',
+  scout: 'Spanar',
+  ember0: 'Glöd 1',
+  ember1: 'Glöd 2',
+  dark: 'Mörkret',
+  apart: 'Hos kråkan',
+};
+
+const canAnyFly = (s: GameState) => living(s).some(canFly);
+
+/** How many fit in each place tonight, after what the crow took. */
+export function seatCapacity(s: GameState, seat: Seat): number {
+  switch (seat) {
+    case 'watch': return 1;
+    case 'scout': return canAnyFly(s) ? 1 : 0;
+    case 'ember0': return emberPairs(s) >= 1 ? 2 : 0;
+    case 'ember1': return emberPairs(s) >= 2 ? 2 : 0;
+    case 'dark': return Infinity;
+    case 'apart': return 0;
+  }
+}
 
 export function seatsFromPlan(s: GameState, plan: FirePlan): Seats {
   const seats: Seats = {};
   for (const a of living(s)) seats[a.id] = 'dark';
+  for (const id of s.fireDebt.apart) seats[id] = 'apart';
   if (plan.watch) seats[plan.watch] = 'watch';
   if (plan.scout) seats[plan.scout] = 'scout';
   plan.pairs.forEach((p, i) => p.forEach((id) => (seats[id] = i === 0 ? 'ember0' : 'ember1')));
@@ -156,34 +181,64 @@ export function planFromSeats(seats: Seats, mourning: FirePlan['mourning']): Fir
   return { watch: ids('watch')[0], scout: ids('scout')[0], pairs, mourning };
 }
 
-/** Seat an animal, keeping one watcher and at most two per ember. */
-export function assignSeat(seats: Seats, id: string, seat: Seat): Seats {
+/** Who sits in a place, in the order they are drawn. */
+export const occupants = (s: GameState, seats: Seats, seat: Seat) => living(s).filter((a) => (seats[a.id] ?? 'dark') === seat).map((a) => a.id);
+
+/**
+ * Put an animal in a place, as when dropped there: into a free spot, or swapping
+ * with whoever sits on that spot. Some places refuse, and say why.
+ */
+export function moveToSeat(s: GameState, seats: Seats, id: string, seat: Seat, slot = 0): { seats: Seats; refusal?: string } {
+  const a = animal(s, id);
+  if (lockedAtFire(s).includes(id)) return { seats, refusal: `${a.name} har redan sin plats i natt.` };
+  if (seat === 'apart') return { seats, refusal: 'Den platsen är redan tagen i natt.' };
+  if (seat === 'scout' && !canFly(a)) return { seats, refusal: 'Bara den som kan flyga kan spana.' };
+  const cap = seatCapacity(s, seat);
+  if (cap === 0) return { seats, refusal: 'Kråkan sitter där i natt. Den glöden räcker inte till fler.' };
+  const from = seats[id] ?? 'dark';
+  if (from === seat) return { seats };
   const next = { ...seats };
-  const others = Object.keys(next).filter((x) => x !== id && next[x] === seat);
-  if (seat === 'watch' || seat === 'scout') others.forEach((x) => (next[x] = 'dark'));
-  if ((seat === 'ember0' || seat === 'ember1') && others.length >= 2) next[others[0]] = 'dark';
+  const here = occupants(s, seats, seat).filter((x) => x !== id);
+  if (here.length >= cap) {
+    // Swap: whoever sat on that spot takes our old place – if they can.
+    const other = here[Math.min(slot, here.length - 1)];
+    const ok = from !== 'scout' || canFly(animal(s, other));
+    next[other] = ok ? from : 'dark';
+  }
   next[id] = seat;
-  return next;
+  return { seats: next };
 }
 
-export function fireSceneSvg(s: GameState, seats: Seats): string {
-  const spots: Record<Seat, [number, number][]> = {
-    ember0: [[28, 66], [40, 72]],
-    ember1: [[60, 72], [72, 66]],
-    watch: [[86, 42]],
-    scout: [[50, 12]],
-    dark: [[9, 36], [21, 31], [33, 29], [67, 29], [79, 31], [50, 27]],
-  };
-  const used: Record<Seat, number> = { ember0: 0, ember1: 0, watch: 0, scout: 0, dark: 0 };
+/** Where each place's spots are in the fire scene, in percent. */
+const SPOTS: Record<Seat, [number, number][]> = {
+  ember0: [[28, 66], [40, 72]],
+  ember1: [[60, 72], [72, 66]],
+  watch: [[86, 44]],
+  scout: [[50, 12]],
+  apart: [[74, 16], [64, 14]],
+  dark: [[9, 34], [20, 30], [31, 28], [42, 31], [58, 31], [9, 50], [20, 46], [69, 30]],
+};
+
+export function fireSceneSvg(s: GameState, seats: Seats, o: { crow?: boolean; picked?: string } = {}): string {
+  const used: Record<Seat, number> = { ember0: 0, ember1: 0, watch: 0, scout: 0, dark: 0, apart: 0 };
+  const locked = lockedAtFire(s);
   const tokens = living(s)
     .map((a) => {
       const seat = seats[a.id] ?? 'dark';
-      const [x, y] = spots[seat][Math.min(used[seat]++, spots[seat].length - 1)];
-      return `<div class="fire-token seat-${seat}" style="left:${x}%;top:${y}%;--owner:${speciesColor(a.species)}">${silhouette(a.species)}<span>${esc(a.name)}</span></div>`;
+      const [x, y] = SPOTS[seat][Math.min(used[seat]++, SPOTS[seat].length - 1)];
+      const lock = locked.includes(a.id);
+      return `<div class="fire-token seat-${seat} ${o.picked === a.id ? 'picked' : ''} ${lock ? 'locked' : ''}" ${lock ? '' : `data-act="fire-pick" data-drag="${a.id}" tabindex="0" role="button" aria-label="Flytta ${esc(a.name)}"`}
+        data-animal="${a.id}" style="left:${x}%;top:${y}%;--owner:${speciesColor(a.species)}">${silhouette(a.species)}<span>${esc(a.name)}</span></div>`;
     })
     .join('');
+  const slots = (['ember0', 'ember1', 'watch', 'scout'] as Seat[])
+    .filter((seat) => seatCapacity(s, seat) > 0)
+    .flatMap((seat) => SPOTS[seat].map(([x, y], i) =>
+      `<button class="fire-slot seat-${seat}" data-act="fire-slot" data-seat="${seat}" data-slot="${i}" style="left:${x}%;top:${y}%" aria-label="${SEAT_NAMES[seat]}"></button>`))
+    .join('');
+  const gone = (['ember0', 'ember1'] as Seat[]).filter((seat) => seatCapacity(s, seat) === 0);
   return `
-    <div class="fire-scene">
+    <div class="fire-scene ${o.picked ? 'picking' : ''}">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <defs>
           <radialGradient id="glow" cx="50%" cy="64%" r="45%"><stop offset="0" stop-color="#f3b45c" stop-opacity="0.55" /><stop offset="1" stop-color="#f3b45c" stop-opacity="0" /></radialGradient>
@@ -195,31 +250,34 @@ export function fireSceneSvg(s: GameState, seats: Seats): string {
         <ellipse cx="50" cy="68" rx="9" ry="3" fill="#2a1d14" />
         <path class="flame" d="M50 50 C56 58 57 64 50 68 C43 64 44 58 50 50 Z" fill="#e7a24a" />
         <path class="flame inner" d="M50 56 C53 60 53 64 50 67 C47 64 47 60 50 56 Z" fill="#f7dd8f" />
-        <ellipse cx="86" cy="49" rx="6" ry="2.4" fill="#2b3530" />
+        <ellipse cx="86" cy="51" rx="6" ry="2.4" fill="#2b3530" />
       </svg>
-      <span class="fire-label ember0">Glöd 1</span><span class="fire-label ember1">Glöd 2</span>
+      <button class="fire-dark-zone" data-act="fire-slot" data-seat="dark" aria-label="Mörkret"></button>
+      <span class="fire-label ember0 ${gone.includes('ember0') ? 'gone' : ''}">Glöd 1</span><span class="fire-label ember1 ${gone.includes('ember1') ? 'gone' : ''}">${gone.includes('ember1') ? 'Kråkans plats' : 'Glöd 2'}</span>
       <span class="fire-label watch">Vakten</span><span class="fire-label dark">Mörkret</span>
-      ${Object.values(seats).includes('scout') ? '<span class="fire-label scout">Spanar</span>' : ''}
+      ${canAnyFly(s) ? '<span class="fire-label scout">Spanar</span>' : ''}
+      ${slots}
       ${tokens}
+      ${o.crow ? `<div class="fire-crow" aria-hidden="true">${crowSilhouette()}</div>` : ''}
     </div>`;
 }
 
-export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mourning']): string {
+export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mourning'], hint = ''): string {
   const plan = planFromSeats(seats, mourning);
   const problem = planProblem(s, plan);
   const w = plan.watch ? animal(s, plan.watch) : undefined;
-  const alone = sitsAlone(s, plan);
   const sc = plan.scout ? animal(s, plan.scout) : undefined;
-  const healers = living(s).filter((a) => a !== w && a !== sc && a.injuries.some((k) => k === 'bleeding' || k === 'shock'));
+  const alone = sitsAlone(s, plan);
+  const resting = (a: Animal) => a !== w && a !== sc && !s.fireDebt.apart.includes(a.id);
+  const healers = living(s).filter((a) => resting(a) && a.injuries.some((k) => k === 'bleeding' || k === 'shock'));
   const notes: string[] = [];
   if (w && hungryWatcher(s, w)) notes.push(`⚠ ${esc(w.name)} är hungrig. Att låta ${esc(w.name)} vaka över de små är ett prov på tillit – det kan gå illa, eller bli början på något nytt.`);
   if (w && w.injuries.some((k) => k === 'bleeding' || k === 'shock')) notes.push(`${esc(w.name)} vakar och får ingen vila – det som kunde läka får vänta.`);
   if (sc) notes.push(`${esc(sc.name)} flyger före i mörkret och ser vad som väntar – i stället för Kvarns minne. Men ${esc(sc.name)} får ingen vila och ingen plats vid glöden.`);
+  for (const id of s.fireDebt.apart) notes.push(`${esc(animal(s, id).name)} sitter hos kråkan och berättar om dalen i natt – ingen vila, men inte ensam.`);
+  for (const id of s.fireDebt.dark) notes.push(`${esc(animal(s, id).name)} gav sin plats vid glöden till kråkan och sitter i mörkret.`);
   if (healers.length) notes.push(`Läker i natt: ${healers.map((a) => esc(a.name)).join(', ')}.`);
   if (alone.length) notes.push(`Sitter ensam i mörkret (−1 tro): ${alone.map((a) => esc(a.name)).join(', ')}.`);
-
-  const seatBtn = (a: Animal, seat: Seat, label: string) =>
-    `<button class="seg ${seats[a.id] === seat ? 'on' : ''}" data-act="fire-seat" data-animal="${a.id}" data-seat="${seat}" aria-pressed="${seats[a.id] === seat}">${label}</button>`;
   const pairText = plan.pairs
     .map((p) => {
       const n = seats[p[0]] === 'ember0' ? 1 : 2;
@@ -251,19 +309,43 @@ export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mo
     </section>` : ''}
     <section class="fire-step">
       <h3>Vem sitter var?</h3>
-      <p class="muted small">En håller vakt och får ingen vila. ${EMBER_PAIRS} par får plats vid glöden – de pratar och kommer varandra närmare. Den som inte får plats sitter ensam i mörkret. Den som kan flyga kan i stället spana framåt.</p>
-      <ul class="seat-list">
-        ${living(s).map((a) => `<li>
-          ${silhouette(a.species)}<span class="seat-name"><b>${esc(a.name)}</b> <span class="muted">✶${a.belief}</span></span>
-          <span class="seg-row">${seatBtn(a, 'watch', 'Vakt')}${seatBtn(a, 'ember0', 'Glöd 1')}${seatBtn(a, 'ember1', 'Glöd 2')}${seatBtn(a, 'dark', 'Mörkret')}${canFly(a) ? seatBtn(a, 'scout', 'Spanar') : ''}</span>
-        </li>`).join('')}
-      </ul>
+      <p class="muted small">Dra djuren till sina platser vid elden – eller tryck på ett djur och sedan på en plats. En håller vakt och får ingen vila. ${emberPairs(s)} par får plats vid glöden – de pratar och kommer varandra närmare. Den som inte får plats sitter ensam i mörkret.${canAnyFly(s) ? ' Den som kan flyga kan spana framåt.' : ''}</p>
+      ${hint ? `<p class="fire-hint">${esc(hint)}</p>` : ''}
+      <ul class="seat-summary">${living(s).map((a) => `<li style="--owner:${speciesColor(a.species)}">${silhouette(a.species)}<b>${esc(a.name)}</b> <span class="muted">✶${a.belief}</span> <span class="seat-tag">${SEAT_NAMES[seats[a.id] ?? 'dark']}</span></li>`).join('')}</ul>
       ${pairText ? `<ul class="pair-list">${pairText}</ul>` : ''}
       ${notes.length ? `<ul class="fire-notes">${notes.map((n) => `<li>${n}</li>`).join('')}</ul>` : ''}
     </section>
     <div class="fire-go">
       <button class="btn primary" data-act="fire-rest" ${problem ? 'disabled' : ''}>Låt natten gå</button>
-      <span class="muted small">${problem ? esc(problem) : 'Elden ger +1 hopp. Blödning och chock läker för alla utom vakten och den som spanar.'}</span>
+      <span class="muted small">${problem ? esc(problem) : 'Elden ger +1 hopp. Blödning och chock läker för alla som får vila.'}</span>
+    </div>`;
+}
+
+// ---------------------------------------------------------------- meetings
+
+/** A meeting in frames: the crow on its branch, who speaks, the words, and our replies. */
+export function meetingHtml(s: GameState, picker = ''): string {
+  const m = s.meeting;
+  if (!m) return '';
+  const frame = CROW[m.frame];
+  const options = meetingOptions(s);
+  const speaker = (by?: string) => (by ? animal(s, by) : undefined);
+  return `
+    <div class="modal meeting" role="dialog" aria-modal="true" aria-labelledby="meet-title">
+      <div class="modal-card meeting-card" data-frame="${m.frame}">
+        <div class="meet-art">${crowSilhouette()}<div class="meet-branch"></div>
+          ${m.by ? `<div class="meet-speaker" style="color:${speciesColor(animal(s, m.by).species)}">${silhouette(animal(s, m.by).species)}<span>${esc(animal(s, m.by).name)}</span></div>` : ''}</div>
+        <div class="meet-body">
+          <h2 id="meet-title">Kråkan vid elden</h2>
+          <p class="meet-text ${frame.speaker === 'story' ? 'story' : ''}">${esc(frame.text(s))}</p>
+          ${picker || `<div class="meet-options">${options.map((o) => {
+            const a = speaker(o.by);
+            const odds = o.chance ? ` <span class="chip tone-warn">${Math.round(o.chance(s) * 100)} % chans</span>` : '';
+            return `<button class="btn option meet-option ${a ? 'by-animal' : ''}" data-act="meet" data-option="${o.id}" ${a ? `style="--owner:${speciesColor(a.species)}"` : ''}>
+              ${a ? `${silhouette(a.species)}<b>${esc(a.name)}</b>` : '<b>Eden</b>'}<span>${esc(o.label)}${odds}</span></button>`;
+          }).join('')}</div>`}
+        </div>
+      </div>
     </div>`;
 }
 

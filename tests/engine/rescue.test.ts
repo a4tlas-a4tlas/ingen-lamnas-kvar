@@ -3,14 +3,14 @@ import { defaultPlan } from '../../src/engine/campfire';
 import { RESCUE_TRUST, bond, cardZones, leadZones, verseStatus } from '../../src/engine/rules';
 import { step } from '../../src/engine/step';
 import type { GameState } from '../../src/engine/types';
-import { calmGame, get, run } from './helpers';
+import { CROW_AWAY, calmGame, get, run } from './helpers';
 
 function arrive(to: 'garden' | 'an'): GameState {
   let s = calmGame(['ingenLamnas']);
   for (const a of s.animals) a.zone = 'lane2';
   s.kraft = 99;
   for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
-  s = run(s, { type: 'travel', to: 'granbacken' });
+  s = run(s, { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
   s = run(s, { type: 'restAtFire', ...defaultPlan(s) });
   s.journey.truth = { garden: 'normal', an: 'normal' };
   s = run(s, { type: 'travel', to });

@@ -101,16 +101,39 @@ for (const route of [
       await page.getByRole('button', { name: 'Jag förstår' }).click();
       continue;
     }
+    if (await page.locator('.meeting').count()) {
+      // The crow at the fire, frame by frame. The river run pays a card; the farm run sends it away.
+      const opt = (label: RegExp) => page.locator('.meet-options .btn', { hasText: label });
+      if (route.scene === 'river') {
+        if (await opt(/Vad vill du ha/).count()) await opt(/Vad vill du ha/).click();
+        else if (await opt(/Ge ett kort/).count()) {
+          await opt(/Ge ett kort/).click();
+          await page.locator('.crow-pick .card').first().click();
+          await page.getByRole('button', { name: 'Ge kråkan kortet' }).click();
+          seen.add('crow');
+        } else await page.locator('.meet-options .btn').first().click();
+      } else if (await opt(/Nej tack/).count()) await opt(/Nej tack/).click();
+      else await page.locator('.meet-options .btn').first().click();
+      continue;
+    }
     if (await page.locator('.fire-screen').count()) {
       seen.add('fire');
-      // Send the owl ahead to see what Kvarn only remembers; someone else keeps watch.
-      const scout = page.locator('[data-act="fire-seat"][data-seat="scout"]');
-      if (await scout.count()) {
-        await scout.first().click();
+      // On the farm run, send the owl ahead: drag it (or, on a phone, tap it and then the place).
+      const owl = page.locator('.fire-token[data-drag="skymning"]');
+      const spot = page.locator('.fire-slot[data-seat="scout"]');
+      if (route.scene === 'farm' && !seen.has('scout') && (await owl.count()) && (await spot.count())) {
+        if (test.info().project.name === 'phone') {
+          await owl.click();
+          await spot.click();
+        } else await owl.dragTo(spot);
+        await expect(page.locator('.fire-token.seat-scout[data-animal="skymning"]')).toHaveCount(1);
         for (const id of ['ljung', 'kvarn', 'frona', 'sotfot', 'sicksack']) {
           if (await page.getByRole('button', { name: 'Låt natten gå' }).isEnabled()) break;
-          const w = page.locator(`[data-act="fire-seat"][data-animal="${id}"][data-seat="watch"]`);
-          if (await w.count()) await w.click();
+          const a = page.locator(`.fire-token[data-drag="${id}"]`);
+          if (await a.count()) {
+            await a.click();
+            await page.locator('.fire-slot[data-seat="watch"]').click();
+          }
         }
         seen.add('scout');
       }
@@ -123,7 +146,7 @@ for (const route of [
       const fork = page.locator(`.onward .btn.primary[data-to="${route.to}"]`);
       if (await fork.count()) {
         await expect(page.locator('.voice')).toHaveCount(2);
-        if (seen.has('scout')) await expect(page.locator('.map-svg text.memory.seen').first()).toBeVisible();
+        if (seen.has('scout') || seen.has('crow')) await expect(page.locator('.map-svg text.memory.seen').first()).toBeVisible();
         else await expect(page.locator('.map-svg text.memory').first()).toContainText('Kvarn tror');
         await fork.click();
       } else await page.locator('.onward .btn').first().click();
