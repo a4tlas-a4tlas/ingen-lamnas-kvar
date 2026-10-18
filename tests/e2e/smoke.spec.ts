@@ -28,7 +28,10 @@ async function leadForward(page: Page, seen: Set<string>) {
   }
 }
 
-test('a whole run: oath, map, road, campfire, farm, onward', async ({ page }) => {
+for (const route of [
+  { to: 'garden', scene: 'farm' },
+  { to: 'an', scene: 'river' },
+]) test(`a whole run: oath, map, road, campfire, ${route.scene}, onward`, async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
@@ -84,7 +87,7 @@ test('a whole run: oath, map, road, campfire, farm, onward', async ({ page }) =>
       continue;
     }
     if (await page.locator('.guide-modal').count()) {
-      if (await page.locator('.scene.farm').count()) seen.add('farm guide');
+      if (await page.locator(`.scene.${route.scene}`).count()) seen.add('area guide');
       await page.getByRole('button', { name: 'Jag förstår' }).click();
       continue;
     }
@@ -95,7 +98,12 @@ test('a whole run: oath, map, road, campfire, farm, onward', async ({ page }) =>
     }
     if (await page.locator('.map-screen').count()) {
       seen.add('map');
-      await page.locator('.onward .btn').first().click();
+      // At the fork, the voices speak and we take this test's way.
+      const fork = page.locator(`.onward .btn.primary[data-to="${route.to}"]`);
+      if (await fork.count()) {
+        await expect(page.locator('.voice')).toHaveCount(2);
+        await fork.click();
+      } else await page.locator('.onward .btn').first().click();
       continue;
     }
     const end = page.getByRole('button', { name: 'Låt timmen gå' });
@@ -103,13 +111,13 @@ test('a whole run: oath, map, road, campfire, farm, onward', async ({ page }) =>
       await page.waitForTimeout(200);
       continue;
     }
-    if (await page.locator('.scene.farm').count()) seen.add('farm');
+    if (await page.locator(`.scene.${route.scene}`).count()) seen.add('area');
     await leadForward(page, seen);
     if (await page.locator('.end-screen, .map-screen, [data-act="lm-letgo"]').count()) continue;
     if (await end.isEnabled()) await end.click();
   }
   await expect(page.locator('.end-screen')).toBeVisible({ timeout: 10_000 });
   await expect(page.locator('.end-screen h2')).toHaveText(/Åkrarna|Eden föll/);
-  if ((await page.locator('.end-screen h2').textContent()) === 'Åkrarna') expect([...seen]).toEqual(expect.arrayContaining(['farm', 'farm guide', 'fire', 'map']));
+  if ((await page.locator('.end-screen h2').textContent()) === 'Åkrarna') expect([...seen]).toEqual(expect.arrayContaining(['area', 'area guide', 'fire', 'map']));
   expect(errors).toEqual([]);
 });

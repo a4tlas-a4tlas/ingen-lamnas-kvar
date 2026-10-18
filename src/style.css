@@ -694,10 +694,40 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .scene.road.day .light { filter: saturate(0.6); }
 
 /* The farm at night: the dawn cut-out sinks into blue dark; stars over the barn. */
-.scene.farm .night-veil, .scene.farm .window-glow { display: none; }
+.scene .night-veil, .scene .night-stars, .scene.farm .window-glow { display: none; }
 .scene.farm.night.farmer-out .window-glow { display: inline; }
-.scene.farm.night .night-veil { display: inline; }
+.scene.night .night-veil, .scene.night .night-stars { display: inline; }
 .scene.farm.night .scene-bg { filter: saturate(0.7) brightness(0.8); }
-.scene.farm .farm-stars { display: none; }
-.scene.farm.night .farm-stars { display: inline; }
 .scene.farm.night .sun { display: none; }
+
+/* ---------------------------------------------------------------- the fork */
+
+.voices { display: grid; gap: 8px; margin: 4px 0 12px; }
+.voice {
+  display: grid; grid-template-columns: 46px 1fr; gap: 2px 10px; align-items: center;
+  background: rgba(239,227,200,0.08); border-left: 3px solid var(--owner); padding: 6px 10px; border-radius: 4px;
+}
+.voice .sil { width: 46px; grid-row: span 2; color: var(--owner); }
+.voice p { margin: 0; font-style: italic; font-size: 0.92em; }
+.voice p b { font-style: normal; font-family: var(--caps); }
+.voice .chip { justify-self: start; font-size: 0.68em; }
+
+/* ---------------------------------------------------------------- the river */
+
+.dam-ruin { display: none; }
+.scene.dam-broken .dam-whole { display: none; }
+.scene.dam-broken .dam-ruin { display: inline; }
+.scene.current-strid .fast-water { opacity: 0.95; animation: rush 0.9s linear infinite; }
+@keyframes rush { to { transform: translateX(14px); } }
+.current-mark, .slip-mark, .heron-mark { position: absolute; pointer-events: none; }
+.current-mark span, .slip-mark span, .heron-mark span {
+  position: absolute; right: 5px; font-size: 0.7em; font-weight: 600; padding: 0 5px; border-radius: 2px;
+}
+.current-mark span { top: 4px; background: #c9d4e6; color: var(--ink); }
+.current-mark.strid { box-shadow: inset 0 0 0 2px rgba(163,58,44,0.85); background: repeating-linear-gradient(90deg, rgba(163,58,44,0.12) 0 10px, transparent 10px 20px); }
+.current-mark.strid span { background: var(--blood); color: var(--paper); }
+.current-mark em { position: absolute; right: 5px; top: 24px; font-size: 0.66em; color: var(--paper); background: rgba(20,26,36,0.55); padding: 0 5px; border-radius: 2px; }
+.slip-mark { box-shadow: inset 0 0 0 2px rgba(201,212,230,0.9); background: repeating-linear-gradient(135deg, rgba(201,212,230,0.22) 0 6px, transparent 6px 14px); animation: approach 2.4s ease-in-out infinite; }
+.slip-mark span { bottom: 4px; background: #c9d4e6; color: var(--ink); }
+.heron-mark { box-shadow: inset 0 0 0 2px rgba(228,192,112,0.9); }
+.heron-mark span { top: 4px; background: var(--gold); color: var(--ink); }

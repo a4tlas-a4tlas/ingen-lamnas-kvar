@@ -1,6 +1,7 @@
 // The guide for each area: what we are trying to do, what kills and what
 // shelters. Numbers come from the rules so the guide cannot drift from them.
 import { ALARM_MAX, ALARM_MAX_NIGHT, FARM, SCENT_MAX } from '../engine/encounters/farm';
+import { DAM_MAX, RIVER } from '../engine/encounters/river';
 import { ROAD } from '../engine/encounters/road';
 import type { EncounterId, TimeOfDay } from '../engine/types';
 
@@ -28,6 +29,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   farm: {
     day: `Bonden vaknar vid ${ALARM_MAX} larm. Hundarna ser oss och kan lockas.`,
     night: `Bonden sover djupt: han vaknar först vid ${ALARM_MAX_NIGHT} larm. Hundarna ser ingenting och kan inte lockas – men doften ligger kvar längre i den kalla luften.`,
+  },
+  river: {
+    day: 'Hägern vaktar en sten varje timme och hugger efter de små.',
+    night: 'Ingen häger – men vattnet är kallt: den som står i ån när timmen går tappar 1 tro.',
   },
 };
 
@@ -89,6 +94,28 @@ export const GUIDES: Record<EncounterId, Guide> = {
       'Gå genom gräset och bäcken – där tappar hundarna spåret.',
       'Se var hundarna stannar innan du låter timmen gå, och led bort den som står där.',
       'Larmet är den verkliga klockan. Låt inte hundarna bita i onödan.',
+    ],
+  },
+  river: {
+    title: 'Så tar vi oss över ån',
+    goal: `Få alla från Strandbrinken till Andra stranden – ${RIVER.maxTurn} timmar. Över stenarna är tre steg, över dammen två.`,
+    dangers: [
+      { icon: '≈', name: 'Hala stenar', text: 'Vågorna gör en eller två stenar hala varje timme – det syns i förväg. Den som står där när timmen går glider ner i strömmen. ”Bita ihop” håller kvar.' },
+      { icon: '↯', name: 'Strömmen', effect: 'dödar', text: 'Lugn eller strid, timme för timme. När den är strid dras små och mellanstora djur i strömmen mot forsen – sista stunden: någon intill kan gripa tag.' },
+      { icon: '⌇', name: `Bäverdammen (${DAM_MAX})`, text: `Snabbast över, men den knakar: +1 för varje djur som går ut på den, +2 för de stora. Vid ${DAM_MAX} brister den – den som står där faller i strömmen, och flodvågen gör strömmen strid två timmar.` },
+      { icon: '⌐', name: 'Hägern', effect: 'skadar', text: 'Bara i dagsljus. Vaktar en sten varje timme och hugger de små som står där – ett sår som blöder.' },
+      { icon: '❄', name: 'Kylan', text: 'Bara om natten. Den som står i ån när timmen går – på en sten eller i strömmen – tappar 1 tro.' },
+    ],
+    shelter: [
+      { icon: '◉', name: 'De stora står emot', text: 'Gamla Ljung står stadigt i strömmen, och den som står i strömmen bredvid Gamla Ljung håller sig fast och dras inte med.' },
+      { icon: '∽', name: 'Kvarn simmar', text: 'Strömmen tar inte Kvarn. Vattnet är Kvarns hem.' },
+      { icon: '⇡', name: 'Ugglan flyger', text: 'Skymning flyger över allt: halka, ström och damm rör inte Skymning – så länge vingen är hel.' },
+      { icon: '◈', name: 'Bita ihop', text: 'Håller kvar den som står på en hal sten den här timmen.' },
+    ],
+    tips: [
+      'Läs strömmen: gå ut i den bara när den är lugn – eller med Gamla Ljung bredvid.',
+      'Dammen bär några få. Låt de svagaste gå där, och spara den till sist.',
+      'Stå aldrig på en sten som är hal när timmen går.',
     ],
   },
 };

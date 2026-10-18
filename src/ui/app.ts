@@ -33,9 +33,11 @@ import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, Zon
 import { sceneSvg, slotIn } from './scene';
 import { assignSeat, fireSceneSvg, firePanelHtml, guideHtml, mapSvg, memorialHtml, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
 import { defaultPlan } from '../engine/campfire';
+import { forkVoices, voiceStake } from '../engine/voices';
 import { pathsFrom, place } from '../data/journey';
 import { dogSilhouette, silhouette, speciesColor } from './silhouettes';
 import { alarmMax, dogDestination } from '../engine/encounters/farm';
+import { CURRENT, DAM, DAM_MAX } from '../engine/encounters/river';
 import { TIME_NAMES, TIME_NOTES } from '../data/guides.sv';
 import { animalStatuses, forecast, type Status } from './status';
 
@@ -97,7 +99,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 5 && s.phase !== 'over' ? s : null;
+    return s.version === 6 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -592,6 +594,8 @@ export class App {
     const scene = q('.scene');
     scene.classList.toggle('culvert-open', s.revealed.includes('culvert'));
     scene.classList.toggle('farmer-out', s.farmerOut);
+    scene.classList.toggle('dam-broken', s.closed.includes(DAM));
+    scene.classList.toggle('current-strid', s.encounterId === 'river' && s.currentPlan[s.turn - 1] === 'strid');
     scene.querySelectorAll<HTMLElement>('.zone.hidden-zone').forEach((z) => z.classList.toggle('found', s.revealed.includes(z.dataset.zone!)));
     q('.moon').classList.toggle('hidden', moonHidden(s));
     const zones = this.targetZones();
@@ -641,7 +645,7 @@ export class App {
         <span class="mpips">${pips(s.hope, 10, 'hope')}</span>
         ${low ? `<span class="mnote">Lågt hopp – vi drar ${hand} kort</span>` : ''}
       </div>
-      ${s.encounterId === 'farm' ? this.alarmHtml(s) : ''}
+      ${s.encounterId === 'farm' ? this.alarmHtml(s) : s.encounterId === 'river' ? this.damHtml(s) : ''}
       <div class="meter kraft ${s.kraft === 0 ? 'empty' : ''}" ${kraftTip}>
         <span class="mlabel">Kraft <b>${s.kraft}</b></span>
         <span class="mpips">${pips(s.kraft, maxKraft, 'kraft')}</span>
@@ -660,6 +664,32 @@ export class App {
         <span class="mlabel">${s.farmerOut ? 'Bonden ute' : `Larm <b>${s.alarm}</b>/${max}`}</span>
         <span class="mpips">${pips}</span>
       </div>`;
+  }
+
+  /** The beaver dam: every step makes it creak; at the limit it breaks. */
+  private damHtml(s: GameState): string {
+    const broken = s.closed.includes(DAM);
+    const tip = `data-tip-icon="⌇" data-tip-title="${broken ? 'Dammen har brustit' : `Dammen ${s.damCreak}/${DAM_MAX}`}" data-tip="${broken
+      ? 'Bäverdammen är borta. Nu finns bara stenarna och strömmen.'
+      : `Snabbast över ån, men den knakar: +1 för varje djur som går ut på den, +2 för de stora. Vid ${DAM_MAX} brister den – den som står där faller i strömmen, och flodvågen gör strömmen strid.`}"`;
+    const pips = Array.from({ length: DAM_MAX }, (_, i) => `<span class="pip alarm ${i < s.damCreak ? 'on' : ''}"></span>`).join('');
+    return `
+      <div class="meter alarm ${broken ? 'full' : ''}" ${tip}>
+        <span class="mlabel">${broken ? 'Dammen brusten' : `Dammen <b>${s.damCreak}</b>/${DAM_MAX}`}</span>
+        <span class="mpips">${pips}</span>
+      </div>`;
+  }
+
+  /** The river: the current in the water, the wet stones, the heron. */
+  private riverTelegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const now = s.currentPlan[s.turn - 1];
+    const next = s.peekNext && s.turn < s.maxTurn ? s.currentPlan[s.turn] : undefined;
+    out.push(`<div class="current-mark ${now}" style="${box(CURRENT)}"><span>${now === 'strid' ? 'strid · drar mot forsen · dödar' : 'lugn ström'}</span>${next ? `<em>nästa timme: ${next}</em>` : ''}</div>`);
+    for (const z of s.slipPlan[s.turn - 1] ?? []) out.push(`<div class="slip-mark" style="${box(z)}"><span>hal · glider ner</span></div>`);
+    if (s.heron) out.push(`<div class="heron-mark" style="${box(s.heron)}"><span>Hägern · skadar små</span></div>`);
+    return out.join('');
   }
 
   /** The dogs stand where they are; asleep, or turned toward a trail. */
@@ -703,6 +733,7 @@ export class App {
 
   private telegraphHtml(s: GameState): string {
     if (s.encounterId === 'farm') return s.phase === 'over' ? '' : this.farmTelegraphHtml(s);
+    if (s.encounterId === 'river') return s.phase === 'over' ? '' : this.riverTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {
@@ -967,6 +998,7 @@ export class App {
         <aside class="between-side">
           <p class="muted small">Kvarns minne av vägen</p>
           <h2>${esc(here.name)}</h2>
+          ${this.voicesHtml(s)}
           <div class="onward">
             ${onward.map(({ path, to }) => {
               const name = esc(known(to.id) ? to.name : to.fogName);
@@ -1003,6 +1035,25 @@ export class App {
           <div class="map-paper">${mapSvg(s, false)}</div>
         </div>
       </div>`;
+  }
+
+  /** At a fork, one or two of us speak up for a path. */
+  private voicesHtml(s: GameState): string {
+    const voices = forkVoices(s);
+    if (!voices.length) return '';
+    return `<div class="voices">${voices
+      .map((v) => {
+        const a = animal(s, v.who);
+        const to = place(v.to);
+        const name = s.journey.visited.includes(to.id) ? to.name : to.fogName;
+        const d = voiceStake(s, a);
+        return `<div class="voice" style="--owner:${speciesColor(a.species)}">
+          ${silhouette(a.species)}
+          <p><b>${esc(a.name)}:</b> ”${esc(v.line)}”</p>
+          <span class="chip tone-info">vill mot ${esc(name)} · +${d} tro om vi går dit, −${d} annars</span>
+        </div>`;
+      })
+      .join('')}</div>`;
   }
 
   private renderCampfire(s: GameState) {

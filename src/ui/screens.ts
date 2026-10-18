@@ -32,6 +32,8 @@ function icon(p: Place): string {
     case 'start':
       return '<path d="M-2.4 1.2 Q-1.2 -1.6 0 0.4 Q1.2 -1.8 2.4 1.2 Z" />';
     case 'encounter':
+      if (p.encounter === 'farm') return '<path d="M-2 1.4 V-0.4 L0 -1.8 L2 -0.4 V1.4 Z" /><rect x="-0.5" y="0.2" width="1" height="1.2" fill="var(--map-paper)" />';
+      if (p.encounter === 'river') return '<path d="M-2.4 -0.8 q0.6 -0.6 1.2 0 t1.2 0 t1.2 0 t1.2 0 M-2.4 0.6 q0.6 -0.6 1.2 0 t1.2 0 t1.2 0 t1.2 0" fill="none" stroke="currentColor" stroke-width="0.45" />';
       return '<rect x="-2.2" y="-0.9" width="4.4" height="1.8" rx="0.3" /><path d="M-1.6 0 h0.8 M-0.2 0 h0.8 M1.2 0 h0.6" stroke="var(--map-paper)" stroke-width="0.3" />';
     case 'campfire':
       return '<path d="M0 -2 C1.2 -0.6 1.4 0.6 0 1.5 C-1.4 0.6 -1.2 -0.6 0 -2 Z" fill="var(--map-fire)" /><path d="M-1.6 1.7 L1.6 1.1 M-1.6 1.1 L1.6 1.7" stroke="currentColor" stroke-width="0.35" />';
@@ -260,7 +262,7 @@ function zoneRole(z: ZoneDef): ZoneRole {
   if (z.goal) return 'goal';
   if (z.start) return 'start';
   if (z.cover) return 'cover';
-  if (z.road || z.exposed) return 'danger';
+  if (z.road || z.exposed || z.water) return 'danger';
   return 'plain';
 }
 

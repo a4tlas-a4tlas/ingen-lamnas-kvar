@@ -1,7 +1,10 @@
 /** Zones are defined per encounter (see encounters/); ids are plain strings. */
 export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
-export type EncounterId = 'road' | 'farm';
+export type EncounterId = 'road' | 'farm' | 'river';
+
+/** The river's current in a given hour. */
+export type Current = 'lugn' | 'strid';
 
 /**
  * Lasting harm from an injuring hit. Halt and broken never heal; bleeding and
@@ -176,7 +179,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 5;
+  version: 6;
   journey: Journey;
   /** The time of day of the encounter we're in. */
   time: TimeOfDay;
@@ -213,6 +216,17 @@ export interface GameState {
   farmerOut: boolean;
   /** The zone the farmer's flashlight will sweep this hour. */
   farmerSweep: ZoneId | null;
+  // The river.
+  /** Calm or strong, hour by hour: a strong current carries the small toward the rapids. */
+  currentPlan: Current[];
+  /** The stones that are wet with spray, hour by hour: whoever stands there slips. */
+  slipPlan: ZoneId[][];
+  /** The beaver dam creaks under every step: at 4 it breaks. */
+  damCreak: number;
+  /** Zones that are gone for the rest of the encounter (the broken dam). */
+  closed: ZoneId[];
+  /** The stone the heron watches this hour (by day). */
+  heron: ZoneId | null;
   peekNext: boolean;
   darkRevealed: boolean;
   hitQueue: Hit[];
