@@ -18,6 +18,13 @@ export const RIVER: EncounterDef = {
     night: 'Himlen ljusnar över vattnet. Det här är nattens sista timme.',
   },
   maxTurn: 8,
+  rescue: {
+    who: 'tistel',
+    zone: 'sten3',
+    found: 'På tredje stenen sitter en hare, avskuren av vattnet. Den darrar och vågar inte hoppa.',
+    trapped: 'på tredje stenen',
+    freed: 'visar vägen över vattnet',
+  },
   zones: [
     { id: 'strand', label: 'Strandbrinken', name: 'strandbrinken', rect: [0, 78, 100, 22], start: true, cover: true },
     { id: 'dammen', label: 'Bäverdammen', name: 'bäverdammen', rect: [0, 26, 22, 52] },

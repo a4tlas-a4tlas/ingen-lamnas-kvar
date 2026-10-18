@@ -1,4 +1,4 @@
-import type { CardKind, Size, Species } from '../engine/types';
+import type { CardKind, Size, Species, TraitId } from '../engine/types';
 
 export interface AnimalDef {
   id: string;
@@ -14,6 +14,8 @@ export interface AnimalDef {
   belief: number;
   swarm?: number;
   speciesCard: CardKind;
+  /** Traits it always has; the rest are rolled. */
+  traits?: TraitId[];
 }
 
 // Placeholder cast for the first slice. Roles are not fixed: each animal
@@ -26,6 +28,16 @@ export const CAST: AnimalDef[] = [
   { id: 'sicksack', name: 'Sicksack', species: 'adder', kindName: 'huggorm', predator: true, size: 'small', hunger: 2, belief: 4, speciesCard: 'giftIReserv' },
   { id: 'frona', name: 'Fröna', species: 'mice', kindName: 'musfamilj', predator: false, size: 'small', belief: 6, swarm: 6, speciesCard: 'smaSteg' },
 ];
+
+/** Those we meet on the way. They start as strangers: no bonds, little belief. */
+export const NEWCOMERS: AnimalDef[] = [
+  { id: 'tistel', name: 'Tistel', species: 'hare', kindName: 'hare', predator: false, size: 'small', belief: 4, speciesCard: 'sprang', traits: ['skygg'] },
+];
+
+export const newcomer = (id: string) => NEWCOMERS.find((d) => d.id === id)!;
+
+/** Anyone who can walk with us: the first ones and those we meet. */
+export const animalDef = (id: string) => CAST.find((d) => d.id === id) ?? NEWCOMERS.find((d) => d.id === id);
 
 /** Starting bonds, -3..3. Pairs not listed start at 0. */
 export const START_BONDS: [string, string, number][] = [

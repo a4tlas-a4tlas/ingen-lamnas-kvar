@@ -1,11 +1,11 @@
-import { CAST, START_BONDS } from '../data/animals';
+import { CAST, START_BONDS, type AnimalDef } from '../data/animals';
 import { TRAITS, TRAIT_IDS } from '../data/traits';
 import { random, shuffle, type RngHolder } from './rng';
 import { PLACES, START_PLACE } from '../data/journey';
 import { ROAD } from './encounters/road';
 import { bondKey } from './rules';
 import { VERSES } from '../data/verses';
-import type { Animal, Card, GameState, Journey, Variant, Verse, VerseId } from './types';
+import type { Animal, Card, GameState, Journey, Variant, Verse, VerseId, ZoneId } from './types';
 
 /** We swear a single verse in the glen; later verses come from the journey. */
 export const OATH_VERSES = 1;
@@ -29,6 +29,36 @@ export function rollMemory(seed: number): Pick<Journey, 'truth' | 'guess' | 'sco
   return { truth, guess, scouted: [] };
 }
 
+/** An animal from its definition: species card plus two traits (fixed ones first, the rest rolled), and their cards. */
+export function makeAnimal(def: AnimalDef, h: RngHolder, nextUid: () => number, zone: ZoneId): { animal: Animal; cards: Card[] } {
+  const fixed = def.traits ?? [];
+  const traits = [...fixed, ...shuffle(h, TRAIT_IDS.filter((t) => !fixed.includes(t)))].slice(0, 2);
+  const animal: Animal = {
+    id: def.id,
+    name: def.name,
+    species: def.species,
+    predator: def.predator,
+    elder: def.elder ?? false,
+    size: def.size,
+    flier: def.flier ?? false,
+    hunger: def.hunger ?? 0,
+    traits,
+    belief: def.belief,
+    injuries: [],
+    grief: [],
+    count: def.swarm,
+    zone,
+    status: 'active',
+    intent: { kind: 'follow' },
+    slowTime: 0,
+    braced: false,
+    flying: false,
+  };
+  const cards: Card[] = [{ uid: nextUid(), kind: def.speciesCard, owner: def.id }];
+  for (const t of traits) cards.push({ uid: nextUid(), kind: TRAITS[t].card, owner: def.id });
+  return { animal, cards };
+}
+
 export function createGame(seed: number): GameState {
   const h: RngHolder = { rng: seed };
   let uid = 1;
@@ -36,37 +66,16 @@ export function createGame(seed: number): GameState {
   const draw: Card[] = [];
 
   for (const def of CAST) {
-    const traits = shuffle(h, [...TRAIT_IDS]).slice(0, 2);
-    animals.push({
-      id: def.id,
-      name: def.name,
-      species: def.species,
-      predator: def.predator,
-      elder: def.elder ?? false,
-      size: def.size,
-      flier: def.flier ?? false,
-      hunger: def.hunger ?? 0,
-      traits,
-      belief: def.belief,
-      injuries: [],
-      grief: [],
-      count: def.swarm,
-      zone: ROAD.zones.find((z) => z.start)!.id,
-      status: 'active',
-      intent: { kind: 'follow' },
-      slowTime: 0,
-      braced: false,
-      flying: false,
-    });
-    draw.push({ uid: uid++, kind: def.speciesCard, owner: def.id });
-    for (const t of traits) draw.push({ uid: uid++, kind: TRAITS[t].card, owner: def.id });
+    const made = makeAnimal(def, h, () => uid++, ROAD.zones.find((z) => z.start)!.id);
+    animals.push(made.animal);
+    draw.push(...made.cards);
   }
 
   const bonds: Record<string, number> = {};
   for (const [a, b, v] of START_BONDS) bonds[bondKey(a, b)] = v;
 
   return {
-    version: 7,
+    version: 8,
     journey: { at: START_PLACE, visited: [START_PLACE], ...rollMemory(seed) },
     variant: 'normal',
     time: 'night',
@@ -102,6 +111,8 @@ export function createGame(seed: number): GameState {
     damCreak: 0,
     closed: [],
     heron: null,
+    rescue: null,
+    met: [],
     peekNext: false,
     darkRevealed: false,
     hitQueue: [],

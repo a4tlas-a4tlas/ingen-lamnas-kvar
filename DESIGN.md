@@ -358,3 +358,34 @@ Design from the milestone 3 interview:
   | Ån | 3.57 | 3.14 (flood) |
 
   The hard variants hurt clearly but aren't hopeless, which makes scouting worth its price.
+
+## Milestone 4 – newcomers and proposed verses (in progress)
+Design from the milestone 4 interview:
+- **Newcomers:** rescued mid-danger, and strangers with an agenda.
+- **The rescue:** built on trust, with a special action card that is always in hand while someone needs saving.
+- **The stranger:** knows the way, for a price.
+- **Proposed verses:** born from a death, from a bond, from fear, plus crisis promises. Mostly proposed at the fire, rarely in the last moment.
+- **No group limit.** The hand stays 5 cards whatever the size, so hope is shared thin.
+- **First new species:** the hare.
+
+### Step 1: the rescue – Tistel the hare (done)
+- **Where Tistel waits:** the first time we come to Gården or Ån, someone is trapped there. Tistel, a young hare, sits in a snare by Hönshuset (close to the dogs) or stranded on Tredje stenen. There's only one per run (`s.met`).
+- **The special card:** a card of its own lies beside the hand while Tistel waits (no owner colour, never discarded):
+  - **Nå fram** (◆1): an animal within one step gives +1 trust. A predator only frightens Tistel.
+  - At **2/2 trust** it becomes **Befria** (◆1): an animal beside Tistel frees Tistel.
+- **Once freed,** Tistel is one of us:
+  - belief 4, the *skygg* trait plus one random
+  - three cards straight into the discard pile
+  - bond +1 with the one who freed Tistel
+  - just as vulnerable as the rest of us
+- **The hare:** runs 2 steps when led, bolts easily (+2), and has the species card **Språng** (◆1, up to 3 steps).
+- **Left behind:** "Vi lämnade Tistel i snaran vid hönshuset." costs −1 hope. No verse breaks, because Tistel wasn't one of us yet.
+- **UI:** a trembling Tistel token with trust in the name tag, the card beside the hand, a forecast line, and a "Någon att rädda" section in the guide. With 7 or more in one zone, the tokens shrink so they fit.
+- **Balance** (bot, 300 runs; a rescuing bot vs one that ignores Tistel). Ours saved, of 4.6 who arrive:
+
+  | Route | Ignore Tistel | Rescue Tistel | Tistel saved |
+  |---|---|---|---|
+  | Gården | 3.15 | 2.35 | 44% of the time |
+  | Ån | 3.39 | 3.16 | 66% of the time |
+
+  The rescue is a real dilemma: on the farm, the hen house lies in the dogs' path.

@@ -2,6 +2,16 @@ import { expect, test, type Page } from '@playwright/test';
 
 /** Lead whoever can move toward the goal (the topmost lit zone), a few times per hour. Lure the dogs once. */
 async function leadForward(page: Page, seen: Set<string>) {
+  // Someone trapped: reach out (or free them) whenever one of us is close enough.
+  const special = page.locator('.card.special:not(.unplayable)');
+  if (await special.count()) {
+    await special.dispatchEvent('click');
+    const helper = page.locator('.token.target');
+    if (await helper.count()) {
+      await helper.first().dispatchEvent('click');
+      seen.add('rescue');
+    } else await page.keyboard.press('Escape');
+  }
   for (let n = 0; n < 3; n++) {
     const movers = page.locator('.token.can-move');
     if (!(await movers.count())) return;

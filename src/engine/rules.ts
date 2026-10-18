@@ -1,5 +1,5 @@
 // Read-only rule helpers shared by the engine (validation) and the UI (targeting).
-import { CAST } from '../data/animals';
+import { animalDef } from '../data/animals';
 import { CARDS, type TargetSpec } from '../data/cards';
 import { encounterOf, zoneDef } from './encounters';
 import type { Animal, Card, GameState, Hit, InjuryKind, VerseId, ZoneId } from './types';
@@ -119,10 +119,13 @@ export function forwardReach(s: GameState, a: Animal, steps: number): ZoneId[] {
   return [...out];
 }
 
-/** Where leading can take an animal. Fliers cover two steps forward in one flight. */
+/** The hare runs: two steps on the ground when led. */
+export const isFast = (a: Animal) => a.species === 'hare';
+
+/** Where leading can take an animal. Fliers cover two steps forward in one flight; the hare runs two. */
 export function leadZones(s: GameState, a: Animal): ZoneId[] {
   const zones = new Set(neighbors(s, a));
-  if (canFly(a) && !hasInjury(a, 'halt')) for (const z of forwardReach(s, a, 2)) if (!zoneDef(s, z).slow) zones.add(z);
+  if ((canFly(a) || isFast(a)) && !hasInjury(a, 'halt')) for (const z of forwardReach(s, a, 2)) if (!zoneDef(s, z).slow) zones.add(z);
   return [...zones];
 }
 
@@ -185,7 +188,7 @@ export function leadCost(a: Animal): number {
 /** A broken wing or paw takes away what makes the animal itself: its species card. */
 export function speciesCardBroken(s: GameState, card: Card): boolean {
   const o = s.animals.find((x) => x.id === card.owner);
-  return !!o && hasInjury(o, 'broken') && CAST.find((d) => d.id === o.id)?.speciesCard === card.kind;
+  return !!o && hasInjury(o, 'broken') && animalDef(o.id)?.speciesCard === card.kind;
 }
 
 export const canMove = (a: Animal) => isActive(a) && !isFrozen(a);
@@ -221,6 +224,8 @@ export function cardZones(s: GameState, card: Card): ZoneId[] {
     case 'snabbaTassar':
     case 'rusa':
       return forwardReach(s, o, 2);
+    case 'sprang':
+      return forwardReach(s, o, 3);
     case 'smaSteg':
     case 'gaForst':
     case 'bara':
@@ -264,6 +269,33 @@ export function lureZones(s: GameState, a: Animal): ZoneId[] {
   return encounterOf(s).zones
     .filter((z) => !z.goal && z.id !== a.zone && canEnter(s, a, z.id) && zoneDistance(s, a.zone, z.id) <= 2)
     .map((z) => z.id);
+}
+
+// ---------------------------------------------------------------- the rescue
+
+/** Trust a trapped newcomer needs before letting anyone close enough to free it. */
+export const RESCUE_TRUST = 2;
+
+/** Who can help the trapped one right now: reach out (within a step, not a predator) or, once trusted, free it (same zone). */
+export function rescueHelpers(s: GameState): string[] {
+  const r = s.rescue;
+  if (!r || s.phase !== 'play' || s.kraft < 1) return [];
+  return s.animals
+    .filter((a) => canMove(a))
+    .filter((a) => (r.trust >= RESCUE_TRUST ? a.zone === r.zone : !a.predator && zoneDistance(s, a.zone, r.zone) <= 1))
+    .map((a) => a.id);
+}
+
+/** Why an animal can't help the trapped one, in words. */
+export function rescueBlockReason(s: GameState, a: Animal): string | null {
+  const r = s.rescue;
+  if (!r) return null;
+  const name = r.who === 'tistel' ? 'Tistel' : 'Den';
+  if (s.kraft < 1) return 'Vi har ingen kraft kvar den här timmen.';
+  if (!canMove(a)) return `${a.name} kan inte röra sig nu.`;
+  if (r.trust >= RESCUE_TRUST) return a.zone === r.zone ? null : `${a.name} måste stå bredvid ${name} för att befria.`;
+  if (a.predator) return `${name} litar inte på ${a.name}. Ett rovdjur skrämmer bara.`;
+  return zoneDistance(s, a.zone, r.zone) <= 1 ? null : `${a.name} är för långt borta för att nå fram.`;
 }
 
 /** Who can throw themselves in the way during the last moment. */

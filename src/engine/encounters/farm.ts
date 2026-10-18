@@ -17,6 +17,13 @@ export const FARM: EncounterDef = {
     night: 'Himlen ljusnar bakom ladan. Det här är nattens sista timme.',
   },
   maxTurn: 8,
+  rescue: {
+    who: 'tistel',
+    zone: 'honshuset',
+    found: 'Vid hönshuset sitter en hare fast i en snara. Den sparkar och gnyr, och ser på oss med vita ögon.',
+    trapped: 'i snaran vid hönshuset',
+    freed: 'gnager av snaran',
+  },
   zones: [
     { id: 'snaret', label: 'Snåret', name: 'snåret', rect: [0, 77, 100, 23], start: true, cover: true },
     { id: 'hogtGras', label: 'Högt gräs', name: 'det höga gräset', rect: [0, 52, 34, 25], cover: true, breaksScent: true },
