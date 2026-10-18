@@ -143,7 +143,9 @@ export interface LogEntry {
 }
 
 /** Why hope moved, so the UI can let an animal speak about it. */
-export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh' | 'fire';
+export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh' | 'fire' | 'wait';
+
+export type TimeOfDay = 'day' | 'night';
 
 /** Side effects the UI and audio react to; the log keeps the readable text. */
 export type GameEvent =
@@ -174,8 +176,12 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 4;
+  version: 5;
   journey: Journey;
+  /** The time of day of the encounter we're in. */
+  time: TimeOfDay;
+  /** The natural time of the next leg: it follows the last one, unless we wait. */
+  clock: TimeOfDay;
   /** The dead not yet mourned by a fire. */
   unmourned: string[];
   encounterId: EncounterId;
@@ -221,7 +227,7 @@ export type Action =
   | { type: 'lead'; target: string; zone: ZoneId }
   | { type: 'lure'; target: string; zone: ZoneId }
   | { type: 'endTurn' }
-  | { type: 'travel'; to: string }
+  | { type: 'travel'; to: string; wait?: boolean }
   | { type: 'restAtFire'; watch?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice> }
   | { type: 'lastMoment'; choice: 'shield'; by: string }
   | { type: 'lastMoment'; choice: 'letGo' };

@@ -48,6 +48,9 @@ test('a whole run: oath, map, road, campfire, farm, onward', async ({ page }) =>
 
   // The map: the glen, and the road ahead in fog.
   await expect(page.locator('.map-screen')).toBeVisible();
+  // The road comes at night; we could wait for the day instead, for one hope.
+  await expect(page.locator('.onward .btn').first()).toHaveText(/i natt/);
+  await expect(page.getByRole('button', { name: /Vänta till dagen/ })).toBeEnabled();
   await page.locator('.onward .btn').first().click();
   await expect(page.locator('.token')).toHaveCount(6);
 

@@ -4,10 +4,10 @@ import { TRAITS } from '../data/traits';
 import { VERSES } from '../data/verses';
 import { closestTo, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone } from './campfire';
 import { planRoad } from './encounters/road';
-import { ALARM_MAX, HEN_HOUSE, SCENT_MAX, dogDestination, dogTargets, newDogs } from './encounters/farm';
+import { HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, oathVerse } from './setup';
-import { ENCOUNTERS, encounterOf, zoneDef } from './encounters';
+import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from './encounters';
 import {
   animal,
   backZone,
@@ -82,7 +82,7 @@ export function step(prev: GameState, action: Action): { state: GameState; event
       case 'lure': lure(c, action.target, action.zone); endIfAllAcross(c); break;
       case 'endTurn': endTurn(c); break;
       case 'lastMoment': resolveLastMoment(c, action); break;
-      case 'travel': travel(c, action.to); break;
+      case 'travel': travel(c, action.to, action.wait); break;
       case 'restAtFire': restAtFire(c, action); break;
     }
   } catch (e) {
@@ -141,15 +141,23 @@ function swear(c: Ctx, verses: VerseId[]) {
 
 // ---------------------------------------------------------------- the journey
 
-function travel(c: Ctx, to: string) {
+function travel(c: Ctx, to: string, wait = false) {
   const s = c.s;
   if (s.phase !== 'map') fail('Vi kan inte gå vidare nu.');
   if (!pathsFrom(s.journey.at).some((p) => p.to === to)) fail('Dit leder ingen väg härifrån.');
   const p = place(to);
+  if (wait && p.kind !== 'encounter') fail('Här finns inget att vänta på.');
   s.journey.at = to;
   if (!s.journey.visited.includes(to)) s.journey.visited.push(to);
   log(c, { kind: 'turn', text: p.name });
-  narrate(c, p.arrive);
+  if (p.kind === 'encounter') {
+    s.time = wait ? otherTime(s.clock) : s.clock;
+    if (wait) {
+      narrate(c, s.time === 'night' ? 'Vi gömde oss och väntade tills mörkret kom.' : 'Vi gömde oss och väntade på ljuset.');
+      changeHope(c, -1, 'wait');
+    }
+  }
+  narrate(c, (s.time === 'night' ? p.arriveNight : p.arriveDay) ?? p.arrive);
   if (p.kind === 'encounter') startEncounter(c, p.encounter!);
   else if (p.kind === 'campfire') s.phase = 'campfire';
   else if (p.kind === 'end') endRun(c);
@@ -167,7 +175,7 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.darkRevealed = false;
   s.hitQueue = [];
   s.pending = undefined;
-  const plan = id === 'road' ? planRoad(s, def.maxTurn) : { trafficPlan: [], moonPlan: [] };
+  const plan = id === 'road' ? planRoad(s, def.maxTurn, s.time) : { trafficPlan: [], moonPlan: [] };
   s.trafficPlan = plan.trafficPlan;
   s.moonPlan = plan.moonPlan;
   const farm = id === 'farm';
@@ -283,6 +291,7 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
   }
   changeHope(c, 1, 'fire');
   narrate(c, 'Vid gryningen släckte vi elden och gick vidare.');
+  s.clock = 'day';
   s.phase = 'map';
 }
 
@@ -335,7 +344,7 @@ function startTurn(c: Ctx) {
   s.kraft = 3 + (hidden && moon === 'intact' ? 1 : 0) - (moonVisible(s) && moon === 'flipped' ? 1 : 0);
 
   log(c, { kind: 'turn', text: `Timme ${s.turn} av ${s.maxTurn}` });
-  if (encounterOf(s).night) narrate(c, hidden ? 'Månen gömmer sig bakom molnen.' : 'Månen lyser över asfalten.');
+  if (s.time === 'night' && s.encounterId === 'road') narrate(c, hidden ? 'Månen gömmer sig bakom molnen.' : 'Månen lyser över asfalten.');
   if (s.encounterId === 'road') {
     const strikes = s.trafficPlan[s.turn - 1] ?? [];
     if (strikes.length === 0) narrate(c, 'Vägen är tyst. För tyst, kanske.');
@@ -343,9 +352,9 @@ function startTurn(c: Ctx) {
       narrate(c, `Ljus i fjärran – en ${st.vehicle} i ${zoneDef(s, st.lane).name}. ${st.severity === 'kill' ? 'Den dödar.' : 'Den skadar.'}`);
     }
     if (strikes.some((x) => x.dark)) narrate(c, 'Något mullrar i mörkret. Inga ljus.');
-    if (s.turn === s.maxTurn) narrate(c, 'Himlen ljusnar i öster. Det här är nattens sista timme.');
   }
   if (s.encounterId === 'farm') telegraphFarm(c);
+  if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
     for (const a of s.animals.filter((x) => isActive(x) && hasInjury(x, 'bleeding'))) {
@@ -468,8 +477,9 @@ function lead(c: Ctx, target: string, zone: ZoneId) {
 
 function raiseAlarm(c: Ctx, n: number) {
   const s = c.s;
-  s.alarm = Math.min(ALARM_MAX, s.alarm + n);
-  if (s.alarm >= ALARM_MAX && !s.farmerOut) {
+  const max = alarmMax(s);
+  s.alarm = Math.min(max, s.alarm + n);
+  if (s.alarm >= max && !s.farmerOut) {
     s.farmerOut = true;
     narrate(c, 'Ett ljus tänds i huset. Dörren slår upp. Bonden kommer ut med en ficklampa.');
   }
@@ -500,7 +510,6 @@ function telegraphFarm(c: Ctx) {
     s.farmerSweep = choices[Math.floor(random(s) * choices.length)].id;
     narrate(c, `Ficklampan söker mot ${zoneDef(s, s.farmerSweep).name}.`);
   }
-  if (s.turn === s.maxTurn) narrate(c, 'Solen stiger över ladan. Det här är sista timmen.');
 }
 
 /** End of the hour: the dogs reach their trail and bite, the flashlight finds whoever is in the open. */
@@ -532,9 +541,13 @@ function farmHazards(c: Ctx) {
   }
 }
 
-/** Scent fades by one each hour; where we end the hour, it grows, unless water, grass or dung hide it. */
+/**
+ * Scent fades by one each hour (at night, in the cold still air, every other hour);
+ * where we end the hour it grows, unless water, grass or dung hide it.
+ */
 function leaveScent(s: GameState) {
-  for (const z of Object.keys(s.scent)) s.scent[z] = Math.max(0, s.scent[z] - 1);
+  const fades = s.time === 'day' || s.turn % 2 === 0;
+  if (fades) for (const z of Object.keys(s.scent)) s.scent[z] = Math.max(0, s.scent[z] - 1);
   const occupied = new Set(s.animals.filter((a) => isActive(a) && !a.flying).map((a) => a.zone));
   for (const id of occupied) {
     const z = zoneDef(s, id);
@@ -919,7 +932,7 @@ function leaveGroup(c: Ctx, a: Animal, cause: 'dawn' | 'doubt') {
   const s = c.s;
   a.status = 'left';
   removeCards(s, a.id);
-  const why = cause === 'dawn' ? encounterOf(s).leftBehind : LEAVE_CAUSE[cause];
+  const why = cause === 'dawn' ? byTime(s, encounterOf(s).leftBehind) : LEAVE_CAUSE[cause];
   s.verses.push({ id: `minne-${a.id}`, kind: 'memorial', text: `För ${a.name}, ${why}.`, flipped: false });
   narrate(c, cause === 'dawn' ? `${a.name} hann inte över. Vi kunde inte vänta.` : `${a.name} vände om, ut i mörkret. Vi såg ${a.name} aldrig igen.`);
   changeHope(c, -1, cause === 'dawn' ? 'dawn' : 'leave', a.id);
@@ -934,7 +947,7 @@ function finishTurn(c: Ctx) {
   if (s.encounterId === 'farm') leaveScent(s);
   if (!s.animals.some(isActive)) return endEncounter(c);
   if (s.turn >= s.maxTurn) {
-    narrate(c, encounterOf(s).timeUp);
+    narrate(c, byTime(s, encounterOf(s).timeUp));
     for (const a of s.animals.filter(isActive)) leaveGroup(c, a, 'dawn');
     return endEncounter(c);
   }
@@ -959,6 +972,7 @@ function endEncounter(c: Ctx) {
   const before = s.animals.filter((a) => a.status === 'safe' || a.status === 'dead' || a.status === 'left').length;
   if (safe.length === before) narrate(c, `Alla ${num(safe.length)} ${crossed}.`);
   else narrate(c, `${capitalize(num(safe.length))} av oss ${crossed}.`);
+  s.clock = otherTime(s.time);
   s.phase = 'map';
 }
 

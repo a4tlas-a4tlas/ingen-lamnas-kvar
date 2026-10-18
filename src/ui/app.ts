@@ -1,7 +1,7 @@
 import { CAST } from '../data/animals';
 import { CARDS, TAG_NAMES } from '../data/cards';
 import { HOPE_LINES, KRAFT_OUT_LINES } from '../data/text.sv';
-import { encounterOf, zoneDef } from '../engine/encounters';
+import { byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
 import { Sound } from '../audio/sound';
@@ -35,7 +35,8 @@ import { assignSeat, fireSceneSvg, firePanelHtml, guideHtml, mapSvg, memorialHtm
 import { defaultPlan } from '../engine/campfire';
 import { pathsFrom, place } from '../data/journey';
 import { dogSilhouette, silhouette, speciesColor } from './silhouettes';
-import { ALARM_MAX, dogDestination } from '../engine/encounters/farm';
+import { alarmMax, dogDestination } from '../engine/encounters/farm';
+import { TIME_NAMES, TIME_NOTES } from '../data/guides.sv';
 import { animalStatuses, forecast, type Status } from './status';
 
 const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
@@ -96,7 +97,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 4 && s.phase !== 'over' ? s : null;
+    return s.version === 5 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -241,7 +242,7 @@ export class App {
         this.mapOpen = false;
         return this.render();
       case 'travel':
-        return this.dispatch({ type: 'travel', to: el.dataset.to! });
+        return this.dispatch({ type: 'travel', to: el.dataset.to!, wait: el.dataset.wait === '1' });
       case 'fire-seat':
         if (this.fireSeats) this.fireSeats = assignSeat(this.fireSeats, el.dataset.animal!, el.dataset.seat as Seat);
         return this.render();
@@ -551,7 +552,7 @@ export class App {
       <div class="game">
         <header class="topbar"></header>
         <main class="stage">
-          <div class="scene ${enc.id} ${enc.night ? 'night' : 'day'}">
+          <div class="scene ${enc.id} ${this.state!.time}">
             ${sceneSvg(enc.id)}
             <div class="moon"><div class="cloud"></div></div>
             <div class="zones">${zoneDivs}
@@ -616,7 +617,7 @@ export class App {
 
   private topbarHtml(s: GameState): string {
     return `
-      <div class="tb-title">Ingen lämnas kvar <span class="muted">· ${esc(encounterOf(s).title)}</span></div>
+      <div class="tb-title">Ingen lämnas kvar <span class="muted">· ${esc(byTime(s, encounterOf(s).title))}</span></div>
       <div class="tb-stats">
         <span class="stat">Timme <b>${s.turn}</b>/${s.maxTurn}</span>
         <button class="btn small" data-act="guide-open">Guide</button>
@@ -649,13 +650,14 @@ export class App {
 
   /** The farm's alarm: barking and stolen hens fill it; full, the farmer comes out. */
   private alarmHtml(s: GameState): string {
-    const tip = `data-tip-icon="!" data-tip-title="Larm ${s.alarm}/${ALARM_MAX}" data-tip="${s.farmerOut
+    const max = alarmMax(s);
+    const tip = `data-tip-icon="!" data-tip-title="Larm ${s.alarm}/${max}" data-tip="${s.farmerOut
       ? 'Bonden är ute. Varje timme lyser ficklampan mot en zon – den som står där i det öppna dör. Snåret och det höga gräset skyddar.'
-      : `Hundarnas skall väcker gården: +1 när de biter, +1 när någon lockar dem, +3 om ett rovdjur tar en höna. Vid ${ALARM_MAX} kommer bonden ut med ficklampan.`}"`;
-    const pips = Array.from({ length: ALARM_MAX }, (_, i) => `<span class="pip alarm ${i < s.alarm ? 'on' : ''}"></span>`).join('');
+      : `Hundarnas skall väcker gården: +1 när de biter, +1 när någon lockar dem, +3 om ett rovdjur tar en höna. Vid ${max} kommer bonden ut med ficklampan.${s.time === 'night' ? ' I natt sover han djupt.' : ''}`}"`;
+    const pips = Array.from({ length: max }, (_, i) => `<span class="pip alarm ${i < s.alarm ? 'on' : ''}"></span>`).join('');
     return `
       <div class="meter alarm ${s.farmerOut ? 'full' : ''}" ${tip}>
-        <span class="mlabel">${s.farmerOut ? 'Bonden ute' : `Larm <b>${s.alarm}</b>/${ALARM_MAX}`}</span>
+        <span class="mlabel">${s.farmerOut ? 'Bonden ute' : `Larm <b>${s.alarm}</b>/${max}`}</span>
         <span class="mpips">${pips}</span>
       </div>`;
   }
@@ -966,7 +968,21 @@ export class App {
           <p class="muted small">Kvarns minne av vägen</p>
           <h2>${esc(here.name)}</h2>
           <div class="onward">
-            ${onward.map(({ path, to }) => `<button class="btn primary" data-act="travel" data-to="${to.id}">Gå mot ${esc(known(to.id) ? to.name : to.fogName)}</button>${path.note ? `<p class="muted small">${esc(path.note)}</p>` : ''}`).join('')}
+            ${onward.map(({ path, to }) => {
+              const name = esc(known(to.id) ? to.name : to.fogName);
+              const note = path.note ? `<p class="muted small">${esc(path.note)}</p>` : '';
+              if (to.kind !== 'encounter') return `<button class="btn primary" data-act="travel" data-to="${to.id}">Gå mot ${name}</button>${note}`;
+              // An encounter comes at the natural time of day, unless we wait for the other one.
+              const now = s.clock;
+              const later = otherTime(now);
+              return `<div class="leg">
+                <button class="btn primary" data-act="travel" data-to="${to.id}">Gå mot ${name} – i ${TIME_NAMES[now]}</button>
+                <p class="small time-note">${now === 'night' ? '☾' : '☼'} ${esc(TIME_NOTES[to.encounter!][now])}</p>
+                <button class="btn" data-act="travel" data-to="${to.id}" data-wait="1" ${s.hope > 0 ? '' : 'disabled'}>Vänta till ${later === 'night' ? 'natten' : 'dagen'} (−1 hopp)</button>
+                <p class="small time-note">${later === 'night' ? '☾' : '☼'} ${esc(TIME_NOTES[to.encounter!][later])}</p>
+                ${note}
+              </div>`;
+            }).join('')}
           </div>
           <h3>Vi som går</h3>
           <ul class="roster">${rosterHtml(s)}</ul>

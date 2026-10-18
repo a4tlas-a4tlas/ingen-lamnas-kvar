@@ -4,7 +4,7 @@ import { FOREST, PATHS, PLACES, pathsFrom, type Place } from '../data/journey';
 import { EMBER_PAIRS, type FirePlan, hungryWatcher, inheritanceLine, living, planProblem, sitsAlone } from '../engine/campfire';
 import { encounterOf, type EncounterDef, type ZoneDef } from '../engine/encounters';
 import { animal, bond } from '../engine/rules';
-import { GUIDES, HIT_ROWS, HOUR_STEPS, type GuideRow } from '../data/guides.sv';
+import { GUIDES, HIT_ROWS, HOUR_STEPS, TIME_NAMES, TIME_NOTES, type GuideRow } from '../data/guides.sv';
 import type { Animal, GameState } from '../engine/types';
 import { silhouette, speciesColor } from './silhouettes';
 import { animalStatuses } from './status';
@@ -318,6 +318,9 @@ export function guideHtml(s: GameState): string {
       <div class="modal-card guide-modal">
         <div class="deck-head"><h2 id="guide-title">${esc(g.title)}</h2><button class="btn small" data-act="guide-close">Stäng</button></div>
         <section class="guide-goal"><h3>Målet</h3><p>${esc(g.goal)}</p></section>
+        <section class="guide-time"><h3>Dag och natt</h3><ul>${(['night', 'day'] as const)
+          .map((t) => `<li class="${t === s.time ? 'now' : ''}"><b>${t === 'night' ? '☾ Natt' : '☼ Dag'}${t === s.time ? ` – nu, i ${TIME_NAMES[t]}` : ''}:</b> ${esc(TIME_NOTES[def.id][t])}</li>`)
+          .join('')}</ul></section>
         <div class="guide-top">
           <section class="guide-sketch"><h3>Kartskiss</h3>${zoneSketchSvg(def, s.revealed)}${legendHtml(def)}</section>
           <section><h3>Så går en timme</h3><ol class="guide-steps">${HOUR_STEPS.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></section>
