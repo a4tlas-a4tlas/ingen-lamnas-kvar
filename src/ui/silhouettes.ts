@@ -150,6 +150,11 @@ export function sceneArt(kind: SceneArt): string {
         ${[0, 1, 2, 3, 4, 5].map((i) => `<rect x="${4 + i * 10}" y="${26 + (i % 2)}" width="6" height="3" fill="#2a1e14"/><rect x="${4 + i * 10}" y="${38 + (i % 2)}" width="6" height="3" fill="#2a1e14"/>`).join('')}`);
     case 'toad':
       return silhouette('toad');
+    case 'ridge':
+      return svg(`
+        <circle cx="44" cy="24" r="8" fill="#f0cf96"/>
+        <path d="M0 48 L0 32 Q16 22 30 28 Q44 20 64 26 L64 48 Z" fill="#5d6b44"/>
+        <path d="M0 48 L0 40 Q20 34 36 38 Q52 34 64 38 L64 48 Z" fill="#3e5032"/>`);
   }
 }
 

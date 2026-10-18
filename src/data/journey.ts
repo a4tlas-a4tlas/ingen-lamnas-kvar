@@ -15,8 +15,6 @@ export interface Path {
 /** The forest we're walking toward: always on the map, always in fog. */
 export const FOREST = { name: 'Skogen', x: 50, y: 4 };
 
-export const START_PLACE = 'dalen';
-
 export function place(s: GameState, id: string): Place {
   const p = s.journey.nodes.find((x) => x.id === id);
   if (!p) throw new Error(`Okänd plats: ${id}`);

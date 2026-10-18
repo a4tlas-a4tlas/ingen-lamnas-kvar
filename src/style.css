@@ -52,9 +52,10 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
   cursor: pointer;
   box-shadow: 0 3px 0 rgba(0,0,0,0.45), 0 6px 14px rgba(0,0,0,0.35);
   font-weight: 600;
-  transition: transform 0.12s, box-shadow 0.12s, background 0.2s;
+  transition: transform 0.12s, box-shadow 0.12s, background 0.2s, filter 0.12s;
 }
-.btn:hover:not([disabled]) { transform: translateY(-1px); }
+/* Hover brightens instead of lifting: a lifting button can slip out from under the pointer at its edge and flicker. */
+.btn:hover:not([disabled]) { filter: brightness(1.06); box-shadow: 0 3px 0 rgba(0,0,0,0.45), 0 8px 18px rgba(0,0,0,0.4); }
 .btn:active:not([disabled]) { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,0.45); }
 .btn[disabled] { opacity: 0.4; cursor: default; }
 .btn.primary { background: var(--gold); }

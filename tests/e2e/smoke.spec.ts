@@ -42,7 +42,7 @@ for (const route of [
   { kind: 'farm', scene: 'farm' },
   { kind: 'river', scene: 'river' },
 ]) test(`a whole run through Dalen, choosing the ${route.scene} where we can`, async ({ page }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(480_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
@@ -90,7 +90,7 @@ for (const route of [
   await page.locator('.zone.target').first().click({ position: { x: 8, y: 8 } });
 
   const seen = new Set<string>();
-  const deadline = Date.now() + 200_000;
+  const deadline = Date.now() + 420_000;
   while (Date.now() < deadline) {
     if (await page.locator('.end-screen').count()) break;
     if (await page.locator('[data-act="lm-letgo"]').count()) {
@@ -110,7 +110,8 @@ for (const route of [
       continue;
     }
     if (await page.locator('.meeting').count()) {
-      if (await page.locator('.meeting-card:not(.crow):not(.proposal)').count()) seen.add('story');
+      if (await page.locator('.meeting-card:not(.crow):not(.proposal):not(.interlude)').count()) seen.add('story');
+      if (await page.locator('.meeting-card.interlude').count()) seen.add('interlude');
       // The crow at the fire, frame by frame. The river run pays a card; the farm run sends it away.
       const opt = (label: RegExp) => page.locator('.meet-options .btn', { hasText: label });
       if (await page.locator('.meeting-card.proposal').count()) {
@@ -182,7 +183,7 @@ for (const route of [
     if (await end.isEnabled({ timeout: 2_000 }).catch(() => false)) await end.click();
   }
   await expect(page.locator('.end-screen')).toBeVisible({ timeout: 10_000 });
-  await expect(page.locator('.end-screen h2')).toHaveText(/Åsen|Eden föll/);
-  if ((await page.locator('.end-screen h2').textContent()) === 'Åsen') expect([...seen]).toEqual(expect.arrayContaining(['fire', 'map', 'story', 'machines']));
+  await expect(page.locator('.end-screen h2')).toHaveText(/Bortom åkrarna|Eden föll/);
+  if ((await page.locator('.end-screen h2').textContent()) === 'Bortom åkrarna') expect([...seen]).toEqual(expect.arrayContaining(['fire', 'map', 'story', 'machines', 'interlude']));
   expect(errors).toEqual([]);
 });

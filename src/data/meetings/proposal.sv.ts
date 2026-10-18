@@ -37,7 +37,9 @@ export const PROPOSAL: Record<string, MeetingFrame> = {
       const p = asked(s);
       return p.rule === 'stay'
         ? `${name(s, p.by)} andas fortfarande. ”${name(s, p.with)}… Lova mig en sak.” ${fill(s, p, PROMISES[p.rule].why)}`
-        : `${name(s, p.by)} ser upp från glöden. ”Lova mig en sak.” ${fill(s, p, PROMISES[p.rule].why)}`;
+        : s.run.between
+          ? `${name(s, p.by)} ser ut över det vi lämnar. ”Lova mig en sak.” ${fill(s, p, PROMISES[p.rule].why)}`
+          : `${name(s, p.by)} ser upp från glöden. ”Lova mig en sak.” ${fill(s, p, PROMISES[p.rule].why)}`;
     },
     card: (s) => {
       const p = asked(s);

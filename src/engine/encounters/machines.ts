@@ -19,7 +19,6 @@ export const MACHINES: EncounterDef = {
     day: 'Schaktaren är nästan framme. Det här är sista timmen.',
     night: 'Schaktaren är nästan framme. Det här är sista timmen.',
   },
-  epilogue: 'Vi står på åsen och ser ner. Där dalen låg finns bara lera och stubbar. Bakom oss tystnar maskinerna. Framför oss ligger allt det andra – fortsättning följer.',
   maxTurn: 8,
   zones: [
     { id: 'glantan', label: 'Gläntan', name: 'gläntan', rect: [0, 76, 100, 24], start: true, exposed: true },

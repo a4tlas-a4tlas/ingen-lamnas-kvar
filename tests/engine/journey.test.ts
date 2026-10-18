@@ -38,7 +38,45 @@ describe('the journey', () => {
     expect(s.journey.visited).toEqual(['dalen', 'vagen', 'granbacken']);
   });
 
-  it('ends the run at the fields, with everyone still alive counted', () => {
+  it('at the end of the glen we stop between two landscapes: look back, are asked a promise, and go on to the fields', () => {
+    let s = acrossTheRoad();
+    s = run(s, { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
+    s = run(s, { type: 'restAtFire', ...defaultPlan(s) });
+    s = run(s, { type: 'travel', to: 'garden' });
+    for (const a of s.animals) if (a.status === 'active') a.zone = 'godsel';
+    s.kraft = 99;
+    for (const a of s.animals.filter((x) => x.status === 'active')) s = run(s, { type: 'lead', target: a.id, zone: 'stenmuren' });
+    s = run(s, { type: 'travel', to: 'akrarna' });
+    expect(s.phase).toBe('map');
+    expect(s.run).toMatchObject({ between: true, offered: ['akrarna'] });
+    expect(s.meeting).toMatchObject({ id: 'interlude', frame: 'start' });
+    // Gamla Ljung grieves the glen; saying it aloud lets it go a little.
+    get(s, 'ljung').grief = ['dalen'];
+    const belief = get(s, 'ljung').belief;
+    s = run(s, { type: 'respond', option: 'look-ljung' });
+    expect(get(s, 'ljung').belief).toBe(Math.min(10, belief + 1));
+    expect(get(s, 'ljung').grief).toEqual([]);
+    expect(step(s, { type: 'respond', option: 'look-ljung' }).events[0].kind).toBe('error');
+    s = run(s, { type: 'respond', option: 'onward' });
+    // The glen leaves a promise in someone.
+    expect(s.meeting).toMatchObject({ id: 'proposal' });
+    expect(s.proposal?.rule).toBe('noCity');
+    s = run(s, { type: 'respond', option: 'accept' }, { type: 'respond', option: 'close' });
+    expect(s.verses.some((v) => v.promise?.rule === 'noCity')).toBe(true);
+    expect(s.meeting).toMatchObject({ id: 'interlude', frame: 'way' });
+    const deck = s.draw.length + s.hand.length + s.discard.length;
+    s = run(s, { type: 'respond', option: 'go-akrarna' });
+    // A new map, the same of us: the deck, the poem and our wounds come along.
+    expect(s.meeting).toBeNull();
+    expect(s.journey).toMatchObject({ region: 'akrarna', at: 'akerkanten' });
+    expect(s.run).toMatchObject({ regions: ['dalen', 'akrarna'], between: false });
+    expect(s.draw.length + s.hand.length + s.discard.length).toBe(deck);
+    expect(s.journey.nodes.find((n) => n.id === 'grusvagen')?.row).toBe(1);
+    s = run(s, { type: 'travel', to: 'grusvagen' });
+    expect(s.encounterId).toBe('road');
+  });
+
+  it('ends the run where the way runs out, with everyone still alive counted', () => {
     let s = acrossTheRoad();
     s = run(s, { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
     s = run(s, { type: 'restAtFire', ...defaultPlan(s) });
@@ -48,6 +86,7 @@ describe('the journey', () => {
     s.kraft = 99;
     for (const a of s.animals.filter((x) => x.status === 'active')) s = run(s, { type: 'lead', target: a.id, zone: 'stenmuren' });
     expect(s.phase).toBe('map');
+    s.run.regions = ['dalen', 'akrarna'];
     s = run(s, { type: 'travel', to: 'akrarna' });
     expect(s.phase).toBe('over');
     expect(s.outcome?.safe).toHaveLength(6);

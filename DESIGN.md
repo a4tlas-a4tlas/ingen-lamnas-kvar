@@ -558,3 +558,23 @@ Every story part is a meeting in frames (`src/data/meetings/dalen.sv.ts`). Repli
 - **Grävskopans spår pays off here:** if we read the tracks, we see where the feller turns next hour and the whole order the bulldozer takes. Without them, only Gläntan is known.
 - **When the last of us is over the ridge,** the run ends with the epilogue ("fortsättning följer").
 - **Balance:** a lead-only bot, with no cards, no comforting and always letting go, brings 3.6 of 6 over the ridge on average. A human with cards and last moments should do better, but rarely bring everyone.
+
+## Milestone 6 – Åkrarna, Stadens utkant, and the choice between them (in progress)
+Design from the milestone 6 interview:
+- **Two regions first:** Åkrarna and Stadens utkant. After that, the choice between 2 random regions.
+- **Each region has at least 4 different scenarios and a boss,** all of them feeling different. Each has 6 rows plus the boss, like Dalen.
+- **The bosses:**
+  - **Åkrarna: Skördetröskan,** with the hedgehog (an earlier meeting decides whether it trusts us).
+  - **Stadens utkant: Fyrverkerinatten,** where the danger is fear itself.
+- **Between two regions comes an interlude:** looking back, a proposed verse, and choosing the way.
+- **One PR per piece.**
+
+### Step 1: regions and the interlude (done)
+- **Regions in a registry** (`src/data/regions/`). Each one has its places and its boss, a fog name, an epilogue, and the promise it leaves in someone.
+- **A run remembers its regions** (`s.run`): the ones we have walked, the ones offered, and whether we stand between two. A new region is a new map from Kvarn (`regionJourney`). The animals, deck, poem, bonds, injuries, grief and knowledge all come along.
+- **When a region's last place is behind us** (the boss, or its end), its epilogue is told, and then *Mellan två landskap* follows:
+  1. **We look back.** Anyone still with us can say something about what we leave (+1 belief). Whoever grieves the region lets go a little.
+  2. **The region's promise.** After Dalen, the one who grieves the glen (otherwise the eldest) asks *"Vi går aldrig dit där maskinerna bor"*. It breaks if we choose the way toward the city. Sotfot speaks against it.
+  3. **Vilken väg?** The regions not yet walked are drawn, up to two, and we choose among them. Until a second one exists, Kvarn "remembers only one way".
+- **Åkrarna, for now:** a map with old dangers in new places (Grusvägen, Gården vid åkern, Kanalen), a few of the story parts that travel, the fires Halmstacken and Vindskyddet, and the end *Bortom åkrarna*, where the run ends for now. Its own dangers and boss come in the next steps.
+- **Hovering a button brightens it instead of lifting it.** A lifting button could slip out from under the pointer at its edge and flicker; the browser test caught it.
