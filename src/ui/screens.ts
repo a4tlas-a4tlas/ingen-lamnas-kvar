@@ -352,7 +352,7 @@ export function meetingHtml(s: GameState, picker = ''): string {
   const def = MEETINGS[m.id];
   const main = proposer
     ? `<div class="meet-proposer" style="color:${speciesColor(proposer.species)}">${silhouette(proposer.species)}<span>${esc(proposer.name)}</span></div>`
-    : def.art === 'crow' ? `${crowSilhouette()}<div class="meet-branch"></div>` : `<div class="meet-thing">${sceneArt(def.art)}</div>`;
+    : def.art === 'crow' ? `${crowSilhouette()}<div class="meet-branch"></div>` : def.art === 'proposer' ? '' : `<div class="meet-thing">${sceneArt(def.art)}</div>`;
   const facing = m.by && m.by !== proposer?.id ? speaker(m.by) : undefined;
   return `
     <div class="modal meeting" role="dialog" aria-modal="true" aria-labelledby="meet-title">

@@ -52,9 +52,17 @@ export const DALEN: RegionDef = {
   ],
   meetings: [
     { key: 'koltrasten', kind: 'meeting', meeting: 'koltrasten', name: 'Björkdungen', fogName: 'Fågelsång?', arrive: 'I björkdungen sjunger någon.', note: 'Någon är där. Kvarn hör sång.' },
+    { key: 'hjorten', kind: 'meeting', meeting: 'hjorten', name: 'Diket vid vägen', fogName: 'Något i diket?', arrive: 'Något stort ligger i diket.', note: 'Någon andas tungt där.' },
+    { key: 'maten', kind: 'meeting', meeting: 'maten', name: 'Ängen vid sjön', fogName: 'Människoröster?', arrive: 'Det luktar bröd.', note: 'Människor – och mat.' },
+    { key: 'framlingen', kind: 'meeting', meeting: 'framlingen', name: 'Granskogen', fogName: 'Ögon i mörkret?', arrive: 'Någon väntar mellan granarna.', note: 'Någon står i vägen.' },
+    { key: 'gravskopan', kind: 'meeting', meeting: 'gravskopan', name: 'Leran', fogName: 'Dieseldoft?', arrive: 'Marken är uppriven.', note: 'Maskinerna har varit här.' },
+    { key: 'tvekan', kind: 'meeting', meeting: 'kvarnsTvekan', name: 'Stenen där vägen delar sig', fogName: 'Kvarn tvekar…', arrive: 'Kvarn stannar.', note: 'Här minns Kvarn sämre.' },
   ],
   finds: [
     { key: 'tradet', kind: 'find', meeting: 'ihaligtTrad', name: 'Det ihåliga trädet', fogName: 'Ett skydd?', arrive: 'Ett gammalt, ihåligt träd.', note: 'Något att vila i, kanske.' },
+    { key: 'barsnar', kind: 'find', meeting: 'barsnar', name: 'Bärsnåret', fogName: 'Något sött?', arrive: 'Det doftar bär.', note: 'Mat, kanske.' },
+    { key: 'stigen', kind: 'find', meeting: 'gammalStig', name: 'Den gamla stigen', fogName: 'En stig?', arrive: 'En stig, nästan igenvuxen.', note: 'Någon har gått här förr.' },
+    { key: 'grytet', kind: 'find', meeting: 'gryt', name: 'Grytet', fogName: 'Ett hål i marken?', arrive: 'Ett gryt under en stubbe.', note: 'Ett gömställe, kanske.' },
   ],
   fire: { key: 'glantan', kind: 'campfire', name: 'Gläntan', fogName: 'En glänta?', arrive: 'En liten glänta, skyddad av hasselbuskar. Här kan vi göra upp eld.', note: 'Vila, och eld.' },
   lastFire: { key: 'granbacken', kind: 'campfire', name: 'Granbacken', fogName: 'Ett skydd under granarna?', arrive: 'Under de täta granarna når vinden inte in. Här kan vi vila.', note: 'Sista vilan i dalen.' },

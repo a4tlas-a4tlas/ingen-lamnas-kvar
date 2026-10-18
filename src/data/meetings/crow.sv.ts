@@ -20,7 +20,26 @@ export type MeetingEffect =
   | 'trick'
   | 'sotfotDark'
   | 'owlScare'
-  | 'story';
+  | 'story'
+  // Dalen's finds and meetings.
+  | 'berries'
+  | 'berriesCareful'
+  | 'learnPath'
+  | 'restDen'
+  | 'ljungDigs'
+  | 'stayDeer'
+  | 'ljungDeer'
+  | 'truceTest'
+  | 'sneak'
+  | 'sotfotSteals'
+  | 'fronaBasket'
+  | 'shareCard'
+  | 'chaseFox'
+  | 'readTracks'
+  | 'followTracks'
+  | 'comfortKvarn'
+  | 'doubtKvarn'
+  | 'guessWay';
 
 export interface MeetingOption {
   id: string;
@@ -36,6 +55,8 @@ export interface MeetingOption {
   effect?: MeetingEffect;
   /** The next frame; none ends the meeting. A gamble may change it. */
   next?: string;
+  /** For gambles the engine rolls: the frame when it fails. */
+  failNext?: string;
 }
 
 export interface MeetingFrame {

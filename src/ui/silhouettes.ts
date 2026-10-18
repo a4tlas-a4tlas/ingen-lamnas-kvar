@@ -1,3 +1,4 @@
+import type { SceneArt } from '../data/meetings';
 import type { Species } from '../engine/types';
 
 // Papercut silhouettes, drawn on a 64×48 grid. Each is a few cut shapes
@@ -99,20 +100,57 @@ export function silhouette(species: Species, color = shapes[species].paper): str
 }
 
 /** What stands in a story part's picture: a thing of the place. */
-export function sceneArt(kind: 'bird' | 'tree' | 'proposer' | 'crow'): string {
-  if (kind === 'bird')
-    return `<svg class="sil" viewBox="0 0 64 48" aria-hidden="true">
-      <path d="M2 40 Q30 30 62 34" stroke="#3a2a1e" stroke-width="2" fill="none"/>
-      <path d="M22 30 Q26 18 38 20 L44 17 L48 19 L43 23 Q42 31 32 33 Z" fill="#0b0d12"/>
-      <path d="M48 19 L53 19.5 L48 21 Z" fill="#e4a83a"/><path d="M22 30 L12 34 L23 33 Z" fill="#0b0d12"/>
-      <circle cx="44" cy="19.5" r="0.9" fill="#e4a83a"/>
-      <path d="M50 10 q3 -2 6 0 M54 6 q3 -2 6 0" stroke="#efe3c8" stroke-width="1" fill="none" opacity="0.7"/>
-    </svg>`;
-  return `<svg class="sil" viewBox="0 0 64 48" aria-hidden="true">
-    <path d="M20 46 Q18 24 24 12 Q32 4 40 12 Q46 24 44 46 Z" fill="#4a3826"/>
-    <ellipse cx="32" cy="30" rx="6" ry="9" fill="#120c08"/>
-    <path d="M24 12 Q14 6 10 10 M40 12 Q50 4 56 9" stroke="#4a3826" stroke-width="3" fill="none"/>
-  </svg>`;
+export function sceneArt(kind: SceneArt): string {
+  const svg = (body: string) => `<svg class="sil" viewBox="0 0 64 48" aria-hidden="true">${body}</svg>`;
+  switch (kind) {
+    case 'bird':
+      return svg(`
+        <path d="M2 40 Q30 30 62 34" stroke="#3a2a1e" stroke-width="2" fill="none"/>
+        <path d="M22 30 Q26 18 38 20 L44 17 L48 19 L43 23 Q42 31 32 33 Z" fill="#0b0d12"/>
+        <path d="M48 19 L53 19.5 L48 21 Z" fill="#e4a83a"/><path d="M22 30 L12 34 L23 33 Z" fill="#0b0d12"/>
+        <circle cx="44" cy="19.5" r="0.9" fill="#e4a83a"/>
+        <path d="M50 10 q3 -2 6 0 M54 6 q3 -2 6 0" stroke="#efe3c8" stroke-width="1" fill="none" opacity="0.7"/>`);
+    case 'tree':
+      return svg(`
+        <path d="M20 46 Q18 24 24 12 Q32 4 40 12 Q46 24 44 46 Z" fill="#4a3826"/>
+        <ellipse cx="32" cy="30" rx="6" ry="9" fill="#120c08"/>
+        <path d="M24 12 Q14 6 10 10 M40 12 Q50 4 56 9" stroke="#4a3826" stroke-width="3" fill="none"/>`);
+    case 'berries':
+      return svg(`
+        <path d="M6 46 Q10 22 22 18 Q30 10 40 16 Q54 18 58 46 Z" fill="#2f4a2a"/>
+        ${[[20, 30], [26, 26], [34, 30], [40, 24], [46, 32], [28, 36], [38, 38], [16, 38]].map(([x, y], i) =>
+          `<circle cx="${x}" cy="${y}" r="2.2" fill="${i % 3 ? '#3b4f9a' : '#b8323a'}"/>`).join('')}`);
+    case 'path':
+      return svg(`
+        <path d="M24 48 Q30 34 26 24 Q22 14 32 4 L36 4 Q28 14 32 24 Q36 34 40 48 Z" fill="#8a6a44"/>
+        <path d="M4 46 Q8 30 14 28 Q18 34 18 46 Z M46 46 Q48 28 56 26 Q62 34 60 46 Z" fill="#2f4a2a"/>
+        <path d="M30 40 l1 -2 l1 2 M28 30 l1 -2 l1 2 M31 18 l1 -2 l1 2" stroke="#3a2a1e" stroke-width="1" fill="none"/>`);
+    case 'den':
+      return svg(`
+        <path d="M4 46 Q8 26 20 22 L44 22 Q58 26 60 46 Z" fill="#4a3826"/>
+        <path d="M18 22 Q18 12 24 10 L28 22 M40 22 L42 12 Q48 12 46 22" fill="#5a4630"/>
+        <path d="M22 46 Q22 32 32 30 Q42 32 42 46 Z" fill="#120c08"/>`);
+    case 'deer':
+      return svg(`
+        <path d="M8 40 Q14 30 30 30 Q46 30 50 36 L58 32 L60 36 L54 40 Q48 44 30 44 Q12 44 8 40 Z" fill="#7a5a3a"/>
+        <path d="M56 32 L54 22 M54 26 L50 22 M56 28 L60 22" stroke="#3a2a1e" stroke-width="1.4" fill="none"/>
+        <circle cx="55" cy="35" r="0.9" fill="#120c08"/>
+        <path d="M2 46 L62 46" stroke="#3a2a1e" stroke-width="2"/>`);
+    case 'basket':
+      return svg(`
+        <path d="M2 44 L18 36 L62 38 L48 46 Z" fill="#b8323a" opacity="0.8"/>
+        <path d="M22 36 L24 22 L46 22 L48 36 Z" fill="#8a6a44"/>
+        <path d="M26 22 Q35 8 44 22" stroke="#5a4630" stroke-width="2" fill="none"/>
+        <ellipse cx="30" cy="22" rx="5" ry="2.4" fill="#d8b070"/><path d="M36 21 L44 19 L42 23 Z" fill="#e8d070"/>`);
+    case 'fox':
+      return silhouette('fox', '#5a3a26');
+    case 'tracks':
+      return svg(`
+        <path d="M0 48 L64 48 L64 20 Q32 26 0 20 Z" fill="#5a4630"/>
+        ${[0, 1, 2, 3, 4, 5].map((i) => `<rect x="${4 + i * 10}" y="${26 + (i % 2)}" width="6" height="3" fill="#2a1e14"/><rect x="${4 + i * 10}" y="${38 + (i % 2)}" width="6" height="3" fill="#2a1e14"/>`).join('')}`);
+    case 'toad':
+      return silhouette('toad');
+  }
 }
 
 /** The crow at the campfire: a stranger, all black but for the eye. */

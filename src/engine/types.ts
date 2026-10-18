@@ -161,7 +161,7 @@ export interface LogEntry {
 }
 
 /** Why hope moved, so the UI can let an animal speak about it. */
-export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh' | 'fire' | 'wait' | 'trapped' | 'song';
+export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh' | 'fire' | 'wait' | 'trapped' | 'song' | 'food' | 'cold' | 'lost';
 
 export type TimeOfDay = 'day' | 'night';
 
@@ -227,7 +227,19 @@ export interface Journey {
 export type MourningChoice = 'bury' | 'carry';
 
 /** A meeting in frames (the crow at the fire): where we are in it, and what has been said. */
-export type MeetingId = 'crow' | 'proposal' | 'koltrasten' | 'ihaligtTrad';
+export type MeetingId =
+  | 'crow'
+  | 'proposal'
+  | 'koltrasten'
+  | 'ihaligtTrad'
+  | 'barsnar'
+  | 'gammalStig'
+  | 'gryt'
+  | 'hjorten'
+  | 'maten'
+  | 'framlingen'
+  | 'gravskopan'
+  | 'kvarnsTvekan';
 
 export interface Meeting {
   id: MeetingId;
@@ -236,6 +248,8 @@ export interface Meeting {
   used: string[];
   /** Places the crow told us about. */
   told: string[];
+  /** A card one of us learned or lost in this meeting, by name. */
+  card?: string;
   /** Who of us spoke last, to stand facing the crow in the picture. */
   by?: string;
   /** In a proposal: those who spoke for it, and against it. */
@@ -267,7 +281,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 11;
+  version: 12;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;
@@ -321,6 +335,8 @@ export interface GameState {
   rescue: Rescue | null;
   /** Newcomers we have met this run – rescued or left behind. Each is met only once. */
   met: string[];
+  /** What we have learned along the way that helps later: 'machines' – how the machines move. */
+  knowledge: string[];
   meeting: Meeting | null;
   /** A promise an animal waits to ask of us, once the meeting before it is over. */
   proposal: Proposal | null;

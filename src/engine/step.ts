@@ -65,6 +65,7 @@ import type {
   LogEntry,
   VerseId,
   ZoneId,
+  TraitId,
 } from './types';
 
 interface Ctx {
@@ -397,10 +398,21 @@ function respond(c: Ctx, optionId: string, uid?: number) {
   const option = meetingOptions(s).find((o) => o.id === optionId);
   if (!option) fail('Det svaret finns inte.');
   let next = option.next;
+  // A gamble the story rolls: it works, or the story goes another way.
+  let won = true;
+  if (option.chance && option.failNext) {
+    won = random(s) < option.chance(s);
+    if (!won) next = option.failNext;
+  }
   const who = speakerOf(s, option);
   const speaker = who ? animal(s, who) : undefined;
   if (speaker) line(c, speaker.id, `${speaker.name}: ${labelOf(s, option)}`);
   const asked = s.proposal;
+  const present = s.animals.filter(isPresent);
+  const among = (id: string) => present.find((a) => a.id === id);
+  const frona = among('frona');
+  const ljung = among('ljung');
+  const sotfot = among('sotfot');
   const told = () => { m.told = revealAhead(c, 'Kråkan berättade:', 'Kråkan hade inget att berätta.'); };
   switch (option.effect) {
     case 'listen':
@@ -414,12 +426,7 @@ function respond(c: Ctx, optionId: string, uid?: number) {
     case 'restHollow': {
       // Whoever keeps watch outside gets no rest: the one who offered, or the most hale of the prey.
       const watcher = speaker ?? s.animals.filter((a) => isPresent(a) && !a.predator).sort((a, b) => a.injuries.length - b.injuries.length || b.belief - a.belief)[0];
-      for (const a of s.animals.filter((x) => isPresent(x) && x !== watcher)) {
-        const healed: InjuryKind[] = a.injuries.filter((k) => k === 'bleeding' || k === 'shock');
-        if (!healed.length) continue;
-        a.injuries = a.injuries.filter((k) => !healed.includes(k));
-        line(c, a.id, `${a.name} vilade i trädet.`);
-      }
+      for (const a of present.filter((x) => x !== watcher)) heal(c, a, `${a.name} vilade i trädet.`);
       if (watcher) {
         changeBelief(c, watcher, -1);
         line(c, watcher.id, `${watcher.name} höll vakt utanför, i kylan.`);
@@ -497,6 +504,88 @@ function respond(c: Ctx, optionId: string, uid?: number) {
       s.fireDebt.apart.push('ljung');
       told();
       break;
+    // ------------------------------------------------ Dalen's finds and meetings
+    case 'berries':
+    case 'berriesCareful':
+      changeHope(c, 1, 'food');
+      for (const a of present) changeBelief(c, a, 1);
+      if (option.effect === 'berries') { if (frona) injure(c, frona, 'shock', '{name} har ätit sig sjuka. Magarna värker.'); }
+      else if (frona) addBond(c, animal(s, 'ljung'), frona, 1);
+      break;
+    case 'learnPath':
+    case 'ljungDigs':
+      m.card = learnCard(c, speaker!);
+      break;
+    case 'restDen':
+      for (const a of present) heal(c, a, `${a.name} sov djupt i grytet.`);
+      if (ljung && !ljung.grief.includes('dalen')) {
+        ljung.grief.push('dalen');
+        line(c, ljung.id, 'Gamla Ljung sörjer dalen. Grytet luktade som hemma.');
+      }
+      break;
+    case 'stayDeer':
+      for (const [i, a] of present.entries()) for (const b of present.slice(i + 1)) addBond(c, a, b, 1);
+      changeHope(c, -1, 'cold');
+      break;
+    case 'ljungDeer':
+      changeBelief(c, ljung!, 2);
+      break;
+    case 'truceTest':
+      if (won) changeBelief(c, speaker!, 2);
+      else {
+        changeHope(c, -1, 'hunt', speaker!.id);
+        for (const a of present.filter((x) => !x.predator)) {
+          changeBelief(c, a, -1);
+          addBond(c, a, speaker!, -1);
+        }
+      }
+      break;
+    case 'sneak':
+      changeHope(c, won ? 2 : 1, 'food');
+      if (!won) {
+        const prey = present.filter((a) => !a.predator);
+        if (prey.length) injure(c, prey[Math.floor(random(s) * prey.length)], 'bleeding', 'Hunden hann bita {name}. Det blöder.');
+      }
+      break;
+    case 'sotfotSteals':
+      if (won) {
+        changeHope(c, 2, 'food');
+        changeBelief(c, speaker!, 1);
+      } else injure(c, speaker!, 'bleeding', 'Hunden hann bita {name} i örat. Det blöder.');
+      break;
+    case 'fronaBasket':
+      changeHope(c, 1, 'food');
+      if (frona) injure(c, frona, 'shock', 'Människorna skrek. {name} darrar fortfarande.');
+      break;
+    case 'shareCard': {
+      const card = crowCards(s).find((x) => x.uid === uid);
+      if (!card) fail('Välj vilket kort räven får.');
+      takeCard(s, card.uid);
+      narrate(c, `Vi gav räven ${CARDS[card.kind].name} från ${animal(s, card.owner).name}.`);
+      if (speaker?.id === 'sotfot') changeBelief(c, speaker, 1);
+      m.told = revealAhead(c, 'Räven berättade:', 'Räven hade inget nytt att berätta.');
+      break;
+    }
+    case 'chaseFox':
+      if (sotfot) changeBelief(c, sotfot, -1);
+      break;
+    case 'readTracks':
+    case 'followTracks':
+      if (!s.knowledge.includes('machines')) s.knowledge.push('machines');
+      narrate(c, 'Nu vet vi hur maskinerna rör sig.');
+      if (option.effect === 'readTracks') changeBelief(c, speaker!, 1);
+      else if (frona) injure(c, frona, 'shock', 'Dieseldoften. {name} känner igen den från dalen.');
+      break;
+    case 'comfortKvarn':
+      changeBelief(c, animal(s, 'kvarn'), 1);
+      break;
+    case 'doubtKvarn':
+      changeBelief(c, animal(s, 'kvarn'), -2);
+      m.told = revealAhead(c, 'Skymning såg:', 'Skymning såg inget nytt.');
+      break;
+    case 'guessWay':
+      changeHope(c, -1, 'lost');
+      break;
   }
   if (next) {
     m.used.push(option.id);
@@ -532,6 +621,27 @@ function breakForLoss(c: Ctx, gone: Animal) {
   const lives = (id?: string) => !!c.s.animals.find((a) => a.id === id && isPresent(a));
   breakPromises(c, 'together', (p) => (p.by === gone.id && lives(p.with)) || (p.with === gone.id && lives(p.by)));
   breakPromises(c, 'stay', (p) => p.with === gone.id && lives(p.by));
+}
+
+/** Learn a card of a trait the animal doesn't already carry: it goes to the discard pile. Its name, or undefined. */
+function learnCard(c: Ctx, a: Animal): string | undefined {
+  const s = c.s;
+  const owned = new Set([...s.draw, ...s.hand, ...s.discard].filter((x) => x.owner === a.id).map((x) => x.kind));
+  const options = (Object.keys(TRAITS) as TraitId[]).filter((t) => !a.traits.includes(t) && !owned.has(TRAITS[t].card));
+  if (!options.length) return undefined;
+  const t = options[Math.floor(random(s) * options.length)];
+  s.discard.push({ uid: s.nextUid++, kind: TRAITS[t].card, owner: a.id });
+  const name = CARDS[TRAITS[t].card].name;
+  line(c, a.id, `${a.name} lärde sig något nytt: ${name}.`);
+  return name;
+}
+
+/** Bleeding and shock heal. */
+function heal(c: Ctx, a: Animal, text: string) {
+  const healed: InjuryKind[] = a.injuries.filter((k) => k === 'bleeding' || k === 'shock');
+  if (!healed.length) return;
+  a.injuries = a.injuries.filter((k) => !healed.includes(k));
+  line(c, a.id, text);
 }
 
 /** A card is gone for good: from wherever it lies. */
@@ -1171,10 +1281,10 @@ function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
   return hasInjury(v, 'bleeding') ? null : 'bleeding';
 }
 
-function injure(c: Ctx, v: Animal, k: InjuryKind) {
+function injure(c: Ctx, v: Animal, k: InjuryKind, text = INJURY_LINES[k]) {
   if (hasInjury(v, k)) return;
   v.injuries.push(k);
-  line(c, v.id, INJURY_LINES[k].replace(/\{name\}/g, v.name));
+  line(c, v.id, text.replace(/\{name\}/g, v.name));
 }
 
 /** A hit that doesn't kill: a swarm loses members, anyone else takes an injury. */
