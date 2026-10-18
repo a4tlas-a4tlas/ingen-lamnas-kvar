@@ -28,14 +28,14 @@ describe('the region map of Dalen', () => {
     expect(shapes.size).toBeGreaterThan(10);
   });
 
-  it('has six rows and the end: the road first, the last fire before the end', () => {
+  it('has six rows and the boss: the road first, the last fire before the machines', () => {
     for (const seed of SEEDS) {
       const { nodes } = generateRegion(DALEN, seed);
       const rows = Math.max(...nodes.map((n) => n.row));
       expect(rows).toBe(7);
       expect(nodes.filter((n) => n.row === 1).map((n) => n.id)).toEqual(['vagen']);
       expect(nodes.filter((n) => n.row === 6).map((n) => n.id)).toEqual(['granbacken']);
-      expect(nodes.find((n) => n.row === 7)!.kind).toBe('end');
+      expect(nodes.find((n) => n.row === 7)).toMatchObject({ kind: 'encounter', encounter: 'machines', next: [] });
       for (let r = 2; r <= 5; r++) expect(nodes.filter((n) => n.row === r).length).toBeGreaterThanOrEqual(2);
     }
   });

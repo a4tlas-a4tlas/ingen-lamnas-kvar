@@ -10,6 +10,7 @@ import { CARDS } from '../data/cards';
 import { planRoad } from './encounters/road';
 import { forkVoices, voiceStake } from './voices';
 import { CURRENT, DAM, DAM_MAX, FLOOD_DAM_CREAK, FLOOD_HOURS, FLOOD_HOURS_TOTAL, STONES, aboveTheWater, carriedAway, holdsOnTo, planRiver, swims } from './encounters/river';
+import { planMachines, roarZones } from './encounters/machines';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, makeAnimal, oathVerse } from './setup';
@@ -180,7 +181,9 @@ function travel(c: Ctx, to: string, wait = false) {
     }
   }
   if (p.kind === 'encounter') {
-    s.time = wait ? otherTime(s.clock) : s.clock;
+    const fixed = ENCOUNTERS[p.encounter!].fixedTime;
+    if (wait && fixed) fail('Maskinerna väntar inte på oss.');
+    s.time = fixed ?? (wait ? otherTime(s.clock) : s.clock);
     for (const v of brokenByTravel(s, to, s.time)) breakPromise(c, v);
     if (wait) {
       narrate(c, s.time === 'night' ? 'Vi gömde oss och väntade tills mörkret kom.' : 'Vi gömde oss och väntade på ljuset.');
@@ -245,6 +248,9 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.damCreak = id === 'river' && hard ? FLOOD_DAM_CREAK : 0;
   s.closed = [];
   s.heron = null;
+  const machines = id === 'machines' ? planMachines(s, s.maxTurn) : { fellPlan: [], dozePlan: [] };
+  s.fellPlan = machines.fellPlan;
+  s.dozePlan = machines.dozePlan;
   // Someone is trapped here, the first time we come.
   s.rescue = def.rescue && !s.met.includes(def.rescue.who) ? { who: def.rescue.who, zone: def.rescue.zone, trust: 0 } : null;
   if (s.rescue) narrate(c, def.rescue!.found);
@@ -712,6 +718,7 @@ function startTurn(c: Ctx) {
   }
   if (s.encounterId === 'farm') telegraphFarm(c);
   if (s.encounterId === 'river') telegraphRiver(c);
+  if (s.encounterId === 'machines') telegraphMachines(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1001,6 +1008,51 @@ function riverHazards(c: Ctx) {
   }
 }
 
+// ---------------------------------------------------------------- the machines
+
+/** At the start of each hour: where the trees will fall, and what ground the bulldozer takes. */
+function telegraphMachines(c: Ctx) {
+  const s = c.s;
+  if (s.turn === 1) {
+    narrate(c, 'Maskinerna startar i gryningen. En fällare går in bland träden, och bakom den kommer schaktaren och tar marken.');
+    if (s.knowledge.includes('machines')) narrate(c, 'Vi har sett deras spår. Vi vet i vilken ordning de tar dalen.');
+  }
+  // Whoever is still on ground the bulldozer took is pushed ahead of it.
+  for (const a of s.animals.filter((x) => isActive(x) && s.closed.includes(x.zone))) {
+    const ahead = encounterOf(s).edges.find(([from, to]) => from === a.zone && !s.closed.includes(to));
+    if (!ahead) continue;
+    a.zone = ahead[1];
+    line(c, a.id, `${a.name} tar sig upp ur leran, till ${zoneDef(s, a.zone).name}.`);
+  }
+  const fell = s.fellPlan[s.turn - 1];
+  if (fell) narrate(c, `Fällaren vänder sig mot ${zoneDef(s, fell).name}. När timmen går faller träden där.`);
+  const doze = s.dozePlan[s.turn - 1];
+  if (doze) narrate(c, `Schaktaren rullar mot ${zoneDef(s, doze).name}. När timmen går är den marken borta.`);
+}
+
+/** End of the hour: the trees fall, the roar frightens, the bulldozer takes the ground. */
+function machinesHazards(c: Ctx) {
+  const s = c.s;
+  const fell = s.fellPlan[s.turn - 1];
+  const doze = s.dozePlan[s.turn - 1];
+  if (fell) {
+    const under = s.animals.filter((a) => isActive(a) && a.zone === fell && !a.flying);
+    if (!under.length) narrate(c, `Träden i ${zoneDef(s, fell).name} faller med ett brak. Ingen av oss var där.`);
+    for (const a of under) s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: fell, source: 'fällaren' });
+    for (const a of s.animals.filter((x) => isActive(x) && roarZones(s).includes(x.zone) && !x.flying)) {
+      if (hasInjury(a, 'shock')) continue;
+      injure(c, a, 'shock', 'Bruset från fällaren går rakt in i {name}. Något stannar kvar där.');
+    }
+  }
+  if (doze) {
+    s.closed.push(doze);
+    narrate(c, `Schaktaren tar ${zoneDef(s, doze).name}. Där finns bara lera nu.`);
+    for (const a of s.animals.filter((x) => isActive(x) && x.zone === doze && !x.flying)) {
+      s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: doze, source: 'schaktaren' });
+    }
+  }
+}
+
 // ---------------------------------------------------------------- the rescue
 
 /** Reach out to the trapped one, or – once it trusts us – free it. Freed, it is one of us. */
@@ -1182,6 +1234,7 @@ function endTurn(c: Ctx) {
   }
   if (s.encounterId === 'farm') farmHazards(c);
   if (s.encounterId === 'river') riverHazards(c);
+  if (s.encounterId === 'machines') machinesHazards(c);
   processHits(c);
 }
 
@@ -1260,7 +1313,7 @@ function processHits(c: Ctx) {
       }
       s.pending = h;
       s.phase = 'lastMoment';
-      narrate(c, h.source === 'forsen' ? `Strömmen drar ${v.name} mot forsen. Ett ögonblick kvar.` : `Ljuset fyller allt. ${v.name} har ett ögonblick kvar.`);
+      narrate(c, (LAST_MOMENT[h.source] ?? 'Ljuset fyller allt. {name} har ett ögonblick kvar.').replace(/\{name\}/g, v.name));
       return;
     }
     applyHit(c, v, h);
@@ -1268,10 +1321,17 @@ function processHits(c: Ctx) {
   finishTurn(c);
 }
 
+/** How the last moment begins, by what is coming. */
+const LAST_MOMENT: Record<string, string> = {
+  forsen: 'Strömmen drar {name} mot forsen. Ett ögonblick kvar.',
+  fällaren: 'Det knakar ovanför {name}. En gran lutar, och faller. Ett ögonblick kvar.',
+  schaktaren: 'Schaktaren rullar in, och jorden rör sig under {name}. Ett ögonblick kvar.',
+};
+
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'bonde'];
 
-const HIT_BY: Record<string, string> = { bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
+const HIT_BY: Record<string, string> = { fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
@@ -1458,6 +1518,12 @@ function endEncounter(c: Ctx) {
   const before = s.animals.filter((a) => a.status === 'safe' || a.status === 'dead' || a.status === 'left').length;
   if (safe.length === before) narrate(c, `Alla ${num(safe.length)} ${crossed}.`);
   else narrate(c, `${capitalize(num(safe.length))} av oss ${crossed}.`);
+  // The last danger of the way: beyond it, the run ends here, for now.
+  const epilogue = encounterOf(s).epilogue;
+  if (epilogue && !pathsFrom(s, s.journey.at).length) {
+    narrate(c, epilogue);
+    return endRun(c);
+  }
   s.clock = otherTime(s.time);
   s.phase = 'map';
 }

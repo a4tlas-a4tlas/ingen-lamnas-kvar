@@ -1,7 +1,8 @@
 import { CAST, animalDef, newcomer } from '../data/animals';
 import { CARDS, TAG_NAMES } from '../data/cards';
 import { HOPE_LINES, KRAFT_OUT_LINES } from '../data/text.sv';
-import { byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
+import { roarZones } from '../engine/encounters/machines';
+import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
 import { Sound } from '../audio/sound';
@@ -105,7 +106,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 12 && s.phase !== 'over' ? s : null;
+    return s.version === 13 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -544,7 +545,7 @@ export class App {
           <button class="btn primary" data-act="new">Börja vandringen</button>
           ${hasSave ? '<button class="btn" data-act="continue">Fortsätt vandringen</button>' : ''}
         </div>
-        <p class="small">Första kapitlet: <em>från dalen till åkrarna</em> · ca 20 minuter</p>
+        <p class="small">Första kapitlet: <em>Dalen – ut ur dalen innan maskinerna tar den</em> · ca 30–40 minuter</p>
         <details class="howto">
           <summary>Hur man spelar</summary>
           <ul>
@@ -659,6 +660,7 @@ export class App {
     scene.classList.toggle('dam-broken', s.closed.includes(DAM));
     scene.classList.toggle('current-strid', s.encounterId === 'river' && s.currentPlan[s.turn - 1] === 'strid');
     scene.querySelectorAll<HTMLElement>('.zone.hidden-zone').forEach((z) => z.classList.toggle('found', s.revealed.includes(z.dataset.zone!)));
+    scene.querySelectorAll<HTMLElement>('.zone').forEach((z) => z.classList.toggle('closed', s.closed.includes(z.dataset.zone as ZoneId)));
     q('.moon').classList.toggle('hidden', moonHidden(s));
     const zones = this.targetZones();
     scene.querySelectorAll<HTMLElement>('.zone').forEach((z) => z.classList.toggle('target', zones.includes(z.dataset.zone as ZoneId)));
@@ -707,7 +709,7 @@ export class App {
         <span class="mpips">${pips(s.hope, 10, 'hope')}</span>
         ${low ? `<span class="mnote">Lågt hopp – vi drar ${hand} kort</span>` : ''}
       </div>
-      ${s.encounterId === 'farm' ? this.alarmHtml(s) : s.encounterId === 'river' ? this.damHtml(s) : ''}
+      ${s.encounterId === 'farm' ? this.alarmHtml(s) : s.encounterId === 'river' ? this.damHtml(s) : s.encounterId === 'machines' ? this.dozerHtml(s) : ''}
       <div class="meter kraft ${s.kraft === 0 ? 'empty' : ''}" ${kraftTip}>
         <span class="mlabel">Kraft <b>${s.kraft}</b></span>
         <span class="mpips">${pips(s.kraft, maxKraft, 'kraft')}</span>
@@ -740,6 +742,36 @@ export class App {
         <span class="mlabel">${broken ? 'Dammen brusten' : `Dammen <b>${s.damCreak}</b>/${DAM_MAX}`}</span>
         <span class="mpips">${pips}</span>
       </div>`;
+  }
+
+  /** The bulldozer: when it next takes ground, and – if we have read the tracks, or it is the clearing – where. */
+  private dozerHtml(s: GameState): string {
+    const next = s.dozePlan.findIndex((z, i) => z && i >= s.turn - 1);
+    if (next < 0) return '';
+    const hours = next + 1 - s.turn;
+    const zone = s.dozePlan[next]!;
+    const known = hours === 0 || s.knowledge.includes('machines') || zone === 'glantan';
+    const when = hours === 0 ? 'när timmen går' : `om ${hours + 1} timmar`;
+    const where = known ? zoneDef(s, zone).label : 'marken bakom oss';
+    const tip = `data-tip-icon="▰" data-tip-title="Schaktaren" data-tip="Schaktaren tar ${esc(where.toLowerCase())} ${when}. Den som står där då hinner knappt undan, och marken är borta sedan dess.${s.knowledge.includes('machines') ? ' Vi har läst spåren: vi vet hela vägen den tar.' : ''}"`;
+    return `
+      <div class="meter alarm ${hours === 0 ? 'full' : ''}" ${tip}>
+        <span class="mlabel">Schaktaren: <b>${esc(where)}</b> ${hours === 0 ? 'nu' : `om ${hours + 1} tim`}</span>
+      </div>`;
+  }
+
+  /** The machines: where the trees fall, the roar beside it, the ground the bulldozer takes. */
+  private machinesTelegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const fell = s.fellPlan[s.turn - 1];
+    const next = s.knowledge.includes('machines') && s.turn < s.maxTurn ? s.fellPlan[s.turn] : undefined;
+    if (fell) out.push(`<div class="fell-mark" style="${box(fell)}"><span>Fällaren · dödar</span></div>`);
+    for (const z of roarZones(s)) out.push(`<div class="roar-mark" style="${box(z)}"><span>bruset · chock</span></div>`);
+    if (next && next !== fell) out.push(`<div class="next-mark" style="${box(next)}"><em>fällaren nästa timme</em></div>`);
+    const doze = s.dozePlan[s.turn - 1];
+    if (doze) out.push(`<div class="doze-mark" style="${box(doze)}"><span>Schaktaren · tar marken · dödar</span></div>`);
+    return out.join('');
   }
 
   /** The river: the current in the water, the wet stones, the heron. */
@@ -796,6 +828,7 @@ export class App {
   private telegraphHtml(s: GameState): string {
     if (s.encounterId === 'farm') return s.phase === 'over' ? '' : this.farmTelegraphHtml(s);
     if (s.encounterId === 'river') return s.phase === 'over' ? '' : this.riverTelegraphHtml(s);
+    if (s.encounterId === 'machines') return s.phase === 'over' ? '' : this.machinesTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {
@@ -1113,6 +1146,14 @@ export class App {
               const note = (path.note ? `<p class="muted small">${esc(path.note)}</p>` : '') + (memo ? `<p class="small memory-note">${esc(memo)}</p>` : '');
               const breaks = (time: 'day' | 'night') => brokenByTravel(s, to.id, time).map((v) => `<p class="small promise-warn">⚠ Bryter ${esc(animal(s, v.promise.by).name)}s löfte: ”${esc(v.text)}”</p>`).join('');
               if (to.kind !== 'encounter') return `<button class="btn primary" data-act="travel" data-to="${to.id}" data-kind="${to.kind}">Gå mot ${name}</button>${note}`;
+              // The machines work at dawn, and don't wait for us.
+              const fixed = ENCOUNTERS[to.encounter!].fixedTime;
+              if (fixed) return `<div class="leg">
+                <button class="btn primary" data-act="travel" data-to="${to.id}" data-kind="${to.encounter}">Gå mot ${name}</button>
+                <p class="small time-note">☼ ${esc(TIME_NOTES[to.encounter!][fixed])}</p>
+                ${breaks(fixed)}
+                ${note}
+              </div>`;
               // An encounter comes at the natural time of day, unless we wait for the other one.
               const now = s.clock;
               const later = otherTime(now);

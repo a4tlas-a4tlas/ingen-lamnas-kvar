@@ -29,12 +29,16 @@ function curve(a: Place, b: Place): { d: string; at: (t: number) => [number, num
   return { d: `M${x1} ${y1} Q${cx} ${cy} ${x2} ${y2}`, at };
 }
 
+/** The machines waiting below the ridge: tracks, a cab, and the arm raised. */
+const MACHINE_ICON = '<rect x="-2.6" y="0.7" width="3.6" height="1" rx="0.5" /><rect x="-2" y="-0.9" width="2.2" height="1.5" /><path d="M0.2 -0.5 L1.6 -1.9 L2.6 -0.1 L2 0.6" fill="none" stroke="currentColor" stroke-width="0.45" />';
+
 function icon(p: Place): string {
   switch (p.kind) {
     case 'start':
       return '<path d="M-2.4 1.2 Q-1.2 -1.6 0 0.4 Q1.2 -1.8 2.4 1.2 Z" />';
     case 'encounter':
       if (p.encounter === 'farm') return '<path d="M-2 1.4 V-0.4 L0 -1.8 L2 -0.4 V1.4 Z" /><rect x="-0.5" y="0.2" width="1" height="1.2" fill="var(--map-paper)" />';
+      if (p.encounter === 'machines') return MACHINE_ICON;
       if (p.encounter === 'river') return '<path d="M-2.4 -0.8 q0.6 -0.6 1.2 0 t1.2 0 t1.2 0 t1.2 0 M-2.4 0.6 q0.6 -0.6 1.2 0 t1.2 0 t1.2 0 t1.2 0" fill="none" stroke="currentColor" stroke-width="0.45" />';
       return '<rect x="-2.2" y="-0.9" width="4.4" height="1.8" rx="0.3" /><path d="M-1.6 0 h0.8 M-0.2 0 h0.8 M1.2 0 h0.6" stroke="var(--map-paper)" stroke-width="0.3" />';
     case 'campfire':
@@ -46,8 +50,7 @@ function icon(p: Place): string {
       // A leaf.
       return '<path d="M-1.8 1.6 Q-2 -1.6 1.8 -1.8 Q1.6 1.4 -1.8 1.6 Z" /><path d="M-1.6 1.4 L1.2 -1.2" stroke="var(--map-paper)" stroke-width="0.3" />';
     case 'end':
-      // The machines waiting on the ridge: tracks, a cab, and the arm raised.
-      return '<rect x="-2.6" y="0.7" width="3.6" height="1" rx="0.5" /><rect x="-2" y="-0.9" width="2.2" height="1.5" /><path d="M0.2 -0.5 L1.6 -1.9 L2.6 -0.1 L2 0.6" fill="none" stroke="currentColor" stroke-width="0.45" />';
+      return MACHINE_ICON;
   }
 }
 
@@ -441,9 +444,9 @@ export function guideHtml(s: GameState): string {
       <div class="modal-card guide-modal">
         <div class="deck-head"><h2 id="guide-title">${esc(g.title)}</h2><button class="btn small" data-act="guide-close">Stäng</button></div>
         <section class="guide-goal"><h3>Målet</h3><p>${esc(g.goal)}</p>${g.hard ? `<p class="small guide-hard ${s.variant === 'hard' ? 'now' : ''}">${s.variant === 'hard' ? '<b>Nu:</b> ' : ''}${esc(g.hard)}</p>` : ''}</section>
-        <section class="guide-time"><h3>Dag och natt</h3><ul>${(['night', 'day'] as const)
+        ${def.fixedTime ? `<section class="guide-time"><h3>Tid</h3><p>${esc(TIME_NOTES[def.id][def.fixedTime])}</p></section>` : `<section class="guide-time"><h3>Dag och natt</h3><ul>${(['night', 'day'] as const)
           .map((t) => `<li class="${t === s.time ? 'now' : ''}"><b>${t === 'night' ? '☾ Natt' : '☼ Dag'}${t === s.time ? ` – nu, i ${TIME_NAMES[t]}` : ''}:</b> ${esc(TIME_NOTES[def.id][t])}</li>`)
-          .join('')}</ul></section>
+          .join('')}</ul></section>`}
         <div class="guide-top">
           <section class="guide-sketch"><h3>Kartskiss</h3>${zoneSketchSvg(def, s.revealed)}${legendHtml(def)}</section>
           <section><h3>Så går en timme</h3><ol class="guide-steps">${HOUR_STEPS.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></section>

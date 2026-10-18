@@ -66,5 +66,10 @@ export const DALEN: RegionDef = {
   ],
   fire: { key: 'glantan', kind: 'campfire', name: 'Gläntan', fogName: 'En glänta?', arrive: 'En liten glänta, skyddad av hasselbuskar. Här kan vi göra upp eld.', note: 'Vila, och eld.' },
   lastFire: { key: 'granbacken', kind: 'campfire', name: 'Granbacken', fogName: 'Ett skydd under granarna?', arrive: 'Under de täta granarna når vinden inte in. Här kan vi vila.', note: 'Sista vilan i dalen.' },
-  end: { key: 'asen', kind: 'end', name: 'Åsen', fogName: 'Åsen – där maskinerna väntar', arrive: 'Vi når åsen ovanför dalen. Bakom oss hörs maskinerna. Framför oss: allt det andra.' },
+  /** The boss of the glen: the machines, at dawn, below the ridge. */
+  end: {
+    key: 'asen', kind: 'encounter', encounter: 'machines', name: 'Åsen', fogName: 'Åsen – där maskinerna väntar',
+    arrive: 'Det ljusnar. Nedanför åsen står maskinerna och väntar, och nu startar de.',
+    note: 'Sista vägen ut ur dalen. Maskinerna väntar.',
+  },
 };

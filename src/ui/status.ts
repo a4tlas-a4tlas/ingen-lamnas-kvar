@@ -1,6 +1,7 @@
 // Every state an animal can be in, in words for the player, plus a forecast
 // of what letting the hour pass will do. Shared by tokens, the info panel and
 // the forecast box so they always say the same thing.
+import { roarZones } from '../engine/encounters/machines';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { newcomer } from '../data/animals';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
@@ -75,12 +76,29 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
       : { key: 'culvert', icon: '◌', label: 'kryper', tone: 'info', explain: `${a.name} kryper genom ${zone.name}. Bilar når inte hit. Ute om en timme.` });
   }
   if (s.encounterId === 'river') out.push(...riverStatuses(s, a));
+  if (s.encounterId === 'machines') out.push(...machinesStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
       explain: `${a.name}s tro är låg. Sjunker den till ${huntsAt(s, a)} kan ${a.name} glömma eden och börja jaga.` });
   } else if (a.belief <= 3 && a.intent.kind === 'follow') {
     out.push({ key: 'doubt', icon: '✶', label: 'tvivlar', tone: 'warn', explain: `${a.name}s tro är låg (${a.belief}). Snart kan ${a.name} frysa, fly eller rusa på egen hand.` });
+  }
+  return out;
+}
+
+/** Below the ridge: the falling trees, the bulldozer, the roar. */
+function machinesStatuses(s: GameState, a: Animal): Status[] {
+  const out: Status[] = [];
+  if (a.flying) return out;
+  if (s.fellPlan[s.turn - 1] === a.zone) {
+    out.push({ key: 'fell', icon: '⚒', label: 'träden faller', tone: 'bad', explain: `Fällaren tar träden här när timmen går. Led ${a.name} härifrån, annars faller de över ${a.name}.` });
+  }
+  if (s.dozePlan[s.turn - 1] === a.zone) {
+    out.push({ key: 'doze', icon: '▰', label: 'schaktaren', tone: 'bad', explain: `Schaktaren tar marken här när timmen går. ${a.name} måste vidare.` });
+  }
+  if (roarZones(s).includes(a.zone) && !a.injuries.includes('shock')) {
+    out.push({ key: 'roar', icon: '≋', label: 'bruset', tone: 'warn', explain: `Träden faller alldeles bredvid. ${a.name} står i det öppna och får chock när timmen går.` });
   }
   return out;
 }
@@ -192,6 +210,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (strikes.some((x) => x.dark) && !s.darkRevealed) out.push({ text: 'Något mullrar i mörkret, utan ljus. Vi vet inte i vilket körfält.', tone: 'bad' });
   if (s.encounterId === 'farm') out.push(...farmForecast(s, zoneOf));
   if (s.encounterId === 'river') out.push(...riverForecast(s, zoneOf));
+  if (s.encounterId === 'machines') out.push(...machinesForecast(s, zoneOf));
   if (s.rescue) {
     const name = newcomer(s.rescue.who).name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${RESCUE_TRUST}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -282,6 +301,35 @@ function riverForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[
     const left = DAM_MAX - s.damCreak;
     if (left === 1) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: nästa som går ut på den bryter den.`, tone: 'warn' });
     else if (left === 2) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: ett stort djur till bryter den.`, tone: 'warn' });
+  }
+  return out;
+}
+
+/** The machines: who the trees fall on, whom the roar frightens, what the bulldozer takes. */
+function machinesForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const at = (z: ZoneId) => s.animals.filter((a) => isActive(a) && zoneOf.get(a.id) === z && !a.flying);
+  const names = (xs: Animal[]) => xs.map((a) => a.name).join(' och ');
+  const fell = s.fellPlan[s.turn - 1];
+  if (fell) {
+    const under = at(fell);
+    const place = zoneDef(s, fell).name;
+    out.push(under.length
+      ? { text: `Träden faller i ${place} över ${names(under)}: dödar!`, tone: 'bad' }
+      : { text: `Träden faller i ${place} – ingen av oss där.`, tone: 'good' });
+    const roar = roarZones(s).flatMap((z) => at(z)).filter((a) => !a.injuries.includes('shock'));
+    if (roar.length) out.push({ text: `Bruset: ${names(roar)} får chock.`, tone: 'warn' });
+  }
+  const doze = s.dozePlan[s.turn - 1];
+  if (doze) {
+    const there = at(doze);
+    const place = zoneDef(s, doze).name;
+    out.push(there.length
+      ? { text: `Schaktaren tar ${place} med ${names(there)}: dödar!`, tone: 'bad' }
+      : { text: `Schaktaren tar ${place} – ingen av oss där.`, tone: 'warn' });
+  }
+  if (s.knowledge.includes('machines') && s.turn < s.maxTurn) {
+    out.push({ text: `Spåren sa oss: nästa timme vänder sig fällaren mot ${zoneDef(s, s.fellPlan[s.turn]).name}.`, tone: 'info' });
   }
   return out;
 }

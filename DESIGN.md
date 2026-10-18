@@ -449,7 +449,7 @@ Design from the milestone 4 interview:
   - travel: the river, the farm, going by day
 - **Warnings:** the map warns on any path that would break a promise ("⚠ Bryter Frönas löfte"), and so does the fire before someone sits alone. Promises show in the poem in the asker's colour.
 
-## Milestone 5 – the full journey (in progress)
+## Milestone 5 – the full journey (in progress: region 1 done)
 Design from the milestone 5 interview:
 - **The run:** 5 regions, 1.5–2 h.
   - Dalen first, Skogsbrynet last.
@@ -540,3 +540,21 @@ Every story part is a meeting in frames (`src/data/meetings/dalen.sv.ts`). Repli
   - Without Kvarn we can only guess: −1 hope.
 
 **The map:** no fork offers the same danger twice. Dalen has 6 meetings and 4 finds, so most maps show at least three different story parts.
+
+### Step 3: Maskinerna – Dalens sista morgon, the glen's boss (done)
+- **Åsen is the last place on Dalen's map,** and it isn't a quiet end any more. Below the ridge the machines start at dawn: the boss is always by day, and we can't wait for the night.
+- **The board** (`src/engine/encounters/machines.ts`), 8 hours:
+  - Gläntan (start)
+  - Björkdungen (birches), Hygget (the clear-cut) and Stenröset (the stone pile)
+  - Västra and Östra granridån (two curtains of spruce)
+  - Åsen (the goal)
+
+  Every way up is three steps.
+- **Fällaren (the felling machine):** each hour it turns to a zone with trees (Björkdungen or one of the spruce curtains), never the same twice in a row. When the hour passes, the trees there fall on anyone standing under them. That kills, with a last moment.
+- **Bruset (the roar):** anyone in the open (Hygget, Stenröset, Gläntan) next to the felling gets shock. Among the trees you don't hear it, but the trees are what the feller wants. Fliers aren't affected.
+- **Schaktaren (the bulldozer):** it takes the ground behind us.
+  - Gläntan goes after hour 3, then Björkdungen and Stenröset (in either order) after hours 5 and 7. The clear-cut, where both ways up meet, is never taken.
+  - That ground is gone for good. Anyone still on it gets a killing hit with a last moment, and survivors are pushed up out of the mud the next hour.
+- **Grävskopans spår pays off here:** if we read the tracks, we see where the feller turns next hour and the whole order the bulldozer takes. Without them, only Gläntan is known.
+- **When the last of us is over the ridge,** the run ends with the epilogue ("fortsättning följer").
+- **Balance:** a lead-only bot, with no cards, no comforting and always letting go, brings 3.6 of 6 over the ridge on average. A human with cards and last moments should do better, but rarely bring everyone.

@@ -28,6 +28,8 @@ export interface ZoneDef {
   water?: boolean;
   /** A stepping stone: spray can make it slippery. */
   stone?: boolean;
+  /** Trees stand here: the felling machine wants them. */
+  trees?: boolean;
 }
 
 /** A text that differs by day and by night. */
@@ -47,6 +49,10 @@ export interface EncounterDef {
   /** Someone trapped here, the first time we come: where, and the words for it. */
   rescue?: { who: string; zone: ZoneId; found: string; trapped: string; freed: string };
   maxTurn: number;
+  /** Always at this time of day: there is no waiting for the other. */
+  fixedTime?: TimeOfDay;
+  /** Said when the last of us is across, if this is the end of the way. */
+  epilogue?: string;
   zones: ZoneDef[];
   /** Paths toward the goal; walking them in reverse goes back. First listed is the main way. */
   edges: [ZoneId, ZoneId][];

@@ -1,6 +1,7 @@
 // The guide for each area: what we are trying to do, what kills and what
 // shelters. Numbers come from the rules so the guide cannot drift from them.
 import { ALARM_MAX, ALARM_MAX_NIGHT, FARM, SCENT_MAX } from '../engine/encounters/farm';
+import { DOZE_HOURS, MACHINES } from '../engine/encounters/machines';
 import { DAM_MAX, RIVER } from '../engine/encounters/river';
 import { ROAD } from '../engine/encounters/road';
 import type { EncounterId, TimeOfDay } from '../engine/types';
@@ -35,6 +36,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   river: {
     day: 'Hägern vaktar en sten varje timme och hugger efter de små.',
     night: 'Ingen häger – men vattnet är kallt: den som står i ån när timmen går tappar 1 tro.',
+  },
+  machines: {
+    day: 'Maskinerna arbetar i gryningen. Det går inte att vänta på mörkret.',
+    night: 'Maskinerna arbetar i gryningen. Det går inte att vänta på mörkret.',
   },
 };
 
@@ -128,6 +133,26 @@ export const GUIDES: Record<EncounterId, Guide> = {
       'Läs strömmen: gå ut i den bara när den är lugn – eller med Gamla Ljung bredvid.',
       'Dammen bär några få. Låt de svagaste gå där, och spara den till sist.',
       'Stå aldrig på en sten som är hal när timmen går.',
+    ],
+  },
+  machines: {
+    title: 'Så tar vi oss upp på åsen',
+    goal: `Få alla från Gläntan upp på Åsen – ${MACHINES.maxTurn} timmar. Varje väg upp är tre steg, och marken bakom oss försvinner.`,
+    dangers: [
+      { icon: '⚒', name: 'Fällaren', effect: 'dödar', text: 'Varje timme vänder den sig mot en zon med träd – Björkdungen eller en av granridåerna – och fäller allt där när timmen går. Zonen märks ”Fällaren · dödar”. Sista stunden: någon intill kan kasta sig emellan.' },
+      { icon: '▰', name: 'Schaktaren', effect: 'dödar', text: `Tar marken bakom oss: Gläntan efter timme ${DOZE_HOURS[0]}, sedan Björkdungen och Stenröset – en efter timme ${DOZE_HOURS[1]}, den andra efter timme ${DOZE_HOURS[2]}. Den som står där då hinner knappt undan. Marken är borta sedan dess.` },
+      { icon: '≋', name: 'Bruset', text: 'Den som står i det öppna bredvid där träden faller får chock. Bland träden hörs det mindre – men det är träden fällaren vill ha.' },
+    ],
+    shelter: [
+      { icon: '♣', name: 'Träden', text: 'Björkdungen och granridåerna stänger ute bruset. Men de är just det fällaren tar: läs vart den vänder sig.' },
+      { icon: '⌂', name: 'Hygget och Stenröset', text: 'Inga träd att fälla – men öppet för bruset, och schaktaren kommer.' },
+      { icon: '⌇', name: 'Grävskopans spår', text: 'Har vi läst spåren vet vi i vilken ordning maskinerna tar dalen: vi ser fällarens nästa timme, och hela schaktarens väg.' },
+      { icon: '⇡', name: 'Ugglan flyger', text: 'Skymning är i luften: träden når inte dit, och bruset inte heller.' },
+    ],
+    tips: [
+      'Lämna Gläntan i tid – den går först.',
+      'Stå aldrig där fällaren vänder sig när timmen går.',
+      'Hygget leder till båda granridåerna. Det är sista platsen schaktaren tar.',
     ],
   },
 };

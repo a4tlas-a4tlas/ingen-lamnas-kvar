@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -258,6 +258,74 @@ function riverSvg(): string {
   <g class="night-stars" fill="#fff6dc">
     <circle cx="60" cy="14" r="1.2"/><circle cx="130" cy="30" r="1"/><circle cx="210" cy="10" r="1.3"/>
     <circle cx="280" cy="26" r="1"/><circle cx="330" cy="12" r="1.2"/>
+  </g>
+</svg>`;
+}
+
+/** Dalens sista morgon: the ridge in the sunrise, spruce below it, birches, a clear-cut and stones, and the clearing where the machines come in. */
+function machinesSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const ridgePines: string[] = [];
+  for (let i = 0; i < 18; i++) ridgePines.push(pine(6 + i * 23 + (i % 2) * 6, y(14) - (i % 3) * 3, 14 + (i % 4) * 4));
+  const spruceBack: string[] = [];
+  for (let i = 0; i < 15; i++) spruceBack.push(pine(-6 + i * 29, y(36), 48 + ((i * 5) % 4) * 8));
+  const spruceFront: string[] = [];
+  for (let i = 0; i < 13; i++) spruceFront.push(pine(8 + i * 32 + (i % 2) * 5, y(46), 56 + ((i * 3) % 4) * 8));
+  const birches: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const bx = x(3) + i * 21 + (i % 2) * 4;
+    const by = y(74) - (i % 3) * 6;
+    birches.push(`<rect x="${bx}" y="${by - 104}" width="5" height="104" fill="#e6dfcc"/>` +
+      `<path d="M${bx} ${by - 70} h5 M${bx} ${by - 44} h5 M${bx} ${by - 20} h5" stroke="#2a2420" stroke-width="2"/>` +
+      `<ellipse cx="${bx + 2}" cy="${by - 108}" rx="17" ry="22" fill="#6f8a4a"/>`);
+  }
+  const stumps: string[] = [];
+  for (let i = 0; i < 9; i++) {
+    const sx = x(37) + (i % 3) * 38 + (i % 2) * 8;
+    const sy = y(52) + Math.floor(i / 3) * 42;
+    stumps.push(`<rect x="${sx}" y="${sy}" width="14" height="10" fill="#7a5a3a"/><ellipse cx="${sx + 7}" cy="${sy}" rx="7" ry="2.6" fill="#d8b98a"/>`);
+  }
+  const rocks: string[] = [];
+  for (let i = 0; i < 9; i++) {
+    const rx = x(69) + (i % 3) * 38 + (i % 2) * 6;
+    const ry = y(56) + Math.floor(i / 3) * 40;
+    rocks.push(`<ellipse cx="${rx}" cy="${ry}" rx="${17 + (i % 2) * 5}" ry="${11 + (i % 3) * 2}" fill="#8a8d88"/><ellipse cx="${rx - 3}" cy="${ry - 4}" rx="${9 + (i % 2) * 3}" ry="4" fill="#a7aaa4"/>`);
+  }
+  const tufts: string[] = [];
+  for (let i = 0; i < 20; i++) tufts.push(tuft(10 + i * 20, y(100) - 2 - (i % 3) * 3, 1.3 + (i % 4) * 0.2));
+  return `
+<svg class="scene-bg machines" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="dawn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5c6a8c"/><stop offset="0.55" stop-color="#d99a72"/><stop offset="1" stop-color="#f0cf96"/>
+    </linearGradient>${DEFS}
+  </defs>
+  <rect width="400" height="${y(16)}" fill="url(#dawn)"/>
+  <circle cx="${x(70)}" cy="${y(13)}" r="22" fill="#f6dc9c" opacity="0.9"/>
+  <path d="M0 ${y(15)} Q${x(30)} ${y(8)} ${x(55)} ${y(12)} T400 ${y(10)} V${y(25)} H0 Z" fill="#5d6b44" filter="url(#cut)"/>
+  <g fill="#3e5032" filter="url(#cut)">${ridgePines.join('')}</g>
+  <rect y="${y(24)}" width="400" height="${y(23)}" fill="#2f3f2a"/>
+  <g fill="#24341f" filter="url(#cut)">${spruceBack.join('')}</g>
+  <g fill="#1d2b19" filter="url(#cut)">${spruceFront.join('')}</g>
+  <rect y="${y(46)}" width="${x(34)}" height="${y(30)}" fill="#6b7d46"/>
+  <rect x="${x(34)}" y="${y(46)}" width="${x(32)}" height="${y(30)}" fill="#8a6c48"/>
+  <path d="M${x(36)} ${y(60)} l40 -6 M${x(44)} ${y(70)} l50 4 M${x(50)} ${y(50)} l30 8" stroke="#5a4630" stroke-width="5" stroke-linecap="round"/>
+  <rect x="${x(66)}" y="${y(46)}" width="${x(34)}" height="${y(30)}" fill="#76785c"/>
+  <g filter="url(#cut)">${birches.join('')}</g>
+  <g filter="url(#cut)">${stumps.join('')}</g>
+  <g filter="url(#cut)">${rocks.join('')}</g>
+  <rect y="${y(76)}" width="400" height="${y(24)}" fill="#6e8048" filter="url(#cut)"/>
+  <g fill="#556636" filter="url(#cut)">${tufts.join('')}</g>
+  <g class="machine-feller" fill="#c99a2e" filter="url(#cut)">
+    <rect x="${x(4)}" y="${y(94)}" width="46" height="18" rx="3"/><rect x="${x(6)}" y="${y(90)}" width="20" height="14" fill="#2a2420"/>
+    <path d="M${x(4) + 40} ${y(95)} L${x(4) + 70} ${y(84)} L${x(4) + 82} ${y(88)}" stroke="#c99a2e" stroke-width="6" fill="none"/>
+    <circle cx="${x(5) + 4}" cy="${y(99)}" r="6" fill="#2a2420"/><circle cx="${x(5) + 34}" cy="${y(99)}" r="6" fill="#2a2420"/>
+  </g>
+  <g class="machine-dozer" fill="#c9692e" filter="url(#cut)">
+    <rect x="${x(76)}" y="${y(93)}" width="54" height="16" rx="3"/><rect x="${x(80)}" y="${y(88)}" width="22" height="14" fill="#2a2420"/>
+    <rect x="${x(72)}" y="${y(92)}" width="8" height="22"/>
+    <rect x="${x(76)}" y="${y(98)}" width="56" height="8" rx="4" fill="#2a2420"/>
   </g>
 </svg>`;
 }
