@@ -3,7 +3,9 @@ import { place, pathsFrom } from '../data/journey';
 import { TRAITS } from '../data/traits';
 import { VERSES } from '../data/verses';
 import { closestTo, crowCards, crowOffers, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone, unseenAhead } from './campfire';
-import { CROW, meetingOptions, trickChance } from '../data/meetings/crow.sv';
+import { trickChance } from '../data/meetings/crow.sv';
+import { labelOf, meetingOptions, speakerOf } from '../data/meetings';
+import { brokenByTravel, keptPromises, promiseFloor, promiseText, proposalAtFire, promises } from './promises';
 import { CARDS } from '../data/cards';
 import { planRoad } from './encounters/road';
 import { forkVoices, voiceStake } from './voices';
@@ -83,6 +85,8 @@ export function step(prev: GameState, action: Action): { state: GameState; event
   const s = structuredClone(prev);
   const c: Ctx = { s, ev: [] };
   try {
+    // A meeting waits for its answer before anything else happens.
+    if (s.meeting && action.type !== 'respond' && action.type !== 'lastMoment') fail('Svara först.');
     switch (action.type) {
       case 'swear': swear(c, action.verses); break;
       case 'play': playCard(c, action.uid, action.target, action.zone); endIfAllAcross(c); break;
@@ -119,7 +123,9 @@ const num = (n: number) => NUMBERS[n] ?? String(n);
 
 function changeBelief(c: Ctx, a: Animal, d: number) {
   if (!isPresent(a)) return;
-  a.belief = Math.max(beliefFloor(c.s), Math.min(10, a.belief + d));
+  // While its own promise holds, an animal never doubts below 3.
+  const floor = promiseFloor(c.s, a.id) && a.belief >= 3 ? 3 : beliefFloor(c.s);
+  a.belief = Math.max(Math.min(floor, a.belief), Math.min(10, a.belief + d));
 }
 
 function changeHope(c: Ctx, d: number, reason: HopeReason, who?: string) {
@@ -174,6 +180,7 @@ function travel(c: Ctx, to: string, wait = false) {
   }
   if (p.kind === 'encounter') {
     s.time = wait ? otherTime(s.clock) : s.clock;
+    for (const v of brokenByTravel(s, to, s.time)) breakPromise(c, v);
     if (wait) {
       narrate(c, s.time === 'night' ? 'Vi gömde oss och väntade tills mörkret kom.' : 'Vi gömde oss och väntade på ljuset.');
       changeHope(c, -1, 'wait');
@@ -191,8 +198,11 @@ function travel(c: Ctx, to: string, wait = false) {
   if (p.kind === 'encounter') startEncounter(c, p.encounter!);
   else if (p.kind === 'campfire') {
     s.phase = 'campfire';
+    // An animal may have a promise to ask of us tonight – after the crow, if it comes.
+    s.proposal = proposalAtFire(s);
     // While something ahead is still only Kvarn's memory, a crow waits by the fire.
     if (crowOffers(s)) s.meeting = { id: 'crow', frame: 'start', used: [], told: [] };
+    else if (s.proposal) s.meeting = { id: 'proposal', frame: 'ask', used: [], told: [] };
   }
   else if (p.kind === 'end') endRun(c);
 }
@@ -330,10 +340,12 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
     changeBelief(c, b, 1);
     line(c, a.id, talk(FIRE_TALK[kind], a, b));
   }
-  for (const a of sitsAlone(s, plan)) {
+  const alone = sitsAlone(s, plan);
+  for (const a of alone) {
     changeBelief(c, a, -1);
     line(c, a.id, `${a.name} satt ensam i mörkret, utanför glöden.`);
   }
+  if (alone.length) breakPromises(c, 'noneAlone');
 
   // 4. Rest heals what can heal, for all but the one who kept watch.
   for (const a of living(s)) {
@@ -348,6 +360,11 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
     if (heal.includes('shock')) line(c, a.id, `Darrningen i ${a.name} släppte till slut.`);
   }
   changeHope(c, 1, 'fire');
+  // Promises kept warm us more than the fire.
+  if (promises(s).length && promises(s).every((v) => !v.flipped)) {
+    changeHope(c, 1, 'fire');
+    narrate(c, 'Vi har hållit varje löfte vi gett. Det värmer mer än elden.');
+  }
   narrate(c, 'Vid gryningen släckte vi elden och gick vidare.');
   s.fireDebt = { embers: 0, apart: [], dark: [] };
   s.clock = 'day';
@@ -375,14 +392,39 @@ function revealAhead(c: Ctx, opening: string, nothing: string): string[] {
 function respond(c: Ctx, optionId: string, uid?: number) {
   const s = c.s;
   const m = s.meeting;
-  if (s.phase !== 'campfire' || !m) fail('Ingen väntar på svar.');
+  if (!m) fail('Ingen väntar på svar.');
   const option = meetingOptions(s).find((o) => o.id === optionId);
   if (!option) fail('Det svaret finns inte.');
   let next = option.next;
-  const speaker = option.by ? animal(s, option.by) : undefined;
-  if (speaker) line(c, speaker.id, `${speaker.name}: ${option.label}`);
+  const who = speakerOf(s, option);
+  const speaker = who ? animal(s, who) : undefined;
+  if (speaker) line(c, speaker.id, `${speaker.name}: ${labelOf(s, option)}`);
+  const asked = s.proposal;
   const told = () => { m.told = revealAhead(c, 'Kråkan berättade:', 'Kråkan hade inget att berätta.'); };
   switch (option.effect) {
+    case 'accept': {
+      const p = asked!;
+      s.verses.push({ id: `lofte-${s.verses.length}`, kind: 'promise', text: promiseText(s, p), flippedText: promiseText(s, p, true), flipped: false, promise: { ...p } });
+      changeBelief(c, animal(s, p.by), 2);
+      for (const id of m.backers ?? []) changeBelief(c, animal(s, id), 1);
+      for (const id of m.objectors ?? []) changeBelief(c, animal(s, id), -1);
+      break;
+    }
+    case 'reject': {
+      changeBelief(c, animal(s, asked!.by), -2);
+      for (const id of m.objectors ?? []) changeBelief(c, animal(s, id), 1);
+      break;
+    }
+    case 'back':
+      m.backers = [...(m.backers ?? []), who!];
+      break;
+    case 'object':
+      m.objectors = [...(m.objectors ?? []), who!];
+      break;
+    case 'mock':
+      m.objectors = [...(m.objectors ?? []), who!];
+      changeBelief(c, animal(s, asked!.by), -1);
+      break;
     case 'payCard': {
       const card = crowCards(s).find((x) => x.uid === uid);
       if (!card) fail('Välj vilket kort kråkan får.');
@@ -435,9 +477,37 @@ function respond(c: Ctx, optionId: string, uid?: number) {
   if (next) {
     m.used.push(option.id);
     m.frame = next;
-    m.by = option.by;
-    if (next === 'start') m.used = m.used.filter((id) => CROW.start.options.some((o) => o.id === id));
-  } else s.meeting = null;
+    m.by = who;
+    return;
+  }
+  // The meeting is over. A promise may be waiting to be asked.
+  s.meeting = null;
+  if (m.id === 'proposal') s.proposal = null;
+  else if (s.proposal) s.meeting = { id: 'proposal', frame: 'ask', used: [], told: [] };
+}
+
+// ---------------------------------------------------------------- promises
+
+/** A promise broken: the words turn, hope sinks, and the one who asked it of us loses faith. */
+function breakPromise(c: Ctx, v: ReturnType<typeof keptPromises>[number]) {
+  const s = c.s;
+  v.flipped = true;
+  c.ev.push({ kind: 'flip', verse: v.id });
+  narrate(c, `Vi lovade: ”${v.text}” Nu är det sant: ”${v.flippedText}”`);
+  changeHope(c, -1, 'flip');
+  const by = s.animals.find((a) => a.id === v.promise.by);
+  if (by && isPresent(by)) changeBelief(c, by, -2);
+}
+
+function breakPromises(c: Ctx, rule: string, test: (p: { by: string; with?: string }) => boolean = () => true) {
+  for (const v of keptPromises(c.s).filter((x) => x.promise.rule === rule && test(x.promise))) breakPromise(c, v);
+}
+
+/** One of us is gone: promises that were about them, while the other lives, are broken. */
+function breakForLoss(c: Ctx, gone: Animal) {
+  const lives = (id?: string) => !!c.s.animals.find((a) => a.id === id && isPresent(a));
+  breakPromises(c, 'together', (p) => (p.by === gone.id && lives(p.with)) || (p.with === gone.id && lives(p.by)));
+  breakPromises(c, 'stay', (p) => p.with === gone.id && lives(p.by));
 }
 
 /** A card is gone for good: from wherever it lies. */
@@ -1045,10 +1115,13 @@ function processHits(c: Ctx) {
       line(c, v.id, `${v.name} biter ihop. Det går, den här gången.`);
       continue;
     }
+    // It reached one of us: some promises cannot survive that.
+    if (LIGHT.includes(h.source)) breakPromises(c, 'light');
+    if (h.source === 'forsen') breakPromises(c, 'current');
     if (isLethal(v, h)) {
       if (h.sudden) {
         narrate(c, `Det fanns ingen varning. ${v.name} hann aldrig förstå.`);
-        die(c, v, 'dark');
+        die(c, v, 'dark', h.source);
         continue;
       }
       s.pending = h;
@@ -1060,6 +1133,9 @@ function processHits(c: Ctx) {
   }
   finishTurn(c);
 }
+
+/** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
+const LIGHT = ['bil', 'lastbil', 'mörk bil', 'bonde'];
 
 const HIT_BY: Record<string, string> = { bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
 
@@ -1111,13 +1187,19 @@ function resolveLastMoment(c: Ctx, action: Extract<Action, { type: 'lastMoment' 
     changeBelief(c, v, 2);
     // The one who throws themselves in the way is hurt, not killed.
     const pushed: Hit = { ...h, victim: by.id, severity: 'injure' };
-    if (isLethal(by, pushed)) die(c, by, 'sacrifice');
+    if (isLethal(by, pushed)) die(c, by, 'sacrifice', h.source);
     else applyHit(c, by, pushed);
+    // Sometimes the one who was saved asks a promise of us, there and then.
+    const both = isPresent(v) && isPresent(by) && !promises(s).some((x) => x.promise.rule === 'stay' && x.promise.by === v.id && x.promise.with === by.id);
+    if (both && !s.meeting && random(s) < 0.5) {
+      s.proposal = { by: v.id, rule: 'stay', with: by.id };
+      s.meeting = { id: 'proposal', frame: 'ask', used: [], told: [] };
+    }
   } else if (action.choice === 'letGo') {
     s.pending = undefined;
     s.phase = 'play';
     narrate(c, `Vi lät ${v.name} gå.`);
-    die(c, v, 'letGo');
+    die(c, v, 'letGo', h.source);
     if (verseStatus(s, 'ingenLamnas') === 'intact') flipVerse(c, 'ingenLamnas');
   } else {
     // Verses are lasting modifiers and story, never a price to pay for a life.
@@ -1170,9 +1252,11 @@ function grieve(c: Ctx, lost: Animal) {
   }
 }
 
-function die(c: Ctx, a: Animal, cause: keyof typeof DEATH_CAUSE) {
+function die(c: Ctx, a: Animal, cause: keyof typeof DEATH_CAUSE, source?: string) {
   const s = c.s;
   a.status = 'dead';
+  a.diedOf = source ?? cause;
+  breakForLoss(c, a);
   if (a.count !== undefined) a.count = 0;
   c.ev.push({ kind: 'death', who: a.id });
   removeCards(s, a.id);
@@ -1190,6 +1274,7 @@ function die(c: Ctx, a: Animal, cause: keyof typeof DEATH_CAUSE) {
 function leaveGroup(c: Ctx, a: Animal, cause: 'dawn' | 'doubt') {
   const s = c.s;
   a.status = 'left';
+  breakForLoss(c, a);
   removeCards(s, a.id);
   const why = cause === 'dawn' ? byTime(s, encounterOf(s).leftBehind) : LEAVE_CAUSE[cause];
   s.verses.push({ id: `minne-${a.id}`, kind: 'memorial', text: `För ${a.name}, ${why}.`, flipped: false });

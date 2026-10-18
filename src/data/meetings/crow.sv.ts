@@ -6,6 +6,11 @@ import { canFly, huntsAt, isPresent } from '../../engine/rules';
 import type { GameState } from '../../engine/types';
 
 export type MeetingEffect =
+  | 'accept'
+  | 'reject'
+  | 'back'
+  | 'object'
+  | 'mock'
   | 'payCard'
   | 'payEmber'
   | 'kvarnHint'
@@ -16,9 +21,9 @@ export type MeetingEffect =
 
 export interface MeetingOption {
   id: string;
-  /** The animal who speaks the reply; none means Eden – all of us. */
-  by?: string;
-  label: string;
+  /** The animal who speaks the reply; none means Eden – all of us. It may depend on who is with us. */
+  by?: string | ((s: GameState) => string | undefined);
+  label: string | ((s: GameState) => string);
   /** Only offered when this holds (beyond the speaker being with us). */
   when?: (s: GameState) => boolean;
   /** For gambles: the chance it works, shown with the reply. */
@@ -32,9 +37,11 @@ export interface MeetingOption {
 
 export interface MeetingFrame {
   id: string;
-  /** Who speaks: the crow, or the story itself. */
-  speaker: 'crow' | 'story';
+  /** Who speaks: the crow, the one asking a promise of us, or the story itself. */
+  speaker: 'crow' | 'proposer' | 'story';
   text: (s: GameState) => string;
+  /** A paper card shown with the words: a promise and what it binds us to. */
+  card?: (s: GameState) => { title: string; lines: string[] };
   options: MeetingOption[];
 }
 
@@ -152,9 +159,4 @@ export const CROW: Record<string, MeetingFrame> = {
   },
 };
 
-/** The replies we can give now: whoever speaks must be with us, and not already have spoken. */
-export function meetingOptions(s: GameState): MeetingOption[] {
-  const m = s.meeting;
-  if (!m) return [];
-  return CROW[m.frame].options.filter((o) => !m.used.includes(o.id) && (!o.by || here(s, o.by)) && (!o.when || o.when(s)));
-}
+export const isHere = here;

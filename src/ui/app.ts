@@ -35,7 +35,9 @@ import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
 import { fireSceneSvg, firePanelHtml, guideHtml, mapSvg, meetingHtml, memoryLine, memorialHtml, moveToSeat, occupants, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
-import { CROW } from '../data/meetings/crow.sv';
+import { currentFrame } from '../data/meetings';
+import { brokenByTravel, promises } from '../engine/promises';
+import { PROMISES, PROMISE_GIFT } from '../data/promises.sv';
 import { crowCards, defaultPlan } from '../engine/campfire';
 import { forkVoices, voiceStake } from '../engine/voices';
 import { pathsFrom, place } from '../data/journey';
@@ -103,7 +105,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 9 && s.phase !== 'over' ? s : null;
+    return s.version === 10 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -283,7 +285,7 @@ export class App {
         return this.dispatch({ type: 'restAtFire', watch: plan.watch, scout: plan.scout, pairs: plan.pairs, mourning: plan.mourning });
       }
       case 'meet': {
-        const option = CROW[s.meeting!.frame].options.find((o) => o.id === el.dataset.option);
+        const option = currentFrame(s)?.options.find((o) => o.id === el.dataset.option);
         if (option?.pickCard) {
           this.meetingPick = { option: option.id };
           return this.render();
@@ -674,7 +676,7 @@ export class App {
     log.scrollTop = log.scrollHeight;
     if (s.phase !== 'play') this.deckView = null;
     q('.modal-root').innerHTML =
-      s.phase === 'lastMoment' ? this.lastMomentHtml(s) : this.deckView ? this.deckHtml(s, this.deckView) : this.mapOpen ? this.mapModalHtml(s) : this.guideOpen ? guideHtml(s) : '';
+      s.phase === 'lastMoment' ? this.lastMomentHtml(s) : s.meeting ? meetingHtml(s, this.meetingPickerHtml(s)) : this.deckView ? this.deckHtml(s, this.deckView) : this.mapOpen ? this.mapModalHtml(s) : this.guideOpen ? guideHtml(s) : '';
   }
 
   // ------------------------------------------------------------ parts
@@ -1043,6 +1045,14 @@ export class App {
           ? `<p class="verse broken"><s>${esc(v.text)}</s><span class="rewritten">${esc(v.flippedText!)}</span><span class="vnote">${esc(def.flipCost)}</span></p>`
           : `<p class="verse"><span>${esc(v.text)}</span><span class="vnote">${esc(def.promise)} <i>Bryts: ${esc(def.breaks)}</i></span></p>`;
       }).join('')}
+      ${promises(s).map((v) => {
+        const a = animal(s, v.promise.by);
+        const def = PROMISES[v.promise.rule];
+        const fill = (t: string) => t.replace(/\{a\}/g, a.name).replace(/\{b\}/g, v.promise.with ? animal(s, v.promise.with).name : '');
+        return v.flipped
+          ? `<p class="verse promise broken" style="--owner:${speciesColor(a.species)}"><span class="vby">${esc(a.name)}s löfte</span><s>${esc(v.text)}</s><span class="rewritten">${esc(v.flippedText!)}</span></p>`
+          : `<p class="verse promise" style="--owner:${speciesColor(a.species)}"><span class="vby">${esc(a.name)}s löfte</span><span>${esc(v.text)}</span><span class="vnote">${esc(fill(PROMISE_GIFT))} <i>${esc(fill(def.binds))}</i></span></p>`;
+      }).join('')}
       ${memorial.length ? `<div class="memorial">${memorial.map((v) => `<p class="verse mem">${esc(v.text)}</p>`).join('')}</div>` : ''}`;
   }
 
@@ -1101,6 +1111,7 @@ export class App {
               const name = esc(known(to.id) ? to.name : to.fogName);
               const memo = memoryLine(s, to.id);
               const note = (path.note ? `<p class="muted small">${esc(path.note)}</p>` : '') + (memo ? `<p class="small memory-note">${esc(memo)}</p>` : '');
+              const breaks = (time: 'day' | 'night') => brokenByTravel(s, to.id, time).map((v) => `<p class="small promise-warn">⚠ Bryter ${esc(animal(s, v.promise.by).name)}s löfte: ”${esc(v.text)}”</p>`).join('');
               if (to.kind !== 'encounter') return `<button class="btn primary" data-act="travel" data-to="${to.id}">Gå mot ${name}</button>${note}`;
               // An encounter comes at the natural time of day, unless we wait for the other one.
               const now = s.clock;
@@ -1108,8 +1119,10 @@ export class App {
               return `<div class="leg">
                 <button class="btn primary" data-act="travel" data-to="${to.id}">Gå mot ${name} – i ${TIME_NAMES[now]}</button>
                 <p class="small time-note">${now === 'night' ? '☾' : '☼'} ${esc(TIME_NOTES[to.encounter!][now])}</p>
+                ${breaks(now)}
                 <button class="btn" data-act="travel" data-to="${to.id}" data-wait="1" ${s.hope > 0 ? '' : 'disabled'}>Vänta till ${later === 'night' ? 'natten' : 'dagen'} (−1 hopp)</button>
                 <p class="small time-note">${later === 'night' ? '☾' : '☼'} ${esc(TIME_NOTES[to.encounter!][later])}</p>
+                ${breaks(later)}
                 ${note}
               </div>`;
             }).join('')}

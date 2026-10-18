@@ -100,7 +100,7 @@ export function planProblem(s: GameState, plan: FirePlan): string | null {
   const seated = plan.pairs.flat();
   if (seated.some((id) => !ids.has(id) || id === plan.watch)) return 'Den som vakar kan inte sitta vid glöden.';
   if (new Set(seated).size !== seated.length) return 'Ingen kan sitta på två platser.';
-  if (s.meeting) return 'Kråkan väntar på svar.';
+  if (s.meeting) return s.meeting.id === 'crow' ? 'Kråkan väntar på svar.' : 'Ett löfte väntar på svar.';
   if (plan.pairs.length > emberPairs(s)) return emberPairs(s) === 1 ? 'Kråkan har tagit en plats vid glöden – bara ett par får plats.' : 'Ingen plats vid glöden i natt.';
   const locked = lockedAtFire(s);
   const misplaced = [plan.watch, plan.scout, ...plan.pairs.flat()].find((id) => id && locked.includes(id));

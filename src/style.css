@@ -832,3 +832,22 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
   .meet-speaker { width: 70%; margin: 0; justify-self: center; grid-column: 1; grid-row: 1; }
   .meet-branch { display: none; }
 }
+
+/* ---------------------------------------------------------------- promises */
+
+.meet-proposer { position: relative; z-index: 1; width: 80%; align-self: center; justify-self: center; text-align: center; margin-top: 16px; }
+.meet-proposer .sil { width: 100%; display: block; filter: drop-shadow(0 0 10px rgba(243,180,92,0.45)); }
+.meet-proposer span { font-family: var(--caps); font-size: 0.8rem; color: var(--paper); }
+.meeting-card.proposal .meet-art { background: radial-gradient(circle at 50% 70%, #5a3a1c, #0f141d 70%); }
+.promise-card {
+  display: grid; gap: 4px; margin: 0 0 12px; padding: 10px 14px; background: #fff8e6;
+  border-left: 4px solid var(--gold); box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.promise-card b { font-family: var(--caps); font-size: 1.15em; }
+.promise-card span { font-size: 0.85em; }
+.verse.promise { border-left: 3px solid var(--owner); padding-left: 8px; }
+.verse.promise .vby { display: block; font-family: var(--caps); font-size: 0.75em; color: var(--owner); }
+.promise-warn { margin: 0 0 4px; color: #ff9a80; font-weight: 600; }
+@media (max-width: 700px) {
+  .meet-proposer { width: 40%; margin: 0; grid-column: 2; grid-row: 1; }
+}
