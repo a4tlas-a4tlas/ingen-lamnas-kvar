@@ -31,7 +31,7 @@ import { OATH_VERSES, createGame } from '../engine/setup';
 import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
-import { assignSeat, fireSceneSvg, firePanelHtml, mapSvg, memorialHtml, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
+import { assignSeat, fireSceneSvg, firePanelHtml, guideHtml, mapSvg, memorialHtml, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
 import { defaultPlan } from '../engine/campfire';
 import { pathsFrom, place } from '../data/journey';
 import { dogSilhouette, silhouette, speciesColor } from './silhouettes';
@@ -39,6 +39,19 @@ import { ALARM_MAX, dogDestination } from '../engine/encounters/farm';
 import { animalStatuses, forecast, type Status } from './status';
 
 const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
+const GUIDES_SEEN_KEY = 'ingen-lamnas-kvar/guides-seen';
+
+/** Whether this browser has already been shown the guide for an area; marks it as seen. */
+function firstVisit(id: string): boolean {
+  try {
+    const seen = JSON.parse(localStorage.getItem(GUIDES_SEEN_KEY) ?? '[]') as string[];
+    if (seen.includes(id)) return false;
+    localStorage.setItem(GUIDES_SEEN_KEY, JSON.stringify([...seen, id]));
+  } catch {
+    // No storage: show the guide every time rather than never.
+  }
+  return true;
+}
 
 type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | { mode: 'lead' | 'lure'; animal?: string };
 
@@ -105,6 +118,7 @@ export class App {
   private oathPick: VerseId[] = [];
   private deckView: DeckView | null = null;
   private mapOpen = false;
+  private guideOpen = false;
   private fireSeats: Seats | null = null;
   private fireMourning: Record<string, 'bury' | 'carry'> = {};
   private mounted = false;
@@ -129,8 +143,10 @@ export class App {
     document.body.appendChild(this.tip);
     window.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      if (this.deckView) {
+      if (this.deckView || this.guideOpen || this.mapOpen) {
         this.deckView = null;
+        this.guideOpen = false;
+        this.mapOpen = false;
         if (this.state) this.render();
       } else this.cancel();
     });
@@ -211,6 +227,12 @@ export class App {
         return this.render();
       case 'deck-close':
         this.deckView = null;
+        return this.render();
+      case 'guide-open':
+        this.guideOpen = true;
+        return this.render();
+      case 'guide-close':
+        this.guideOpen = false;
         return this.render();
       case 'map-open':
         this.mapOpen = true;
@@ -559,7 +581,10 @@ export class App {
   }
 
   private renderGame(s: GameState, hurt?: Set<string>) {
-    if (!this.mounted) this.mountGame();
+    if (!this.mounted) {
+      this.mountGame();
+      this.guideOpen = s.phase === 'play' && s.turn === 1 && firstVisit(s.encounterId);
+    }
     const q = <T extends HTMLElement>(sel: string) => this.root.querySelector<T>(sel)!;
     q('.topbar').innerHTML = this.topbarHtml(s);
     q('.hud').innerHTML = this.hudHtml(s);
@@ -584,7 +609,7 @@ export class App {
     log.scrollTop = log.scrollHeight;
     if (s.phase !== 'play') this.deckView = null;
     q('.modal-root').innerHTML =
-      s.phase === 'lastMoment' ? this.lastMomentHtml(s) : this.deckView ? this.deckHtml(s, this.deckView) : this.mapOpen ? this.mapModalHtml(s) : '';
+      s.phase === 'lastMoment' ? this.lastMomentHtml(s) : this.deckView ? this.deckHtml(s, this.deckView) : this.mapOpen ? this.mapModalHtml(s) : this.guideOpen ? guideHtml(s) : '';
   }
 
   // ------------------------------------------------------------ parts
@@ -594,6 +619,7 @@ export class App {
       <div class="tb-title">Ingen lämnas kvar <span class="muted">· ${esc(encounterOf(s).title)}</span></div>
       <div class="tb-stats">
         <span class="stat">Timme <b>${s.turn}</b>/${s.maxTurn}</span>
+        <button class="btn small" data-act="guide-open">Guide</button>
         <button class="btn small" data-act="map-open">Kartan</button>
         <button class="btn small" data-act="mute">${this.sound.muted ? 'Ljud av' : 'Ljud på'}</button>
       </div>`;

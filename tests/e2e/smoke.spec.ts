@@ -51,6 +51,16 @@ test('a whole run: oath, map, road, campfire, farm, onward', async ({ page }) =>
   await page.locator('.onward .btn').first().click();
   await expect(page.locator('.token')).toHaveCount(6);
 
+  // The first time on the road, the guide opens by itself; the Guide button brings it back.
+  await expect(page.locator('.guide-modal')).toBeVisible();
+  await expect(page.locator('.guide-modal .zone-sketch .sk-zone')).toHaveCount(6);
+  await page.getByRole('button', { name: 'Jag förstår' }).click();
+  await expect(page.locator('.guide-modal')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Guide', exact: true }).click();
+  await expect(page.locator('#guide-title')).toHaveText('Så går vi över vägen');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.guide-modal')).toHaveCount(0);
+
   // The deck checker shows every card, grouped by animal.
   await page.getByRole('button', { name: 'Hela leken' }).click();
   await expect(page.locator('.deck-animal')).toHaveCount(6);
@@ -68,6 +78,11 @@ test('a whole run: oath, map, road, campfire, farm, onward', async ({ page }) =>
     if (await page.locator('.end-screen').count()) break;
     if (await page.locator('[data-act="lm-letgo"]').count()) {
       await page.locator('[data-act="lm-letgo"]').click();
+      continue;
+    }
+    if (await page.locator('.guide-modal').count()) {
+      if (await page.locator('.scene.farm').count()) seen.add('farm guide');
+      await page.getByRole('button', { name: 'Jag förstår' }).click();
       continue;
     }
     if (await page.locator('.fire-screen').count()) {
@@ -92,6 +107,6 @@ test('a whole run: oath, map, road, campfire, farm, onward', async ({ page }) =>
   }
   await expect(page.locator('.end-screen')).toBeVisible({ timeout: 10_000 });
   await expect(page.locator('.end-screen h2')).toHaveText(/Åkrarna|Eden föll/);
-  if ((await page.locator('.end-screen h2').textContent()) === 'Åkrarna') expect([...seen]).toEqual(expect.arrayContaining(['farm', 'fire', 'map']));
+  if ((await page.locator('.end-screen h2').textContent()) === 'Åkrarna') expect([...seen]).toEqual(expect.arrayContaining(['farm', 'farm guide', 'fire', 'map']));
   expect(errors).toEqual([]);
 });

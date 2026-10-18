@@ -254,3 +254,14 @@ Design from the milestone 2 interview, part 1. The run becomes: oath → map →
   - the farmer comes out in about 1 run in 3
   - about 1.5 survivors reach Åkrarna injured
   - Before the barn blocked the yard, a straight rush crossed 4.1 with almost no losses.
+
+### Guiden (the guide): how to play each area
+- A **"Guide"** button in the top bar opens a rulebook card for the area we're in. It **opens by itself the first time** you enter an area, remembered per browser in localStorage `ingen-lamnas-kvar/guides-seen`.
+- **Sections:**
+  - **Målet** (the goal)
+  - **Kartskiss** (map sketch): drawn from the encounter's own zones and coloured by role (start / goal / cover / open danger / hidden). Hidden zones show as "?" until found.
+  - **Så går en timme** (how an hour goes): shared by all areas
+  - **Faror** (dangers): each row says whether it injures or kills
+  - **Skydd & knep** (shelter and tricks)
+  - **Tips**
+- **The text** lives in `src/data/guides.sv.ts`. Numbers (hours, alarm, scent) come from the rules, and a test checks that every encounter has a guide.

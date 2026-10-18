@@ -2,7 +2,9 @@
 // the memorial stone. Pure functions of state (plus the campfire plan).
 import { FOREST, PATHS, PLACES, pathsFrom, type Place } from '../data/journey';
 import { EMBER_PAIRS, type FirePlan, hungryWatcher, inheritanceLine, living, planProblem, sitsAlone } from '../engine/campfire';
+import { encounterOf, type EncounterDef, type ZoneDef } from '../engine/encounters';
 import { animal, bond } from '../engine/rules';
+import { GUIDES, HIT_ROWS, HOUR_STEPS, type GuideRow } from '../data/guides.sv';
 import type { Animal, GameState } from '../engine/types';
 import { silhouette, speciesColor } from './silhouettes';
 import { animalStatuses } from './status';
@@ -246,5 +248,86 @@ export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mo
     <div class="fire-go">
       <button class="btn primary" data-act="fire-rest" ${problem ? 'disabled' : ''}>Låt natten gå</button>
       <span class="muted small">${problem ? esc(problem) : 'Elden ger +1 hopp. Blödning och chock läker för alla utom vakten.'}</span>
+    </div>`;
+}
+
+// ---------------------------------------------------------------- the guide
+
+type ZoneRole = 'start' | 'goal' | 'cover' | 'danger' | 'hidden' | 'plain';
+
+function zoneRole(z: ZoneDef): ZoneRole {
+  if (z.hidden) return 'hidden';
+  if (z.goal) return 'goal';
+  if (z.start) return 'start';
+  if (z.cover) return 'cover';
+  if (z.road || z.exposed) return 'danger';
+  return 'plain';
+}
+
+const ROLE_NAMES: Record<ZoneRole, string> = {
+  start: 'start',
+  goal: 'målet',
+  cover: 'skydd',
+  danger: 'öppet – faran slår här',
+  hidden: 'gömd väg',
+  plain: 'öppet',
+};
+
+/** A pencil sketch of the board, drawn from the encounter's own zones. Hidden zones show as ? until found. */
+export function zoneSketchSvg(def: EncounterDef, revealed: string[]): string {
+  const zones = [...def.zones].sort((a, b) => Number(!!a.hidden) - Number(!!b.hidden));
+  const top = Math.min(...def.zones.map((z) => z.rect[1]));
+  const rects = zones
+    .map((z) => {
+      const [x, y, w, h] = z.rect;
+      const role = zoneRole(z);
+      const known = !z.hidden || revealed.includes(z.id);
+      const label = known ? z.label : '?';
+      const tall = h * 5 > w * 4 * 1.2;
+      const cx = (x + w / 2) * 4;
+      const cy = (y - top + h / 2) * 5;
+      // Small caps run about 0.62 em per letter; shrink the label to fit its box.
+      const room = (tall ? h * 5 : w * 4) - 14;
+      const size = Math.min(21, Math.max(11, room / (label.length * 0.62 + (z.goal ? 1.4 : 0))));
+      return `<g class="sk-zone ${role}" data-zone="${z.id}">
+        <rect x="${x * 4 + 2}" y="${(y - top) * 5 + 2}" width="${w * 4 - 4}" height="${h * 5 - 4}" rx="6"/>
+        <text x="${cx}" y="${cy}" style="font-size:${size.toFixed(1)}px" ${tall ? `transform="rotate(-90 ${cx} ${cy})"` : ''}>${esc(label)}${z.goal ? ' ★' : ''}</text>
+      </g>`;
+    })
+    .join('');
+  return `<svg class="zone-sketch" viewBox="0 0 400 ${(100 - top) * 5}" role="img" aria-label="Skiss över platsen">${rects}</svg>`;
+}
+
+function legendHtml(def: EncounterDef): string {
+  const roles = [...new Set(def.zones.map(zoneRole))];
+  return `<div class="sk-legend">${roles.map((r) => `<span><i class="sk-swatch ${r}"></i>${ROLE_NAMES[r]}</span>`).join('')}</div>`;
+}
+
+function rowsHtml(rows: GuideRow[]): string {
+  return `<ul class="guide-rows">${rows
+    .map((r) => `<li><span class="g-icon">${esc(r.icon)}</span><div><b>${esc(r.name)}</b>${r.effect ? ` <span class="chip ${r.effect === 'dödar' ? 'tone-bad' : 'tone-warn'}">${r.effect}</span>` : ''}<p>${esc(r.text)}</p></div></li>`)
+    .join('')}</ul>`;
+}
+
+/** The rulebook for the area we stand in: goal, board, the hour, dangers, shelter, tips. */
+export function guideHtml(s: GameState): string {
+  const def = encounterOf(s);
+  const g = GUIDES[def.id];
+  return `
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <div class="modal-card guide-modal">
+        <div class="deck-head"><h2 id="guide-title">${esc(g.title)}</h2><button class="btn small" data-act="guide-close">Stäng</button></div>
+        <section class="guide-goal"><h3>Målet</h3><p>${esc(g.goal)}</p></section>
+        <div class="guide-top">
+          <section class="guide-sketch"><h3>Kartskiss</h3>${zoneSketchSvg(def, s.revealed)}${legendHtml(def)}</section>
+          <section><h3>Så går en timme</h3><ol class="guide-steps">${HOUR_STEPS.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></section>
+        </div>
+        <div class="guide-cols">
+          <section><h3>Faror</h3>${rowsHtml([...g.dangers, ...HIT_ROWS])}</section>
+          <section><h3>Skydd &amp; knep</h3>${rowsHtml(g.shelter)}</section>
+        </div>
+        <section class="guide-tips"><h3>Tips</h3><ul>${g.tips.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></section>
+        <button class="btn primary" data-act="guide-close">Jag förstår</button>
+      </div>
     </div>`;
 }
