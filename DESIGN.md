@@ -390,11 +390,24 @@ Design from the milestone 4 interview:
 
   The rescue is a real dilemma: on the farm, the hen house lies in the dogs' path.
 
-### Step 2: the crow at the campfire (done)
-- **When it comes:** while some place ahead is still only Kvarn's memory, a crow sits outside the glow: "Jag vet vad som väntar där framme. Men inget är gratis."
-- **The price, you choose:**
-  - **Ge ett kort** (give a card): any card from the deck except memories of the dead, gone for good ("Kråkan tog Bära från Gamla Ljung").
-  - **Ge en plats vid glöden** (give a place by the embers): the crow takes a seat, so only one pair gets the fire tonight.
-  - **Nej tack** (no thanks).
-- **The reveal:** the same as the owl's scouting (`revealAhead` in `step.ts`, shared by both), for every place within two paths. The owl and the crow are never both needed in one night.
-- **UI:** a crow cut-out in the fire scene, an "En kråka i mörkret" section with the three choices, and a card picker built from the deck checker's mini cards, which names the chosen card.
+### Step 2: the crow at the campfire – a meeting in frames (done)
+- **When it comes:** we arrive at the fire, and something ahead is still only Kvarn's memory. A crow lands on a branch, and the meeting plays out frame by frame before the seating.
+  - Each frame shows the crow on its branch, the last of us who spoke facing it, and the words.
+  - Our replies are buttons in the speaker's colour.
+  - A reply only appears if its animal is with us.
+- **The frames** (`src/data/meetings/crow.sv.ts`, data with conditions and effects):
+  - **Eden:** "Vad vill du ha?" → **the price**. Give a card (picked from the deck, gone for good) or a place by the embers (only one pair tonight). Either way, the crow tells us. Or say "Det är för dyrt."
+  - **Kvarn:** "Jag minns vägen själv." → the crow says *how many* places Kvarn remembers wrong, but not which. Kvarn gets +1 belief if Kvarn was right everywhere, −1 otherwise.
+  - **Sotfot:** "Vi kanske kan hjälpa varandra…" → the fox's two offers:
+    - **a trick:** the chance is Sotfot's belief ×10%, shown on the reply. If it works, the crow tells for free and Sotfot gets +1 belief. If it fails, the crow snatches one of Sotfot's cards and flies off.
+    - **giving up a place:** Sotfot sits in the dark tonight, and the crow tells.
+  - **Skymning** (wing whole) lifts its wings → crows hate owls. Skymning can scare the crow away (Skymning +1 belief, no knowledge), offer to fly there itself (the crow leaves offended), or draw back.
+  - **Gamla Ljung:** "Varför sitter du här ensam?" → the crow's flock lived in the glen. Ljung tells the crow about the glen: Ljung sits apart all night (no rest, no embers, but not alone), and the crow tells.
+  - **Sicksack**, when hungry: "Kom lite närmare, fågel." → the crow flees.
+  - **"Nej tack. Flyg vidare."** → the crow leaves.
+- **The cost lingers into the night:** `s.fireDebt` (fewer embers, someone apart, someone in the dark) shapes the seating. We can't rest until the crow has had its answer.
+- **The seating is dragged:** we drag the animals to spots in the fire scene (Vakten, Glöd 1 and 2, Spanar, Mörkret), or tap an animal and then a spot.
+  - Dropping on someone swaps the two.
+  - A spot that can't take the animal refuses it, with a line why ("Bara den som kan flyga kan spana").
+  - Those the crow has placed are locked.
+  - The side panel only shows information.

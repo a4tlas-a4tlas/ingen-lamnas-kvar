@@ -3,7 +3,7 @@ import { defaultPlan, planProblem } from '../../src/engine/campfire';
 import { createGame } from '../../src/engine/setup';
 import { step } from '../../src/engine/step';
 import type { GameState } from '../../src/engine/types';
-import { calmGame, get, run } from './helpers';
+import { CROW_AWAY, calmGame, get, run } from './helpers';
 
 /** Everyone across the road: we stand on the map, ready for the fire. */
 function acrossTheRoad(): GameState {
@@ -34,14 +34,14 @@ describe('the journey', () => {
     expect(s.encounterId).toBe('road');
     expect(s.trafficPlan).toHaveLength(10);
     s = acrossTheRoad();
-    s = run(s, { type: 'travel', to: 'granbacken' });
+    s = run(s, { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
     expect(s.phase).toBe('campfire');
     expect(s.journey.visited).toEqual(['dalen', 'vagen', 'granbacken']);
   });
 
   it('ends the run at the fields, with everyone still alive counted', () => {
     let s = acrossTheRoad();
-    s = run(s, { type: 'travel', to: 'granbacken' });
+    s = run(s, { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
     s = run(s, { type: 'restAtFire', ...defaultPlan(s) });
     s = run(s, { type: 'travel', to: 'garden' });
     expect(s.encounterId).toBe('farm');
@@ -58,7 +58,7 @@ describe('the journey', () => {
 
 describe('the campfire', () => {
   function atFire(): GameState {
-    return run(acrossTheRoad(), { type: 'travel', to: 'granbacken' });
+    return run(acrossTheRoad(), { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
   }
 
   it('pairs by the embers grow closer; whoever has no place sits alone', () => {

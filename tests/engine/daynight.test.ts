@@ -6,7 +6,7 @@ import { canLure, moonVisible } from '../../src/engine/rules';
 import { createGame } from '../../src/engine/setup';
 import { step } from '../../src/engine/step';
 import type { GameState } from '../../src/engine/types';
-import { calmGame, get, run } from './helpers';
+import { CROW_AWAY, calmGame, get, run } from './helpers';
 
 const sworn = (seed = 3) => run(createGame(seed), { type: 'swear', verses: ['manen'] });
 
@@ -16,7 +16,7 @@ function atTheFork(): GameState {
   for (const a of s.animals) a.zone = 'lane2';
   s.kraft = 99;
   for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
-  s = run(s, { type: 'travel', to: 'granbacken' });
+  s = run(s, { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
   return run(s, { type: 'restAtFire', ...defaultPlan(s) });
 }
 

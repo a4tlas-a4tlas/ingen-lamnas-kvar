@@ -34,8 +34,9 @@ import { OATH_VERSES, createGame } from '../engine/setup';
 import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
-import { assignSeat, fireSceneSvg, firePanelHtml, guideHtml, mapSvg, memoryLine, type CrowChoice, memorialHtml, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
-import { crowCards, crowOffers, defaultPlan } from '../engine/campfire';
+import { fireSceneSvg, firePanelHtml, guideHtml, mapSvg, meetingHtml, memoryLine, memorialHtml, moveToSeat, occupants, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
+import { CROW } from '../data/meetings/crow.sv';
+import { crowCards, defaultPlan } from '../engine/campfire';
 import { forkVoices, voiceStake } from '../engine/voices';
 import { pathsFrom, place } from '../data/journey';
 import { dogSilhouette, silhouette, speciesColor } from './silhouettes';
@@ -102,7 +103,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 8 && s.phase !== 'over' ? s : null;
+    return s.version === 9 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -127,7 +128,13 @@ export class App {
   private guideOpen = false;
   private fireSeats: Seats | null = null;
   private fireMourning: Record<string, 'bury' | 'carry'> = {};
-  private fireCrow: CrowChoice = null;
+  /** Picking a card for the crow: which reply, and which card so far. */
+  private meetingPick: { option: string; uid?: number } | null = null;
+  /** The animal lifted up by a tap, waiting for a place. */
+  private firePicked: string | null = null;
+  private fireHint = '';
+  private drag: { id: string; x: number; y: number; ghost?: HTMLElement } | null = null;
+  private suppressClick = false;
   private mounted = false;
   private busy = false;
   private hint = '';
@@ -136,6 +143,9 @@ export class App {
 
   constructor(private root: HTMLElement) {
     root.addEventListener('click', (e) => this.onClick(e));
+    root.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+    window.addEventListener('pointermove', (e) => this.onPointerMove(e));
+    window.addEventListener('pointerup', (e) => this.onPointerUp(e));
     root.addEventListener('pointerover', (e) => {
       this.highlightOwner(e, true);
       this.showTip(e);
@@ -172,7 +182,6 @@ export class App {
         this.state = createGame(randomSeed());
         this.oathPick = [];
         this.fireSeats = null;
-        this.fireCrow = null;
         this.mapOpen = false;
         this.mounted = false;
         writeSave(this.state);
@@ -250,24 +259,45 @@ export class App {
         return this.render();
       case 'travel':
         return this.dispatch({ type: 'travel', to: el.dataset.to!, wait: el.dataset.wait === '1' });
-      case 'fire-seat':
-        if (this.fireSeats) this.fireSeats = assignSeat(this.fireSeats, el.dataset.animal!, el.dataset.seat as Seat);
+      case 'fire-pick': {
+        if (this.suppressClick) return;
+        const id = el.dataset.drag!;
+        // With someone already lifted, tapping another puts the first on that one's spot.
+        if (this.firePicked && this.firePicked !== id && this.fireSeats && s) {
+          const seat = this.fireSeats[id] ?? 'dark';
+          return this.seatAnimal(this.firePicked, seat, occupants(s, this.fireSeats, seat).indexOf(id));
+        }
+        this.firePicked = this.firePicked === id ? null : id;
+        this.fireHint = '';
         return this.render();
+      }
+      case 'fire-slot':
+        if (this.firePicked) this.seatAnimal(this.firePicked, el.dataset.seat as Seat, Number(el.dataset.slot ?? 0));
+        return;
       case 'fire-mourn':
         this.fireMourning = { ...this.fireMourning, [el.dataset.dead!]: el.dataset.choice as 'bury' | 'carry' };
         return this.render();
       case 'fire-rest': {
         if (!this.fireSeats) return;
-        const plan = planFromSeats(this.fireSeats, this.fireMourning, this.fireCrow);
-        return this.dispatch({ type: 'restAtFire', watch: plan.watch, scout: plan.scout, crow: plan.crow, pairs: plan.pairs, mourning: plan.mourning });
+        const plan = planFromSeats(this.fireSeats, this.fireMourning);
+        return this.dispatch({ type: 'restAtFire', watch: plan.watch, scout: plan.scout, pairs: plan.pairs, mourning: plan.mourning });
       }
-      case 'crow': {
-        const deal = el.dataset.deal;
-        this.fireCrow = deal === 'card' ? { price: 'card' } : deal === 'ember' ? { price: 'ember' } : null;
+      case 'meet': {
+        const option = CROW[s.meeting!.frame].options.find((o) => o.id === el.dataset.option);
+        if (option?.pickCard) {
+          this.meetingPick = { option: option.id };
+          return this.render();
+        }
+        return this.dispatch({ type: 'respond', option: el.dataset.option! });
+      }
+      case 'meet-card':
+        if (this.meetingPick) this.meetingPick = { ...this.meetingPick, uid: Number(el.dataset.uid) };
         return this.render();
-      }
-      case 'crow-card':
-        this.fireCrow = { price: 'card', uid: Number(el.dataset.uid) };
+      case 'meet-give':
+        if (this.meetingPick?.uid !== undefined) return this.dispatch({ type: 'respond', option: this.meetingPick.option, uid: this.meetingPick.uid });
+        return;
+      case 'meet-back':
+        this.meetingPick = null;
         return this.render();
       case 'rescue-card':
         if (this.sel.mode === 'rescue') return this.cancel();
@@ -387,6 +417,7 @@ export class App {
   private dispatch(action: Action) {
     if (!this.state) return;
     const prevKraft = this.state.kraft;
+    const hadMeeting = !!this.state.meeting;
     const r = step(this.state, action);
     const err = r.events.find((e) => e.kind === 'error');
     if (err && err.kind === 'error') {
@@ -396,10 +427,12 @@ export class App {
     this.state = r.state;
     this.sel = { mode: 'idle' };
     this.hint = '';
-    if (this.state.phase !== 'campfire') {
+    // The meeting's end decides who has a place tonight: seat everyone afresh.
+    if (this.state.phase !== 'campfire' || (hadMeeting && !this.state.meeting)) {
       this.fireSeats = null;
-      this.fireCrow = null;
+      this.firePicked = null;
     }
+    this.meetingPick = null;
     writeSave(this.state);
     this.play(r.events, prevKraft);
   }
@@ -1102,26 +1135,86 @@ export class App {
       </div>`;
   }
 
-  /** A crow outside the glow: it knows what lies ahead, and it wants something for it. */
-  private crowHtml(s: GameState): string {
-    if (!crowOffers(s)) return '';
-    const deal = this.fireCrow;
-    const btn = (key: string, label: string, on: boolean) =>
-      `<button class="seg ${on ? 'on' : ''}" data-act="crow" data-deal="${key}" aria-pressed="${on}">${label}</button>`;
-    const chosen = deal?.price === 'card' ? crowCards(s).find((c) => c.uid === deal.uid) : undefined;
-    const picker = deal?.price === 'card'
-      ? `<p class="small">${chosen ? `Kråkan får <b>${esc(CARDS[chosen.kind].name)}</b> från ${esc(animal(s, chosen.owner).name)} – för alltid.` : 'Vilket kort får kråkan? Det försvinner för alltid.'}</p>
-         <div class="deck-grid crow-pick">${byOwner(s, crowCards(s)).map((c) =>
-           cardFaceHtml(s, c, { tag: 'button', attrs: `data-act="crow-card" data-uid="${c.uid}" aria-pressed="${deal.uid === c.uid}"`, classes: ['mini', deal.uid === c.uid ? 'selected' : ''] })).join('')}</div>`
-      : '';
-    return `<section class="fire-step crow-step">
-      <h3>En kråka i mörkret</h3>
-      <p class="verse-line">”Jag vet vad som väntar där framme. Men inget är gratis.”</p>
-      <p class="muted small">Kråkan berättar sanningen om platserna framför oss – i stället för Kvarns minne.</p>
-      <div class="seg-row">${btn('card', 'Ge ett kort', deal?.price === 'card')}${btn('ember', 'Ge en plats vid glöden', deal?.price === 'ember')}${btn('none', 'Nej tack', !deal)}</div>
-      ${deal?.price === 'ember' ? '<p class="small">Kråkan sätter sig vid glöden: bara ett par får plats i natt.</p>' : ''}
-      ${picker}
-    </section>`;
+  /** Choosing the card the crow will take: the mini cards, and the one chosen named. */
+  private meetingPickerHtml(s: GameState): string {
+    const pick = this.meetingPick;
+    if (!pick) return '';
+    const chosen = crowCards(s).find((c) => c.uid === pick.uid);
+    return `<p class="small">${chosen ? `Kråkan får <b>${esc(CARDS[chosen.kind].name)}</b> från ${esc(animal(s, chosen.owner).name)} – för alltid.` : 'Vilket kort får kråkan? Det försvinner för alltid.'}</p>
+      <div class="deck-grid crow-pick">${byOwner(s, crowCards(s)).map((c) =>
+        cardFaceHtml(s, c, { tag: 'button', attrs: `data-act="meet-card" data-uid="${c.uid}" aria-pressed="${pick.uid === c.uid}"`, classes: ['mini', pick.uid === c.uid ? 'selected' : ''] })).join('')}</div>
+      <div class="meet-options">
+        <button class="btn primary" data-act="meet-give" ${chosen ? '' : 'disabled'}>Ge kråkan kortet</button>
+        <button class="btn" data-act="meet-back">Tillbaka</button>
+      </div>`;
+  }
+
+  /** Seat an animal where it was dropped, or say why it can't sit there. */
+  private seatAnimal(id: string, seat: Seat, slot: number) {
+    const s = this.state;
+    if (!s || !this.fireSeats) return;
+    const r = moveToSeat(s, this.fireSeats, id, seat, slot);
+    this.fireSeats = r.seats;
+    this.fireHint = r.refusal ?? '';
+    this.firePicked = null;
+    this.render();
+  }
+
+  /** Dragging an animal across the fire scene: a paper cut-out follows the finger or the mouse. */
+  private onPointerDown(e: PointerEvent) {
+    const tok = (e.target as HTMLElement).closest<HTMLElement>('.fire-token[data-drag]');
+    if (!tok || this.state?.phase !== 'campfire' || this.state.meeting) return;
+    this.drag = { id: tok.dataset.drag!, x: e.clientX, y: e.clientY };
+    this.suppressClick = false;
+  }
+
+  private onPointerMove(e: PointerEvent) {
+    const d = this.drag;
+    if (!d) return;
+    if (!d.ghost) {
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 6) return;
+      const tok = this.root.querySelector<HTMLElement>(`.fire-token[data-drag="${d.id}"]`);
+      if (!tok) return;
+      d.ghost = tok.cloneNode(true) as HTMLElement;
+      d.ghost.classList.add('drag-ghost');
+      d.ghost.style.width = `${tok.offsetWidth}px`;
+      document.body.appendChild(d.ghost);
+      tok.classList.add('dragging');
+    }
+    e.preventDefault();
+    d.ghost.style.left = `${e.clientX}px`;
+    d.ghost.style.top = `${e.clientY}px`;
+    const over = this.slotAt(e.clientX, e.clientY);
+    this.root.querySelectorAll('.fire-slot.over, .fire-dark-zone.over').forEach((x) => x.classList.remove('over'));
+    over?.classList.add('over');
+  }
+
+  private onPointerUp(e: PointerEvent) {
+    const d = this.drag;
+    this.drag = null;
+    if (!d?.ghost) return;
+    d.ghost.remove();
+    this.suppressClick = true;
+    window.setTimeout(() => (this.suppressClick = false), 0);
+    const slot = this.slotAt(e.clientX, e.clientY);
+    if (slot) this.seatAnimal(d.id, slot.dataset.seat as Seat, Number(slot.dataset.slot ?? 0));
+    else this.render();
+  }
+
+  /** The place under the pointer, looking through the dragged cut-out and the tokens. */
+  private slotAt(x: number, y: number): HTMLElement | null {
+    for (const el of document.elementsFromPoint(x, y)) {
+      const slot = (el as HTMLElement).closest<HTMLElement>('.fire-slot, .fire-dark-zone');
+      if (slot) return slot;
+      const tok = (el as HTMLElement).closest<HTMLElement>('.fire-token[data-animal]');
+      if (tok && !tok.classList.contains('dragging') && this.fireSeats && this.state) {
+        // Dropped on someone: the spot they sit on.
+        const seat = this.fireSeats[tok.dataset.animal!] ?? 'dark';
+        const i = occupants(this.state, this.fireSeats, seat).indexOf(tok.dataset.animal!);
+        return this.root.querySelector<HTMLElement>(`.fire-slot[data-seat="${seat}"][data-slot="${i}"]`) ?? this.root.querySelector<HTMLElement>(seat === 'dark' ? '.fire-dark-zone' : `.fire-slot[data-seat="${seat}"]`);
+      }
+    }
+    return null;
   }
 
   /** At a fork, one or two of us speak up for a path. */
@@ -1154,10 +1247,11 @@ export class App {
       <div class="screen between fire-screen">
         <div class="fire-wrap">
           <h2>${esc(place(s.journey.at).name)} <span class="muted">· lägerelden</span></h2>
-          ${fireSceneSvg(s, this.fireSeats, crowOffers(s))}
+          ${fireSceneSvg(s, this.fireSeats, { crow: !!s.meeting || s.fireDebt.apart.length > 0 || s.fireDebt.embers > 0, picked: this.firePicked ?? undefined })}
           ${memorialHtml(s)}
         </div>
-        <aside class="between-side">${firePanelHtml(s, this.fireSeats, this.fireMourning, this.fireCrow, this.crowHtml(s))}</aside>
+        <aside class="between-side">${firePanelHtml(s, this.fireSeats, this.fireMourning, this.fireHint)}</aside>
+        ${meetingHtml(s, this.meetingPickerHtml(s))}
       </div>`;
   }
 

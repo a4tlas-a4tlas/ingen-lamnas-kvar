@@ -2,7 +2,8 @@ import { DEATH_CAUSE, INJURY_LINES, LEAVE_CAUSE, intentLine } from '../data/text
 import { place, pathsFrom } from '../data/journey';
 import { TRAITS } from '../data/traits';
 import { VERSES } from '../data/verses';
-import { closestTo, crowCards, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone, unseenAhead } from './campfire';
+import { closestTo, crowCards, crowOffers, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone, unseenAhead } from './campfire';
+import { CROW, meetingOptions, trickChance } from '../data/meetings/crow.sv';
 import { CARDS } from '../data/cards';
 import { planRoad } from './encounters/road';
 import { forkVoices, voiceStake } from './voices';
@@ -88,6 +89,7 @@ export function step(prev: GameState, action: Action): { state: GameState; event
       case 'lead': lead(c, action.target, action.zone); endIfAllAcross(c); break;
       case 'lure': lure(c, action.target, action.zone); endIfAllAcross(c); break;
       case 'rescue': rescue(c, action.by); break;
+      case 'respond': respond(c, action.option, action.uid); break;
       case 'endTurn': endTurn(c); break;
       case 'lastMoment': resolveLastMoment(c, action); break;
       case 'travel': travel(c, action.to, action.wait); break;
@@ -187,7 +189,11 @@ function travel(c: Ctx, to: string, wait = false) {
     else narrate(c, `Kvarn mindes fel: ${seen}.`);
   }
   if (p.kind === 'encounter') startEncounter(c, p.encounter!);
-  else if (p.kind === 'campfire') s.phase = 'campfire';
+  else if (p.kind === 'campfire') {
+    s.phase = 'campfire';
+    // While something ahead is still only Kvarn's memory, a crow waits by the fire.
+    if (crowOffers(s)) s.meeting = { id: 'crow', frame: 'start', used: [], told: [] };
+  }
   else if (p.kind === 'end') endRun(c);
 }
 
@@ -310,21 +316,8 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
   const scout = plan.scout ? animal(s, plan.scout) : undefined;
   if (scout) revealAhead(c, `${scout.name} flög före i mörkret.`, `${scout.name} flög före i mörkret, men såg inget vi inte redan visste.`);
 
-  // Or the crow tells us – for a price.
-  if (plan.crow) {
-    if (plan.crow.price === 'card') {
-      const uid = plan.crow.uid;
-      const card = crowCards(s).find((x) => x.uid === uid)!;
-      for (const pile of [s.draw, s.hand, s.discard]) {
-        const i = pile.findIndex((x) => x.uid === uid);
-        if (i >= 0) pile.splice(i, 1);
-      }
-      narrate(c, `Kråkan tog ${CARDS[card.kind].name} från ${animal(s, card.owner).name} i näbben, och flög upp i granen.`);
-    } else {
-      narrate(c, 'Kråkan satte sig vid glöden, där någon av oss skulle ha suttit.');
-    }
-    revealAhead(c, 'Kråkan berättade, med huvudet på sned.', 'Kråkan hade inget att berätta.');
-  }
+  // Those the meeting placed tonight.
+  for (const id of s.fireDebt.apart) line(c, id, `${animal(s, id).name} satt hos kråkan och berättade om dalen, långt in på natten.`);
 
   // 3. By the embers.
   for (const [ai, bi] of plan.pairs) {
@@ -346,8 +339,8 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
   for (const a of living(s)) {
     const heal: InjuryKind[] = a.injuries.filter((k) => k === 'bleeding' || k === 'shock');
     if (!heal.length) continue;
-    if (a === w || a === scout) {
-      line(c, a.id, `${a.name} ${a === w ? 'vakade' : 'flög före'} och fick ingen vila. Såren får vänta.`);
+    if (a === w || a === scout || s.fireDebt.apart.includes(a.id)) {
+      line(c, a.id, `${a.name} ${a === w ? 'vakade' : a === scout ? 'flög före' : 'berättade hela natten'} och fick ingen vila. Såren får vänta.`);
       continue;
     }
     a.injuries = a.injuries.filter((k) => !heal.includes(k));
@@ -356,12 +349,13 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
   }
   changeHope(c, 1, 'fire');
   narrate(c, 'Vid gryningen släckte vi elden och gick vidare.');
+  s.fireDebt = { embers: 0, apart: [], dark: [] };
   s.clock = 'day';
   s.phase = 'map';
 }
 
 /** Whoever went ahead – the owl or the crow – tells us the truth of the places within two paths. */
-function revealAhead(c: Ctx, opening: string, nothing: string) {
+function revealAhead(c: Ctx, opening: string, nothing: string): string[] {
   const s = c.s;
   const ahead = unseenAhead(s);
   for (const id of ahead) {
@@ -372,6 +366,86 @@ function revealAhead(c: Ctx, opening: string, nothing: string) {
     narrate(c, `${opening} ${p.name}: ${p.memory![truth]}${wrong ? ' – Kvarn mindes fel.' : ', som Kvarn mindes.'}`);
   }
   if (!ahead.length) narrate(c, nothing);
+  return ahead;
+}
+
+// ---------------------------------------------------------------- meetings
+
+/** Answer the crow: move to the next frame, and carry out what the reply means, at once. */
+function respond(c: Ctx, optionId: string, uid?: number) {
+  const s = c.s;
+  const m = s.meeting;
+  if (s.phase !== 'campfire' || !m) fail('Ingen väntar på svar.');
+  const option = meetingOptions(s).find((o) => o.id === optionId);
+  if (!option) fail('Det svaret finns inte.');
+  let next = option.next;
+  const speaker = option.by ? animal(s, option.by) : undefined;
+  if (speaker) line(c, speaker.id, `${speaker.name}: ${option.label}`);
+  const told = () => { m.told = revealAhead(c, 'Kråkan berättade:', 'Kråkan hade inget att berätta.'); };
+  switch (option.effect) {
+    case 'payCard': {
+      const card = crowCards(s).find((x) => x.uid === uid);
+      if (!card) fail('Välj vilket kort kråkan får.');
+      takeCard(s, card.uid);
+      narrate(c, `Kråkan tog ${CARDS[card.kind].name} från ${animal(s, card.owner).name} i näbben.`);
+      told();
+      break;
+    }
+    case 'payEmber':
+      s.fireDebt.embers++;
+      narrate(c, 'Kråkan satte sig vid glöden, där någon av oss skulle ha suttit.');
+      told();
+      break;
+    case 'kvarnHint': {
+      const kvarn = animal(s, 'kvarn');
+      const wrong = unseenAhead(s).some((id) => s.journey.guess[id] !== s.journey.truth[id]);
+      changeBelief(c, kvarn, wrong ? -1 : 1);
+      break;
+    }
+    case 'trick': {
+      const fox = animal(s, 'sotfot');
+      if (random(s) < trickChance(s)) {
+        changeBelief(c, fox, 1);
+        narrate(c, 'Kråkan lyssnade på Sotfots hemlighet – och berättade, utan att få något.');
+        told();
+      } else {
+        const own = crowCards(s).filter((x) => x.owner === fox.id);
+        if (own.length) {
+          const card = own[Math.floor(random(s) * own.length)];
+          takeCard(s, card.uid);
+          narrate(c, `Kråkan genomskådade Sotfot och tog ${CARDS[card.kind].name}.`);
+        }
+        next = 'snatched';
+      }
+      break;
+    }
+    case 'sotfotDark':
+      s.fireDebt.embers++;
+      s.fireDebt.dark.push('sotfot');
+      told();
+      break;
+    case 'owlScare':
+      changeBelief(c, animal(s, 'skymning'), 1);
+      break;
+    case 'story':
+      s.fireDebt.apart.push('ljung');
+      told();
+      break;
+  }
+  if (next) {
+    m.used.push(option.id);
+    m.frame = next;
+    m.by = option.by;
+    if (next === 'start') m.used = m.used.filter((id) => CROW.start.options.some((o) => o.id === id));
+  } else s.meeting = null;
+}
+
+/** A card is gone for good: from wherever it lies. */
+function takeCard(s: GameState, uid: number) {
+  for (const pile of [s.draw, s.hand, s.discard]) {
+    const i = pile.findIndex((x) => x.uid === uid);
+    if (i >= 0) pile.splice(i, 1);
+  }
 }
 
 function flipVerse(c: Ctx, id: VerseId) {

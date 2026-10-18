@@ -5,7 +5,7 @@ import { zoneDistance } from '../../src/engine/rules';
 import { oathVerse } from '../../src/engine/setup';
 import { forkVoices, voiceStake } from '../../src/engine/voices';
 import type { GameState } from '../../src/engine/types';
-import { calmGame, get, run } from './helpers';
+import { CROW_AWAY, calmGame, get, run } from './helpers';
 
 /** Across the road and through the fire: the map at Granbacken, where the way forks. */
 function atTheFork(verse: 'ingenLamnas' | 'denAldste' = 'ingenLamnas'): GameState {
@@ -13,7 +13,7 @@ function atTheFork(verse: 'ingenLamnas' | 'denAldste' = 'ingenLamnas'): GameStat
   for (const a of s.animals) a.zone = 'lane2';
   s.kraft = 99;
   for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
-  s = run(s, { type: 'travel', to: 'granbacken' });
+  s = run(s, { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
   s = run(s, { type: 'restAtFire', ...defaultPlan(s) });
   // These tests are about the river itself, not about Kvarn's memory of it.
   s.journey.truth = { garden: 'normal', an: 'normal' };

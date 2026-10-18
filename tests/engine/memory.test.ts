@@ -5,7 +5,7 @@ import { FLOOD_DAM_CREAK } from '../../src/engine/encounters/river';
 import { createGame, rollMemory } from '../../src/engine/setup';
 import { step } from '../../src/engine/step';
 import type { GameState } from '../../src/engine/types';
-import { calmGame, get, run } from './helpers';
+import { CROW_AWAY, calmGame, get, run } from './helpers';
 
 /** At the campfire on Granbacken, before the fork. */
 function atTheFire(): GameState {
@@ -13,7 +13,7 @@ function atTheFire(): GameState {
   for (const a of s.animals) a.zone = 'lane2';
   s.kraft = 99;
   for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
-  return run(s, { type: 'travel', to: 'granbacken' });
+  return run(s, { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
 }
 
 const lastNarration = (s: GameState) => s.log.filter((e) => e.kind === 'narrate').map((e) => e.text);
@@ -53,7 +53,7 @@ describe("Kvarn's memory", () => {
       for (const a of s.animals) a.zone = 'lane2';
       s.kraft = 99;
       for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
-      s = run(s, { type: 'travel', to: 'granbacken' });
+      s = run(s, { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
       s = run(s, { type: 'restAtFire', ...defaultPlan(s) });
       s.journey.truth.an = 'hard';
       s = run(s, { type: 'travel', to: 'an' });

@@ -767,3 +767,68 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .crow-pick { max-height: 340px; overflow-y: auto; padding: 2px; }
 .crow-pick .card.mini { cursor: pointer; }
 .crow-pick .card.mini.selected { outline: 3px solid var(--blood); outline-offset: 2px; }
+
+/* ---------------------------------------------------------------- dragging to the fire */
+
+.fire-token { cursor: grab; touch-action: none; }
+.fire-token.locked { cursor: default; opacity: 0.85; }
+.fire-token.picked .sil { transform: translateY(-6px); filter: drop-shadow(0 0 8px var(--gold)) drop-shadow(0 3px 1.5px #000); }
+.fire-token.dragging { opacity: 0.25; }
+.drag-ghost {
+  position: fixed; z-index: 50; pointer-events: none; transform: translate(-50%, -60%) rotate(-4deg) scale(1.08);
+  text-align: center; filter: drop-shadow(0 10px 12px rgba(0,0,0,0.6));
+}
+.drag-ghost .sil { width: 100%; display: block; color: var(--owner); }
+.drag-ghost span { font-size: 0.7rem; color: var(--paper); }
+.fire-slot {
+  position: absolute; transform: translate(-50%, -50%); width: 10%; aspect-ratio: 1.3; border-radius: 50%;
+  background: rgba(239,227,200,0.04); border: 2px dashed rgba(239,227,200,0.35); padding: 0; cursor: pointer;
+}
+.fire-slot.seat-scout { border-color: rgba(201,212,230,0.5); }
+.fire-scene.picking .fire-slot, .fire-slot.over { border-color: var(--gold); background: rgba(228,192,112,0.18); animation: breathe 1.6s ease-in-out infinite; }
+.fire-dark-zone {
+  position: absolute; left: 1%; top: 20%; width: 74%; height: 34%; border-radius: 24px; border: 2px dashed transparent;
+  background: none; cursor: pointer; padding: 0;
+}
+.fire-scene.picking .fire-dark-zone, .fire-dark-zone.over { border-color: rgba(239,227,200,0.35); background: rgba(0,0,0,0.25); }
+.fire-label.gone { color: #8b4a3a; font-style: italic; }
+.fire-token { z-index: 2; }
+.fire-hint { color: var(--gold); font-style: italic; margin: 4px 0; }
+.seat-summary { list-style: none; margin: 6px 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 10px; font-size: 0.88em; }
+.seat-summary li { display: flex; align-items: center; gap: 5px; }
+.seat-summary .sil { width: 26px; color: var(--owner); }
+.seat-tag { margin-left: auto; font-family: var(--caps); font-size: 0.8em; padding: 0 6px; border-radius: 6px; background: rgba(239,227,200,0.1); }
+
+/* ---------------------------------------------------------------- the meeting */
+
+.modal-card.meeting-card { max-width: 760px; display: grid; grid-template-columns: 180px 1fr; gap: 18px; text-align: left; animation: frame-in 0.5s ease-out; }
+.meet-art { position: relative; display: grid; align-items: end; justify-items: center; background: radial-gradient(circle at 50% 30%, #2a3348, #0f141d 70%); border-radius: 6px; min-height: 180px; overflow: hidden; }
+.meet-art .sil { width: 78%; position: relative; z-index: 1; margin-bottom: 26px; animation: crow-tilt 5s ease-in-out infinite; }
+.meet-branch { position: absolute; left: 0; right: 0; bottom: 22px; height: 8px; background: #3a2a1e; border-radius: 4px; transform: rotate(-4deg); }
+.meet-body h2 { margin: 0 0 6px; font-size: 1.4em; }
+.meet-text { font-size: 1.05em; line-height: 1.45; margin: 0 0 12px; }
+.meet-text.story { font-style: italic; }
+.meet-options { display: grid; gap: 8px; }
+.meet-option { display: grid !important; grid-template-columns: 38px auto 1fr; align-items: center; gap: 4px 10px; }
+.meet-option .sil { width: 38px; grid-row: span 2; color: var(--owner); }
+.meet-option b { white-space: nowrap; }
+.meet-option.by-animal { border-left: 4px solid var(--owner); }
+.meet-option:not(.by-animal) { grid-template-columns: auto 1fr; }
+@keyframes frame-in { from { opacity: 0; transform: translateY(8px); } }
+@media (max-width: 700px) {
+  .modal-card.meeting-card { grid-template-columns: 1fr; }
+  .meet-art { min-height: 110px; }
+  .meet-art .sil { width: 34%; }
+}
+.meet-art { grid-template-rows: 1fr auto; }
+.meet-art > .sil { align-self: start; margin: 18px 0 0; width: 70%; }
+.meet-branch { top: 52%; bottom: auto; }
+.meet-speaker { position: relative; z-index: 1; width: 64%; justify-self: start; margin: 0 0 10px 10px; text-align: center; transform: scaleX(-1); }
+.meet-speaker .sil { width: 100%; display: block; filter: drop-shadow(0 0 6px rgba(228,192,112,0.35)); }
+.meet-speaker span { display: inline-block; transform: scaleX(-1); font-size: 0.7rem; color: var(--paper); font-family: var(--caps); }
+@media (max-width: 700px) {
+  .meet-art { grid-template-columns: 1fr 1fr; grid-template-rows: auto; min-height: 0; align-items: center; padding: 8px; }
+  .meet-art > .sil { width: 70%; margin: 0; justify-self: center; grid-column: 2; grid-row: 1; }
+  .meet-speaker { width: 70%; margin: 0; justify-self: center; grid-column: 1; grid-row: 1; }
+  .meet-branch { display: none; }
+}
