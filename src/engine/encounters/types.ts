@@ -51,8 +51,6 @@ export interface EncounterDef {
   maxTurn: number;
   /** Always at this time of day: there is no waiting for the other. */
   fixedTime?: TimeOfDay;
-  /** Said when the last of us is across, if this is the end of the way. */
-  epilogue?: string;
   zones: ZoneDef[];
   /** Paths toward the goal; walking them in reverse goes back. First listed is the main way. */
   edges: [ZoneId, ZoneId][];

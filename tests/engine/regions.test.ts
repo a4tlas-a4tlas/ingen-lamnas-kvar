@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DALEN } from '../../src/data/regions/dalen';
+import { REGIONS } from '../../src/data/regions';
 import { generateRegion } from '../../src/engine/regions';
 import { createGame } from '../../src/engine/setup';
 import { step } from '../../src/engine/step';
@@ -111,4 +112,22 @@ describe('the forks', () => {
       }
     }
   });
+});
+
+describe('every region', () => {
+  for (const def of Object.values(REGIONS)) {
+    it(`${def.name}: its maps keep the rules, start at its edge and end at its last place`, () => {
+      for (const seed of SEEDS.slice(0, 150)) {
+        const { nodes } = generateRegion(def, seed);
+        expect(nodes[0].id).toBe(def.start.key);
+        expect(nodes.find((n) => n.row === 7)!.id).toBe(def.end.key);
+        for (const way of ways(nodes)) {
+          const kinds = way.map((n) => n.kind);
+          expect(kinds.filter((k) => k === 'encounter').length).toBeGreaterThanOrEqual(2);
+          expect(kinds.filter((k) => k === 'meeting' || k === 'find').length).toBeGreaterThanOrEqual(1);
+          expect(way.some((n, i) => i > 0 && n.encounter && n.id.split('-')[0] === way[i - 1].id.split('-')[0])).toBe(false);
+        }
+      }
+    });
+  }
 });

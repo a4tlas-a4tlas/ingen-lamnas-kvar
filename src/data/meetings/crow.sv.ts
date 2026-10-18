@@ -39,7 +39,10 @@ export type MeetingEffect =
   | 'followTracks'
   | 'comfortKvarn'
   | 'doubtKvarn'
-  | 'guessWay';
+  | 'guessWay'
+  // Between two regions.
+  | 'lookBack'
+  | 'chooseRegion';
 
 export interface MeetingOption {
   id: string;

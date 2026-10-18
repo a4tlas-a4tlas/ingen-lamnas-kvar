@@ -1,6 +1,7 @@
 // Every meeting in frames, by name.
 import { CROW, isHere, type MeetingFrame, type MeetingOption } from './crow.sv';
 import { BARSNAR, FRAMLINGEN, GAMMAL_STIG, GRAVSKOPAN, GRYT, HJORTEN, IHALIGT_TRAD, KOLTRASTEN, KVARNS_TVEKAN, MATEN } from './dalen.sv';
+import { INTERLUDE } from './interlude.sv';
 import { PROPOSAL } from './proposal.sv';
 import type { GameState, MeetingId } from '../../engine/types';
 
@@ -13,7 +14,7 @@ export interface MeetingDef {
   taker?: string;
 }
 
-export type SceneArt = 'bird' | 'tree' | 'berries' | 'path' | 'den' | 'deer' | 'basket' | 'fox' | 'tracks' | 'toad';
+export type SceneArt = 'bird' | 'tree' | 'berries' | 'path' | 'den' | 'deer' | 'basket' | 'fox' | 'tracks' | 'toad' | 'ridge';
 
 export const MEETINGS: Record<MeetingId, MeetingDef> = {
   crow: { title: 'Kråkan vid elden', art: 'crow', frames: CROW, taker: 'Kråkan' },
@@ -28,6 +29,7 @@ export const MEETINGS: Record<MeetingId, MeetingDef> = {
   framlingen: { title: 'Den hungriga främlingen', art: 'fox', frames: FRAMLINGEN, taker: 'Räven' },
   gravskopan: { title: 'Grävskopans spår', art: 'tracks', frames: GRAVSKOPAN },
   kvarnsTvekan: { title: 'Kvarns tvekan', art: 'toad', frames: KVARNS_TVEKAN },
+  interlude: { title: 'Mellan två landskap', art: 'ridge', frames: INTERLUDE },
 };
 
 export const currentFrame = (s: GameState) => (s.meeting ? MEETINGS[s.meeting.id].frames[s.meeting.frame] : undefined);

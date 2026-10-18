@@ -37,6 +37,7 @@ import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, Zon
 import { sceneSvg, slotIn } from './scene';
 import { fireSceneSvg, firePanelHtml, guideHtml, mapSvg, meetingHtml, memoryLine, memorialHtml, moveToSeat, occupants, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
 import { MEETINGS, currentFrame } from '../data/meetings';
+import { REGIONS } from '../data/regions';
 import { brokenByTravel, promises } from '../engine/promises';
 import { PROMISES, PROMISE_GIFT } from '../data/promises.sv';
 import { crowCards, defaultPlan } from '../engine/campfire';
@@ -106,7 +107,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 13 && s.phase !== 'over' ? s : null;
+    return s.version === 14 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -1136,7 +1137,7 @@ export class App {
       <div class="screen between map-screen">
         <div class="map-paper">${mapSvg(s, true)}</div>
         <aside class="between-side">
-          <p class="muted small">Kvarns minne av vägen</p>
+          <p class="muted small">Kvarns minne av vägen · ${esc(REGIONS[s.journey.region].name)}</p>
           <h2>${esc(here.name)}</h2>
           ${this.voicesHtml(s)}
           <div class="onward">

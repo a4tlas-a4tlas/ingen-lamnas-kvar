@@ -62,6 +62,13 @@ export const PROMISES: Record<PromiseRule, PromiseDef> = {
     why: '{a} känner sig sedd i ljuset, och vågar inte längre.',
     objector: { id: 'frona', line: '”Vi ser ingenting i mörkret. Ingenting.”' },
   },
+  noCity: {
+    text: 'Vi går aldrig dit där maskinerna bor.',
+    flipped: 'Vi gick in bland maskinerna.',
+    binds: 'Bryts om vi väljer vägen in mot staden.',
+    why: '{a} såg dalen bli lera. {a} vill aldrig mer höra en motor.',
+    objector: { id: 'sotfot', line: '”I staden finns mat för alla. Man kan inte lova bort den.”' },
+  },
   stay: {
     text: 'Jag lämnar dig aldrig, {b}.',
     flipped: '{a} lämnade {b}.',

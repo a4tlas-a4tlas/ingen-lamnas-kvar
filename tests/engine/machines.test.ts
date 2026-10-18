@@ -98,15 +98,15 @@ describe('Dalens sista morgon', () => {
     expect(step(s, { type: 'lead', target: 'sotfot', zone: 'glantan' }).events[0].kind).toBe('error');
   });
 
-  it('everyone over the ridge ends the glen – and the run, for now', () => {
+  it('everyone over the ridge ends the glen, and we stop between two landscapes', () => {
     let s = morning();
     for (const a of s.animals) a.zone = 'granVast';
     s.fellPlan = s.fellPlan.map(() => 'granOst');
     for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'asen' });
-    expect(s.phase).toBe('over');
-    expect(s.outcome?.fallen).toBe(false);
-    expect(s.outcome?.safe.length).toBe(s.animals.length);
-    expect(s.log.some((e) => e.text.includes('fortsättning följer'))).toBe(true);
+    expect(s.phase).toBe('map');
+    expect(s.animals.every((a) => a.status === 'safe')).toBe(true);
+    expect(s.meeting).toMatchObject({ id: 'interlude', frame: 'start' });
+    expect(s.log.some((e) => e.text.includes('lera och stubbar'))).toBe(true);
   });
 
   it('when time runs out, whoever is still below is left to the machines', () => {
@@ -118,7 +118,7 @@ describe('Dalens sista morgon', () => {
     s.fellPlan[s.turn - 1] = 'bjorkdungen';
     s = run(s, { type: 'endTurn' });
     expect(get(s, 'kvarn').status).toBe('left');
-    expect(s.phase).toBe('over');
+    expect(s.meeting?.id).toBe('interlude');
   });
 
   it('having read the tracks, we see where the trees fall next', () => {

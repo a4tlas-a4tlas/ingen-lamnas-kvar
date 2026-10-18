@@ -50,7 +50,8 @@ function icon(p: Place): string {
       // A leaf.
       return '<path d="M-1.8 1.6 Q-2 -1.6 1.8 -1.8 Q1.6 1.4 -1.8 1.6 Z" /><path d="M-1.6 1.4 L1.2 -1.2" stroke="var(--map-paper)" stroke-width="0.3" />';
     case 'end':
-      return MACHINE_ICON;
+      // Where the region ends: a gate in a hedge.
+      return '<path d="M-2.6 1.6 V-0.6 Q-1.8 -1.8 -1 -0.6 V1.6 Z M1 1.6 V-0.6 Q1.8 -1.8 2.6 -0.6 V1.6 Z" /><path d="M-1 0 H1 M-1 1 H1" stroke="currentColor" stroke-width="0.35" />';
   }
 }
 

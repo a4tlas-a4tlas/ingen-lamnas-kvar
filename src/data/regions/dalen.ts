@@ -1,13 +1,19 @@
 // Dalen: the glen we flee, and the first region of the way. Its places, as templates
 // the map is drawn from; the order and the paths between them differ every run.
-import type { MapNode } from '../../engine/types';
+import type { MapNode, PromiseRule, RegionId } from '../../engine/types';
 
 /** A place before it is put on the map: no position, no paths yet. `key` names it. */
 export type Template = Omit<MapNode, 'id' | 'row' | 'x' | 'y' | 'next'> & { key: string };
 
 export interface RegionDef {
-  id: string;
+  id: RegionId;
   name: string;
+  /** How the region is named before we have seen it: in the interlude, when choosing the way. */
+  fogName: string;
+  /** Said when we leave the region behind, over its boss. */
+  epilogue: string;
+  /** The promise someone asks of us when we look back on the region. */
+  verse?: PromiseRule;
   start: Template;
   /** The first danger, always the same. */
   first: Template;
@@ -31,6 +37,9 @@ const road = (key: string, name: string): Template => ({
 export const DALEN: RegionDef = {
   id: 'dalen',
   name: 'Dalen',
+  fogName: 'Dalen',
+  epilogue: 'Vi står på åsen och ser ner. Där dalen låg finns bara lera och stubbar. Bakom oss tystnar maskinerna. Framför oss ligger allt det andra.',
+  verse: 'noCity',
   start: { key: 'dalen', kind: 'start', name: 'Dalen', fogName: 'Dalen', arrive: 'Dalen, där vi föddes. Maskinerna står still i natt.' },
   first: road('vagen', 'Vägen'),
   dangers: [

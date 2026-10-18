@@ -13,7 +13,8 @@ import { CURRENT, DAM, DAM_MAX, FLOOD_DAM_CREAK, FLOOD_HOURS, FLOOD_HOURS_TOTAL,
 import { planMachines, roarZones } from './encounters/machines';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
-import { OATH_VERSES, makeAnimal, oathVerse } from './setup';
+import { OATH_VERSES, makeAnimal, oathVerse, regionJourney } from './setup';
+import { MIDDLE_REGIONS, OFFERED, REGIONS } from '../data/regions';
 import { newcomer } from '../data/animals';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from './encounters';
 import {
@@ -67,6 +68,9 @@ import type {
   VerseId,
   ZoneId,
   TraitId,
+  Meeting,
+  Proposal,
+  RegionId,
 } from './types';
 
 interface Ctx {
@@ -209,7 +213,47 @@ function travel(c: Ctx, to: string, wait = false) {
     else if (s.proposal) s.meeting = { id: 'proposal', frame: 'ask', used: [], told: [] };
   }
   else if (p.kind === 'meeting' || p.kind === 'find') s.meeting = { id: p.meeting!, frame: 'start', used: [], told: [] };
-  else if (p.kind === 'end') endRun(c);
+  else if (p.kind === 'end') endRegion(c);
+}
+
+/**
+ * The region lies behind us. If more of the way remains, we stop between two landscapes:
+ * we look back, someone may ask a promise of us, and Kvarn shows the ways on.
+ */
+function endRegion(c: Ctx) {
+  const s = c.s;
+  narrate(c, REGIONS[s.journey.region].epilogue);
+  const left = MIDDLE_REGIONS.filter((r) => !s.run.regions.includes(r));
+  s.run.offered = shuffle(s, left).slice(0, OFFERED);
+  if (!s.run.offered.length) {
+    narrate(c, 'Fortsättning följer.');
+    return endRun(c);
+  }
+  s.phase = 'map';
+  s.run.between = true;
+  s.meeting = { id: 'interlude', frame: 'start', used: [], told: [] };
+}
+
+/** The promise the region leaves in someone: asked by the one who grieves it, or else the eldest. */
+function regionVerse(s: GameState): Proposal | null {
+  const rule = REGIONS[s.journey.region].verse;
+  if (!rule || keptPromises(s).some((v) => v.promise.rule === rule)) return null;
+  const here = s.animals.filter(isPresent);
+  const by = here.find((a) => a.grief.includes(s.journey.region)) ?? here.find((a) => a.elder) ?? here[0];
+  return by ? { by: by.id, rule } : null;
+}
+
+/** On into the next region: Kvarn draws its map, and we stand at its edge. */
+function chooseRegion(c: Ctx, id: RegionId) {
+  const s = c.s;
+  if (!s.run.offered.includes(id)) fail('Dit leder ingen väg.');
+  const def = REGIONS[id];
+  s.run.regions.push(id);
+  s.run.offered = [];
+  s.run.between = false;
+  s.journey = regionJourney(def, s.seed + 7919 * s.run.regions.length);
+  log(c, { kind: 'turn', text: def.name });
+  narrate(c, def.start.arrive);
 }
 
 /** Everyone still with us starts the next danger at its start, with the whole deck shuffled. */
@@ -592,6 +636,16 @@ function respond(c: Ctx, optionId: string, uid?: number) {
     case 'guessWay':
       changeHope(c, -1, 'lost');
       break;
+    case 'lookBack':
+      changeBelief(c, speaker!, 1);
+      if (speaker!.grief.includes(s.journey.region)) {
+        speaker!.grief = speaker!.grief.filter((g) => g !== s.journey.region);
+        line(c, speaker!.id, `${speaker!.name} har sagt det högt nu. Sorgen över ${REGIONS[s.journey.region].name.toLowerCase()} släpper lite.`);
+      }
+      break;
+    case 'chooseRegion':
+      chooseRegion(c, option.id.slice('go-'.length) as RegionId);
+      break;
   }
   if (next) {
     m.used.push(option.id);
@@ -601,8 +655,15 @@ function respond(c: Ctx, optionId: string, uid?: number) {
   }
   // The meeting is over. A promise may be waiting to be asked.
   s.meeting = null;
-  if (m.id === 'proposal') s.proposal = null;
-  else if (s.proposal) s.meeting = { id: 'proposal', frame: 'ask', used: [], told: [] };
+  const way: Meeting = { id: 'interlude', frame: 'way', used: [], told: [] };
+  if (m.id === 'interlude' && m.frame === 'start') {
+    // Done looking back: the region may leave a promise in someone, before we choose the way on.
+    s.proposal = regionVerse(s);
+    s.meeting = s.proposal ? { id: 'proposal', frame: 'ask', used: [], told: [] } : way;
+  } else if (m.id === 'proposal') {
+    s.proposal = null;
+    if (s.run.between) s.meeting = way;
+  } else if (s.proposal) s.meeting = { id: 'proposal', frame: 'ask', used: [], told: [] };
 }
 
 // ---------------------------------------------------------------- promises
@@ -1518,14 +1579,10 @@ function endEncounter(c: Ctx) {
   const before = s.animals.filter((a) => a.status === 'safe' || a.status === 'dead' || a.status === 'left').length;
   if (safe.length === before) narrate(c, `Alla ${num(safe.length)} ${crossed}.`);
   else narrate(c, `${capitalize(num(safe.length))} av oss ${crossed}.`);
-  // The last danger of the way: beyond it, the run ends here, for now.
-  const epilogue = encounterOf(s).epilogue;
-  if (epilogue && !pathsFrom(s, s.journey.at).length) {
-    narrate(c, epilogue);
-    return endRun(c);
-  }
   s.clock = otherTime(s.time);
   s.phase = 'map';
+  // The last danger of the region: beyond it, the region ends.
+  if (!pathsFrom(s, s.journey.at).length) endRegion(c);
 }
 
 const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);

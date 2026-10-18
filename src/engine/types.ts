@@ -105,7 +105,10 @@ export interface Dog {
 }
 
 /** What an animal's promise binds us to – and so what breaks it. */
-export type PromiseRule = 'light' | 'current' | 'noneAlone' | 'together' | 'water' | 'farm' | 'night' | 'stay';
+export type PromiseRule = 'light' | 'current' | 'noneAlone' | 'together' | 'water' | 'farm' | 'night' | 'stay' | 'noCity';
+
+/** The regions of the way: the glen first, the forest's edge last, the others in between in any order. */
+export type RegionId = 'dalen' | 'akrarna';
 
 /** A promise an animal asked of us: who asked, what it binds us to, and – for two – who else it is about. */
 export interface Proposal {
@@ -212,7 +215,7 @@ export interface MapNode {
 
 export interface Journey {
   /** The region we walk through, and its map, drawn anew every run. */
-  region: string;
+  region: RegionId;
   nodes: MapNode[];
   at: string;
   visited: string[];
@@ -239,7 +242,8 @@ export type MeetingId =
   | 'maten'
   | 'framlingen'
   | 'gravskopan'
-  | 'kvarnsTvekan';
+  | 'kvarnsTvekan'
+  | 'interlude';
 
 export interface Meeting {
   id: MeetingId;
@@ -281,7 +285,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 13;
+  version: 14;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;
@@ -342,6 +346,8 @@ export interface GameState {
   met: string[];
   /** What we have learned along the way that helps later: 'machines' – how the machines move. */
   knowledge: string[];
+  /** The regions we have walked through, the ones offered next, and whether we stand between two. */
+  run: { regions: RegionId[]; offered: RegionId[]; between: boolean };
   meeting: Meeting | null;
   /** A promise an animal waits to ask of us, once the meeting before it is over. */
   proposal: Proposal | null;

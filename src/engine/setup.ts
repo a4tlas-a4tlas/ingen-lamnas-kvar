@@ -1,8 +1,7 @@
 import { CAST, START_BONDS, type AnimalDef } from '../data/animals';
 import { TRAITS, TRAIT_IDS } from '../data/traits';
 import { shuffle, type RngHolder } from './rng';
-import { START_PLACE } from '../data/journey';
-import { DALEN } from '../data/regions/dalen';
+import { DALEN, type RegionDef } from '../data/regions/dalen';
 import { generateRegion } from './regions';
 import { ROAD } from './encounters/road';
 import { bondKey } from './rules';
@@ -17,13 +16,16 @@ export function oathVerse(id: VerseId): Verse {
 }
 
 /**
- * The first region's map, with what each place really is and what Kvarn remembers.
+ * A region's map, with what each place really is and what Kvarn remembers.
  * Drawn from its own stream of the seed, so the rest of the run plays out the same.
  */
-export function firstRegion(seed: number): Journey {
-  const map = generateRegion(DALEN, seed);
-  return { region: DALEN.id, nodes: map.nodes, at: START_PLACE, visited: [START_PLACE], truth: map.truth, guess: map.guess, scouted: [] };
+export function regionJourney(def: RegionDef, seed: number): Journey {
+  const map = generateRegion(def, seed);
+  const start = def.start.key;
+  return { region: def.id, nodes: map.nodes, at: start, visited: [start], truth: map.truth, guess: map.guess, scouted: [] };
 }
+
+export const firstRegion = (seed: number) => regionJourney(DALEN, seed);
 
 /** An animal from its definition: species card plus two traits (fixed ones first, the rest rolled), and their cards. */
 export function makeAnimal(def: AnimalDef, h: RngHolder, nextUid: () => number, zone: ZoneId): { animal: Animal; cards: Card[] } {
@@ -71,7 +73,7 @@ export function createGame(seed: number): GameState {
   for (const [a, b, v] of START_BONDS) bonds[bondKey(a, b)] = v;
 
   return {
-    version: 13,
+    version: 14,
     journey: firstRegion(seed),
     variant: 'normal',
     time: 'night',
@@ -112,6 +114,7 @@ export function createGame(seed: number): GameState {
     rescue: null,
     met: [],
     knowledge: [],
+    run: { regions: ['dalen'], offered: [], between: false },
     meeting: null,
     proposal: null,
     fireDebt: { embers: 0, apart: [], dark: [] },
