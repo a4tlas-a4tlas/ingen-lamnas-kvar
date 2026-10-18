@@ -69,7 +69,8 @@ export interface RegionMap {
 
 /**
  * Which place each kind becomes. The same place never comes twice in a row along a path,
- * and places side by side differ where they can; null when a repeat cannot be avoided.
+ * places side by side differ where they can, and no fork offers the same danger twice;
+ * null when that cannot be kept.
  */
 function choosePlaces(h: RngHolder, def: RegionDef, rows: Kind[][], edges: number[][][], anyway = false): Template[][] | null {
   const out: Template[][] = [];
@@ -89,6 +90,12 @@ function choosePlaces(h: RngHolder, def: RegionDef, rows: Kind[][], edges: numbe
         out[r][i] = pickOf(h, unlike.length ? unlike : fresh.length ? fresh : pool);
       }
     }
+    // A fork between two of the same danger is no choice at all.
+    if (r > 0 && !anyway)
+      for (const targets of edges[r - 1]) {
+        const dangers = targets.filter((j) => rows[r][j] === 'danger').map((j) => out[r][j].key);
+        if (new Set(dangers).size < dangers.length) return null;
+      }
   }
   return out;
 }

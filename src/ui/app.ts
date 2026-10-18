@@ -35,7 +35,7 @@ import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
 import { fireSceneSvg, firePanelHtml, guideHtml, mapSvg, meetingHtml, memoryLine, memorialHtml, moveToSeat, occupants, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
-import { currentFrame } from '../data/meetings';
+import { MEETINGS, currentFrame } from '../data/meetings';
 import { brokenByTravel, promises } from '../engine/promises';
 import { PROMISES, PROMISE_GIFT } from '../data/promises.sv';
 import { crowCards, defaultPlan } from '../engine/campfire';
@@ -105,7 +105,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 11 && s.phase !== 'over' ? s : null;
+    return s.version === 12 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -1154,11 +1154,12 @@ export class App {
     const pick = this.meetingPick;
     if (!pick) return '';
     const chosen = crowCards(s).find((c) => c.uid === pick.uid);
-    return `<p class="small">${chosen ? `Kråkan får <b>${esc(CARDS[chosen.kind].name)}</b> från ${esc(animal(s, chosen.owner).name)} – för alltid.` : 'Vilket kort får kråkan? Det försvinner för alltid.'}</p>
+    const taker = (s.meeting && MEETINGS[s.meeting.id].taker) || 'Kråkan';
+    return `<p class="small">${chosen ? `${taker} får <b>${esc(CARDS[chosen.kind].name)}</b> från ${esc(animal(s, chosen.owner).name)} – för alltid.` : `Vilket kort får ${taker.toLowerCase()}? Det försvinner för alltid.`}</p>
       <div class="deck-grid crow-pick">${byOwner(s, crowCards(s)).map((c) =>
         cardFaceHtml(s, c, { tag: 'button', attrs: `data-act="meet-card" data-uid="${c.uid}" aria-pressed="${pick.uid === c.uid}"`, classes: ['mini', pick.uid === c.uid ? 'selected' : ''] })).join('')}</div>
       <div class="meet-options">
-        <button class="btn primary" data-act="meet-give" ${chosen ? '' : 'disabled'}>Ge kråkan kortet</button>
+        <button class="btn primary" data-act="meet-give" ${chosen ? '' : 'disabled'}>Ge ${taker.toLowerCase()} kortet</button>
         <button class="btn" data-act="meet-back">Tillbaka</button>
       </div>`;
   }

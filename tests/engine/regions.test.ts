@@ -99,3 +99,16 @@ describe('walking the map', () => {
     expect(step(s, { type: 'travel', to: story.next[0] }).events[0].kind).toBe('error');
   });
 });
+
+describe('the forks', () => {
+  it('never offer the same danger twice', () => {
+    for (const seed of SEEDS) {
+      const { nodes } = generateRegion(DALEN, seed);
+      const by = new Map(nodes.map((n) => [n.id, n]));
+      for (const n of nodes) {
+        const dangers = n.next.map((id) => by.get(id)!).filter((m) => m.encounter).map((m) => m.id.split('-')[0]);
+        expect(new Set(dangers).size, `${seed} ${n.id}`).toBe(dangers.length);
+      }
+    }
+  });
+});

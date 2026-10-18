@@ -102,7 +102,15 @@ for (const route of [
       await page.getByRole('button', { name: 'Jag förstår' }).click();
       continue;
     }
+    if (await page.locator('.meeting .crow-pick').count()) {
+      // Someone wants a card of us (the crow, or the starving fox): give the first.
+      await page.locator('.crow-pick .card').first().click();
+      await page.locator('[data-act="meet-give"]').click();
+      seen.add('gave');
+      continue;
+    }
     if (await page.locator('.meeting').count()) {
+      if (await page.locator('.meeting-card:not(.crow):not(.proposal)').count()) seen.add('story');
       // The crow at the fire, frame by frame. The river run pays a card; the farm run sends it away.
       const opt = (label: RegExp) => page.locator('.meet-options .btn', { hasText: label });
       if (await page.locator('.meeting-card.proposal').count()) {
@@ -162,17 +170,18 @@ for (const route of [
       continue;
     }
     const end = page.getByRole('button', { name: 'Låt timmen gå' });
-    if (!(await end.isEnabled())) {
+    // The screen may change under us (the end comes after the hour): never wait on a button that is gone.
+    if (!(await end.isEnabled({ timeout: 2_000 }).catch(() => false))) {
       await page.waitForTimeout(200);
       continue;
     }
     if (await page.locator(`.scene.${route.scene}`).count()) seen.add('area');
     await leadForward(page, seen);
     if (await page.locator('.end-screen, .map-screen, [data-act="lm-letgo"]').count()) continue;
-    if (await end.isEnabled()) await end.click();
+    if (await end.isEnabled({ timeout: 2_000 }).catch(() => false)) await end.click();
   }
   await expect(page.locator('.end-screen')).toBeVisible({ timeout: 10_000 });
   await expect(page.locator('.end-screen h2')).toHaveText(/Åsen|Eden föll/);
-  if ((await page.locator('.end-screen h2').textContent()) === 'Åsen') expect([...seen]).toEqual(expect.arrayContaining(['fire', 'map']));
+  if ((await page.locator('.end-screen h2').textContent()) === 'Åsen') expect([...seen]).toEqual(expect.arrayContaining(['fire', 'map', 'story']));
   expect(errors).toEqual([]);
 });

@@ -112,7 +112,8 @@ function riverStatuses(s: GameState, a: Animal): Status[] {
 function lasting(s: GameState, a: Animal): Status[] {
   const out = a.injuries.map((k) => injuryStatus(a, k));
   if (a.grief.length) {
-    const names = a.grief.map((id) => animal(s, id).name).join(' och ');
+    // We grieve the fallen, and sometimes a place: the glen we lost.
+    const names = a.grief.map((id) => s.animals.find((x) => x.id === id)?.name ?? (id === 'dalen' ? 'dalen' : id)).join(' och ');
     out.push({ key: 'grief', icon: '❦', label: `sörjer ${names}`, tone: 'warn',
       explain: `${a.name} bär ${names} med sig. Sorgen gör att ${a.name} tvivlar lättare.` });
   }

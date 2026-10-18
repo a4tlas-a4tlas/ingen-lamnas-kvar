@@ -507,3 +507,36 @@ Design from the milestone 5 interview:
     - Fröna urges us on.
   - **Det ihåliga trädet:** bleeding and shock heal for everyone but the one who keeps watch (−1 belief).
 - **For now,** Åsen ends the run ("Åsen" on the end screen). Maskinerna come in step 3.
+
+### Step 2: Dalen's finds and meetings (done)
+Every story part is a meeting in frames (`src/data/meetings/dalen.sv.ts`). Replies are spoken by whoever is with us, and some are gambles whose odds show on the reply.
+
+**Finds** (short):
+
+| Find | What happens |
+|---|---|
+| **Det ihåliga trädet** | Rest. Bleeding and shock heal, but whoever keeps watch outside gets −1 belief. |
+| **Ett bärsnår** | +1 hope and +1 belief for everyone. Fröna eat themselves sick (shock), unless Gamla Ljung stops them, which brings Ljung and Fröna closer. |
+| **En gammal stig** | Whoever goes first learns a new card from a trait they don't have. |
+| **Ett övergivet gryt** | Everyone heals, but Gamla Ljung grieves for the glen and doubts more easily. Or Ljung searches the passages and learns a card. |
+
+**Meetings:**
+- **Koltrasten:** listen, or the owl hunts the blackbird.
+- **Den döende hjorten:**
+  - Stay with it: every bond +1, −1 hope.
+  - Ljung comforts it: Ljung +2 belief.
+  - A hungry predator is tempted, a gamble on its belief:
+    - It resists: +2 belief.
+    - It eats: −1 hope, and the prey lose belief and their bond to it.
+- **Människorna med maten:**
+  - Sneak in (60 %): +2 hope; if it fails, +1 hope and a dog bite.
+  - Sotfot steals (Sotfot's belief ×10 %): if it fails, Sotfot is bitten.
+  - Fröna in the basket: +1 hope, but shock.
+- **Den hungriga främlingen:** give the starved fox a card and it tells you what's ahead, the same reveal as the crow's. Chasing it off costs Sotfot 1 belief.
+- **Grävskopans spår:** Kvarn reads the tracks, or we follow them (and the diesel frightens Fröna). Either way we learn how the machines move (`s.knowledge`), and the boss will use that.
+- **Kvarns tvekan:**
+  - Trust Kvarn: +1 belief.
+  - Or Skymning flies ahead: the reveal, but Kvarn −2.
+  - Without Kvarn we can only guess: −1 hope.
+
+**The map:** no fork offers the same danger twice. Dalen has 6 meetings and 4 finds, so most maps show at least three different story parts.
