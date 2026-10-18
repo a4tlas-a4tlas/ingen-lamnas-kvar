@@ -1,7 +1,7 @@
 /** Zones are defined per encounter (see encounters/); ids are plain strings. */
 export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
-export type EncounterId = 'road' | 'farm' | 'river';
+export type EncounterId = 'road' | 'farm' | 'river' | 'machines';
 
 /** The river's current in a given hour. */
 export type Current = 'lugn' | 'strid';
@@ -281,7 +281,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 12;
+  version: 13;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;
@@ -331,6 +331,11 @@ export interface GameState {
   closed: ZoneId[];
   /** The stone the heron watches this hour (by day). */
   heron: ZoneId | null;
+  // The machines.
+  /** The trees that fall at the end of each hour. */
+  fellPlan: ZoneId[];
+  /** The ground the bulldozer takes at the end of each hour, if any. */
+  dozePlan: (ZoneId | null)[];
   /** Someone trapped in this encounter, not yet one of us: they must come to trust us before we can free them. */
   rescue: Rescue | null;
   /** Newcomers we have met this run – rescued or left behind. Each is met only once. */

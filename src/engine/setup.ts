@@ -71,7 +71,7 @@ export function createGame(seed: number): GameState {
   for (const [a, b, v] of START_BONDS) bonds[bondKey(a, b)] = v;
 
   return {
-    version: 12,
+    version: 13,
     journey: firstRegion(seed),
     variant: 'normal',
     time: 'night',
@@ -107,6 +107,8 @@ export function createGame(seed: number): GameState {
     damCreak: 0,
     closed: [],
     heron: null,
+    fellPlan: [],
+    dozePlan: [],
     rescue: null,
     met: [],
     knowledge: [],

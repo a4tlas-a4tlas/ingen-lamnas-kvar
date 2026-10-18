@@ -176,12 +176,13 @@ for (const route of [
       continue;
     }
     if (await page.locator(`.scene.${route.scene}`).count()) seen.add('area');
+    if (await page.locator('.scene.machines').count()) seen.add('machines');
     await leadForward(page, seen);
     if (await page.locator('.end-screen, .map-screen, [data-act="lm-letgo"]').count()) continue;
     if (await end.isEnabled({ timeout: 2_000 }).catch(() => false)) await end.click();
   }
   await expect(page.locator('.end-screen')).toBeVisible({ timeout: 10_000 });
   await expect(page.locator('.end-screen h2')).toHaveText(/Åsen|Eden föll/);
-  if ((await page.locator('.end-screen h2').textContent()) === 'Åsen') expect([...seen]).toEqual(expect.arrayContaining(['fire', 'map', 'story']));
+  if ((await page.locator('.end-screen h2').textContent()) === 'Åsen') expect([...seen]).toEqual(expect.arrayContaining(['fire', 'map', 'story', 'machines']));
   expect(errors).toEqual([]);
 });

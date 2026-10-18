@@ -29,7 +29,7 @@ export const CLASSIC: MapNode[] = [
   node(DALEN.lastFire, 'granbacken', 2, ['garden', 'an']),
   node(DALEN.dangers[0], 'garden', 3, ['akrarna']),
   node(DALEN.dangers[1], 'an', 3, ['akrarna']),
-  { ...node(DALEN.end, 'akrarna', 4, []), name: 'Åkrarna' },
+  { ...node(DALEN.end, 'akrarna', 4, []), kind: 'end', encounter: undefined, name: 'Åkrarna' },
 ];
 
 /** A new game on the fixed little map, with Kvarn remembering every place right. */
