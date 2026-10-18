@@ -55,13 +55,17 @@ export function handSize(s: GameState): number {
   return s.hope >= 4 ? 5 : s.hope >= 1 ? 4 : 3;
 }
 
-/** Only night encounters have a moon. */
+/** The moon matters where it shines on open asphalt: the road at night. */
+function underMoon(s: GameState): boolean {
+  return s.time === 'night' && s.encounterId === 'road';
+}
+
 export function moonHidden(s: GameState): boolean {
-  return encounterOf(s).night && (s.moonPlan[s.turn - 1] ?? false);
+  return underMoon(s) && (s.moonPlan[s.turn - 1] ?? false);
 }
 
 export function moonVisible(s: GameState): boolean {
-  return encounterOf(s).night && !(s.moonPlan[s.turn - 1] ?? false);
+  return underMoon(s) && !(s.moonPlan[s.turn - 1] ?? false);
 }
 
 export const hasInjury = (a: Animal, k: InjuryKind) => a.injuries.includes(k);
@@ -251,7 +255,7 @@ export function leadTargets(s: GameState): string[] {
 
 /** The fox and the owl can show themselves to the dogs and draw them away. */
 export function canLure(s: GameState, a: Animal): boolean {
-  return s.encounterId === 'farm' && s.dogsAwake && canMove(a) && (a.species === 'fox' || a.species === 'owl') && !hasInjury(a, 'broken');
+  return s.encounterId === 'farm' && s.time === 'day' && s.dogsAwake && canMove(a) && (a.species === 'fox' || a.species === 'owl') && !hasInjury(a, 'broken');
 }
 
 /** Where a lure can be laid: up to two steps away, anywhere on the farm but the wall. */

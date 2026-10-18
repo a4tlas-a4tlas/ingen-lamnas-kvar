@@ -249,7 +249,8 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 
 /* ---------------------------------------------------------------- the farm */
 
-.scene.day .moon { display: none; }
+/* The moon only matters over the road at night. */
+.scene.day .moon, .scene:not(.road) .moon { display: none; }
 .farm-window { fill: #2a2420; transition: fill 1s; }
 .farmer-out .farm-window { fill: #f6d27a; filter: drop-shadow(0 0 4px #f6d27a); }
 .meter.alarm .mpips { gap: 0.3em; }
@@ -673,3 +674,30 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
   .zone-sketch { max-width: 240px; margin: 0 auto; }
   .modal-card.guide-modal { padding: 16px 14px 14px; }
 }
+
+/* ---------------------------------------------------------------- day and night */
+
+.leg { display: grid; gap: 4px; justify-items: start; margin-bottom: 8px; }
+.leg .btn:not(.primary) { font-size: 0.85em; }
+.time-note { margin: 0 0 4px; color: var(--paper-dim); font-style: italic; }
+.guide-time ul { margin: 0; padding-left: 1.1em; display: grid; gap: 3px; font-size: 0.92em; }
+.guide-time li.now { font-weight: 600; }
+.guide-time li:not(.now) { opacity: 0.7; }
+
+/* The road by day: a grey morning sky, no stars, pale asphalt. */
+.scene.road.day {
+  --sky-top: #6c7a92; --sky-low: #cdb79f; --forest-back: #3e5048; --forest: #2b3a33;
+  --grass-far: #50624a; --grass-mid: #5d7350; --grass-near: #4d6142; --grass-dark: #364a30;
+  --asphalt: #4a4c52; --paint: #e8e2cc;
+}
+.scene.road.day .stars { display: none; }
+.scene.road.day .light { filter: saturate(0.6); }
+
+/* The farm at night: the dawn cut-out sinks into blue dark; stars over the barn. */
+.scene.farm .night-veil, .scene.farm .window-glow { display: none; }
+.scene.farm.night.farmer-out .window-glow { display: inline; }
+.scene.farm.night .night-veil { display: inline; }
+.scene.farm.night .scene-bg { filter: saturate(0.7) brightness(0.8); }
+.scene.farm .farm-stars { display: none; }
+.scene.farm.night .farm-stars { display: inline; }
+.scene.farm.night .sun { display: none; }

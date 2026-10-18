@@ -137,7 +137,7 @@ function farmSvg(): string {
     </linearGradient>${DEFS}
   </defs>
   <rect width="400" height="${y(14)}" fill="url(#dawn)"/>
-  <circle cx="300" cy="${y(13)}" r="22" fill="#f3c890" opacity="0.9"/>
+  <circle class="sun" cx="300" cy="${y(13)}" r="22" fill="#f3c890" opacity="0.9"/>
   <path d="M0 ${y(11)} q60 -14 120 -4 t130 -6 t150 2 V${y(14)} H0 Z" fill="#4a3e52" filter="url(#cut)"/>
   <rect y="${y(12)}" width="400" height="${y(7)}" fill="#8c7a48" filter="url(#cut)"/>
   <g fill="#6b5c35">${stubble.join('')}</g>
@@ -178,5 +178,14 @@ function farmSvg(): string {
   <g fill="#1a2617" filter="url(#cut)">${thicket.join('')}</g>
   <g fill="#121b10" filter="url(#cut)">${thicketFront.join('')}</g>
   <g fill="#8b3a4a">${[30, 110, 190, 270, 350].map((cx, i) => `<circle cx="${cx}" cy="${y(90) + (i % 2) * 12}" r="2"/>`).join('')}</g>
+  <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.62"/>
+  <g class="window-glow">
+    <rect class="farm-window" x="${x(40)}" y="${y(31.5)}" width="${x(5)}" height="${y(3)}"/>
+    <rect class="farm-window" x="${x(63)}" y="${y(31.5)}" width="${x(5)}" height="${y(3)}"/>
+  </g>
+  <g class="farm-stars" fill="#fff6dc">
+    <circle cx="40" cy="12" r="1.2"/><circle cx="110" cy="26" r="1"/><circle cx="170" cy="8" r="1.3"/>
+    <circle cx="240" cy="22" r="1"/><circle cx="300" cy="10" r="1.2"/><circle cx="360" cy="28" r="1"/>
+  </g>
 </svg>`;
 }

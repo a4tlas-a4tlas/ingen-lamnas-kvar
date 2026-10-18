@@ -1,8 +1,8 @@
 // Every state an animal can be in, in words for the player, plus a forecast
 // of what letting the hour pass will do. Shared by tokens, the info panel and
 // the forecast box so they always say the same thing.
-import { encounterOf, zoneDef } from '../engine/encounters';
-import { ALARM_MAX, HEN_HOUSE, dogDestination } from '../engine/encounters/farm';
+import { zoneDef } from '../engine/encounters';
+import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { animal, backZone, boltZone, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
 import type { InjuryKind } from '../engine/types';
 import type { Animal, GameState, ZoneId } from '../engine/types';
@@ -165,7 +165,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (strikes.some((x) => x.dark) && !s.darkRevealed) out.push({ text: 'Något mullrar i mörkret, utan ljus. Vi vet inte i vilket körfält.', tone: 'bad' });
   if (s.encounterId === 'farm') out.push(...farmForecast(s, zoneOf));
   if (s.turn >= s.maxTurn) {
-    out.push({ text: `${encounterOf(s).night ? 'Gryningen' : 'Solen står högt'}: alla som inte är över blir kvar.`, tone: 'bad' });
+    out.push({ text: 'Sista timmen: alla som inte är över när den går blir kvar.', tone: 'bad' });
   }
   if (out.length === 0) out.push({ text: 'Inget händer oss den här timmen.', tone: 'good' });
   return out;
@@ -205,10 +205,10 @@ function farmForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[]
     out.push(caught.length
       ? { text: `Ficklampan lyser på ${z.name} och hittar ${caught.map((a) => a.name).join(' och ')}: dödar!`, tone: 'bad' }
       : { text: `Ficklampan lyser på ${z.name} – ingen av oss där.`, tone: 'good' });
-  } else if (alarm >= ALARM_MAX) {
+  } else if (alarm >= alarmMax(s)) {
     out.push({ text: 'Larmet blir fullt: bonden kommer ut med ficklampan.', tone: 'bad' });
   } else if (alarm > s.alarm) {
-    out.push({ text: `Larmet stiger till ${alarm} av ${ALARM_MAX}.`, tone: 'warn' });
+    out.push({ text: `Larmet stiger till ${alarm} av ${alarmMax(s)}.`, tone: 'warn' });
   }
   return out;
 }

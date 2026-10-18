@@ -1,4 +1,4 @@
-import type { EncounterId, ZoneId } from '../types';
+import type { EncounterId, ZoneId, TimeOfDay } from '../types';
 
 export interface ZoneDef {
   id: ZoneId;
@@ -26,16 +26,20 @@ export interface ZoneDef {
   breaksScent?: boolean;
 }
 
+/** A text that differs by day and by night. */
+export type ByTime = Record<TimeOfDay, string>;
+
 export interface EncounterDef {
   id: EncounterId;
-  title: string;
+  title: ByTime;
   /** "Fem av oss {crossed}." */
   crossed: string;
   /** Narrated when time runs out. */
-  timeUp: string;
+  timeUp: ByTime;
   /** "För X, {leftBehind}." on the memorial stone, for those still here when time runs out. */
-  leftBehind: string;
-  night: boolean;
+  leftBehind: ByTime;
+  /** Said in the last hour. */
+  lastHour: ByTime;
   maxTurn: number;
   zones: ZoneDef[];
   /** Paths toward the goal; walking them in reverse goes back. First listed is the main way. */

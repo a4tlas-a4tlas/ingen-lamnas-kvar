@@ -5,11 +5,17 @@ import type { EncounterDef } from './types';
 
 export const FARM: EncounterDef = {
   id: 'farm',
-  title: 'Gårdshundarna',
+  title: { day: 'Gårdshundarna', night: 'Gården om natten' },
   crossed: 'tog sig över stenmuren',
-  timeUp: 'Solen stod högt över gården. Vi kunde inte vänta längre.',
-  leftBehind: 'som blev kvar på gården',
-  night: false,
+  timeUp: {
+    day: 'Solen stod högt över gården. Vi kunde inte vänta längre.',
+    night: 'Gryningen kom och gården vaknade. Vi kunde inte vänta längre.',
+  },
+  leftBehind: { day: 'som blev kvar på gården', night: 'som blev kvar på gården i mörkret' },
+  lastHour: {
+    day: 'Solen stiger över ladan. Det här är sista timmen.',
+    night: 'Himlen ljusnar bakom ladan. Det här är nattens sista timme.',
+  },
   maxTurn: 8,
   zones: [
     { id: 'snaret', label: 'Snåret', name: 'snåret', rect: [0, 77, 100, 23], start: true, cover: true },
@@ -34,6 +40,12 @@ export const FARM: EncounterDef = {
 export const KENNEL: ZoneId = 'gardsplanen';
 export const HEN_HOUSE: ZoneId = 'honshuset';
 export const ALARM_MAX = 5;
+/** At night the farmer sleeps deep: it takes more barking to wake him. */
+export const ALARM_MAX_NIGHT = 7;
+
+export function alarmMax(s: GameState): number {
+  return s.time === 'night' ? ALARM_MAX_NIGHT : ALARM_MAX;
+}
 export const SCENT_MAX = 3;
 
 export function newDogs(): Dog[] {

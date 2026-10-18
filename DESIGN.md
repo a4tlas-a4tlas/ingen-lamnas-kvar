@@ -265,3 +265,33 @@ Design from the milestone 2 interview, part 1. The run becomes: oath → map →
   - **Skydd & knep** (shelter and tricks)
   - **Tips**
 - **The text** lives in `src/data/guides.sv.ts`. Numbers (hours, alarm, scent) come from the rules, and a test checks that every encounter has a guide.
+
+## Milestone 3 – the journey (in progress)
+Design from the milestone 3 interview:
+- **Path choice** mixes three things: fog (Kvarn sometimes remembers wrong), visible cost, and the animals' voices.
+- **Day/night:** the same place plays with other rules.
+- **New area:** Ån (the river), with slippery stones, a current that carries you away, and a beaver dam.
+- **Seasons** come in a later milestone.
+
+### Step 1: day and night (done)
+- **The time follows the journey:** the glen's last night → the road at night → the fire, "Vid gryningen släckte vi elden" → the next place by day. After each encounter the clock flips.
+- **"Vänta till natten/dagen"** on the map costs **−1 hope**, so the other time of day is a choice with a price. Each option on the map shows what the time changes.
+- **The road:**
+  - **by day:** more cars (fewer quiet hours, both lanes more often), no dark cars, no moon
+  - **at night:** as before
+- **The farm:**
+  - **by day:** as before
+  - **at night:** the farmer sleeps deep (the alarm goes up to 7). The dogs can't see a lure, so *Locka hundarna* doesn't work. Scent fades only every other hour in the cold air.
+- **The moon only matters over the road at night.**
+- **The art:**
+  - the road by day: a grey morning palette via CSS variables
+  - the farm at night: a dark blue veil, stars, and lit windows that shine through when the farmer comes out
+- **The guide** has a "Dag och natt" section that marks the current time.
+- **Balance** (lead-only bot, 300 runs), saved animals:
+
+  | Leg | Night | Day |
+  |---|---|---|
+  | Road | 4.5 | 4.6 |
+  | Farm | 3.4 | 3.4 |
+
+  Neither time dominates. The difference is in what a human can do: a lure by day, peeking at traffic by night.
