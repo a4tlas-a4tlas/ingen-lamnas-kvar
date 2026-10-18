@@ -9,6 +9,7 @@ import { randomSeed } from '../engine/rng';
 import {
   animal,
   bond,
+  canLure,
   cardBlockReason,
   cardAnimals,
   cardCost,
@@ -22,6 +23,7 @@ import {
   leadCost,
   leadTargets,
   leadZones,
+  lureZones,
   moonHidden,
   verseStatus,
 } from '../engine/rules';
@@ -29,15 +31,29 @@ import { OATH_VERSES, createGame } from '../engine/setup';
 import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
-import { assignSeat, fireSceneSvg, firePanelHtml, mapSvg, memorialHtml, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
+import { assignSeat, fireSceneSvg, firePanelHtml, guideHtml, mapSvg, memorialHtml, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
 import { defaultPlan } from '../engine/campfire';
 import { pathsFrom, place } from '../data/journey';
-import { silhouette, speciesColor } from './silhouettes';
+import { dogSilhouette, silhouette, speciesColor } from './silhouettes';
+import { ALARM_MAX, dogDestination } from '../engine/encounters/farm';
 import { animalStatuses, forecast, type Status } from './status';
 
 const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
+const GUIDES_SEEN_KEY = 'ingen-lamnas-kvar/guides-seen';
 
-type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | { mode: 'lead'; animal?: string };
+/** Whether this browser has already been shown the guide for an area; marks it as seen. */
+function firstVisit(id: string): boolean {
+  try {
+    const seen = JSON.parse(localStorage.getItem(GUIDES_SEEN_KEY) ?? '[]') as string[];
+    if (seen.includes(id)) return false;
+    localStorage.setItem(GUIDES_SEEN_KEY, JSON.stringify([...seen, id]));
+  } catch {
+    // No storage: show the guide every time rather than never.
+  }
+  return true;
+}
+
+type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | { mode: 'lead' | 'lure'; animal?: string };
 
 const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
 type DeckView = 'draw' | 'discard' | 'all';
@@ -80,7 +96,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 3 && s.phase !== 'over' ? s : null;
+    return s.version === 4 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -102,6 +118,7 @@ export class App {
   private oathPick: VerseId[] = [];
   private deckView: DeckView | null = null;
   private mapOpen = false;
+  private guideOpen = false;
   private fireSeats: Seats | null = null;
   private fireMourning: Record<string, 'bury' | 'carry'> = {};
   private mounted = false;
@@ -126,8 +143,10 @@ export class App {
     document.body.appendChild(this.tip);
     window.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      if (this.deckView) {
+      if (this.deckView || this.guideOpen || this.mapOpen) {
         this.deckView = null;
+        this.guideOpen = false;
+        this.mapOpen = false;
         if (this.state) this.render();
       } else this.cancel();
     });
@@ -209,6 +228,12 @@ export class App {
       case 'deck-close':
         this.deckView = null;
         return this.render();
+      case 'guide-open':
+        this.guideOpen = true;
+        return this.render();
+      case 'guide-close':
+        this.guideOpen = false;
+        return this.render();
       case 'map-open':
         this.mapOpen = true;
         return this.render();
@@ -228,6 +253,11 @@ export class App {
         const plan = planFromSeats(this.fireSeats, this.fireMourning);
         return this.dispatch({ type: 'restAtFire', watch: plan.watch, pairs: plan.pairs, mourning: plan.mourning });
       }
+      case 'lure':
+        if (this.sel.mode === 'lead' && this.sel.animal) this.sel = { mode: 'lure', animal: this.sel.animal };
+        else if (this.sel.mode === 'lure') this.sel = { mode: 'lead', animal: this.sel.animal };
+        this.hint = '';
+        return this.render();
       case 'animal':
         return this.pickAnimal(el.dataset.animal!);
       case 'zone':
@@ -292,6 +322,7 @@ export class App {
       return [];
     }
     if (this.sel.mode === 'lead' && this.sel.animal) return leadZones(s, animal(s, this.sel.animal));
+    if (this.sel.mode === 'lure' && this.sel.animal) return lureZones(s, animal(s, this.sel.animal));
     return [];
   }
 
@@ -305,12 +336,12 @@ export class App {
     }
     // While a card moves its owner, tapping an animal in a lit zone picks that zone.
     const zone = animal(s, id).zone;
-    if (card && this.targetZones().includes(zone)) return this.pickZone(zone);
+    if ((card || this.sel.mode === 'lure') && this.targetZones().includes(zone)) return this.pickZone(zone);
 
     // Otherwise tapping an animal selects it: we see it, and lead it if it can go.
     this.hint = '';
     this.inspect = id;
-    if (this.sel.mode === 'lead' && this.sel.animal === id) this.sel = { mode: 'idle' };
+    if ((this.sel.mode === 'lead' || this.sel.mode === 'lure') && this.sel.animal === id) this.sel = { mode: 'idle' };
     else if (s.phase === 'play' && leadTargets(s).includes(id)) this.sel = { mode: 'lead', animal: id };
     else this.sel = { mode: 'idle' };
     this.render();
@@ -323,6 +354,7 @@ export class App {
       return this.dispatch({ type: 'play', uid: card.uid, target: this.sel.animal, zone });
     }
     if (this.sel.mode === 'lead' && this.sel.animal) this.dispatch({ type: 'lead', target: this.sel.animal, zone });
+    if (this.sel.mode === 'lure' && this.sel.animal) this.dispatch({ type: 'lure', target: this.sel.animal, zone });
   }
 
   private dispatch(action: Action) {
@@ -514,17 +546,19 @@ export class App {
         return `<div class="zone ${z.hidden ? 'hidden-zone' : ''} ${h > w ? 'column' : ''}" data-act="zone" data-zone="${z.id}" style="left:${x}%;top:${y}%;width:${w}%;height:${h}%"><span>${esc(z.label)}</span></div>`;
       })
       .join('');
+    const enc = encounterOf(this.state!);
     this.root.innerHTML = `
       <div class="game">
         <header class="topbar"></header>
         <main class="stage">
-          <div class="scene">
-            ${sceneSvg()}
+          <div class="scene ${enc.id} ${enc.night ? 'night' : 'day'}">
+            ${sceneSvg(enc.id)}
             <div class="moon"><div class="cloud"></div></div>
             <div class="zones">${zoneDivs}
             </div>
             <div class="telegraph"></div>
             <div class="sweeps"></div>
+            <div class="dogs"></div>
             <div class="tokens"></div>
             <div class="hud"></div>
             <div class="bubbles" aria-live="polite"></div>
@@ -547,17 +581,22 @@ export class App {
   }
 
   private renderGame(s: GameState, hurt?: Set<string>) {
-    if (!this.mounted) this.mountGame();
+    if (!this.mounted) {
+      this.mountGame();
+      this.guideOpen = s.phase === 'play' && s.turn === 1 && firstVisit(s.encounterId);
+    }
     const q = <T extends HTMLElement>(sel: string) => this.root.querySelector<T>(sel)!;
     q('.topbar').innerHTML = this.topbarHtml(s);
     q('.hud').innerHTML = this.hudHtml(s);
     const scene = q('.scene');
     scene.classList.toggle('culvert-open', s.revealed.includes('culvert'));
+    scene.classList.toggle('farmer-out', s.farmerOut);
     scene.querySelectorAll<HTMLElement>('.zone.hidden-zone').forEach((z) => z.classList.toggle('found', s.revealed.includes(z.dataset.zone!)));
     q('.moon').classList.toggle('hidden', moonHidden(s));
     const zones = this.targetZones();
     scene.querySelectorAll<HTMLElement>('.zone').forEach((z) => z.classList.toggle('target', zones.includes(z.dataset.zone as ZoneId)));
     q('.telegraph').innerHTML = this.telegraphHtml(s);
+    q('.dogs').innerHTML = this.dogsHtml(s);
     this.updateTokens(s, q('.tokens'), hurt);
     q('.actions').innerHTML = this.actionsHtml(s);
     q('.forecast').innerHTML = s.phase === 'play' ? this.forecastHtml(s) : '';
@@ -570,7 +609,7 @@ export class App {
     log.scrollTop = log.scrollHeight;
     if (s.phase !== 'play') this.deckView = null;
     q('.modal-root').innerHTML =
-      s.phase === 'lastMoment' ? this.lastMomentHtml(s) : this.deckView ? this.deckHtml(s, this.deckView) : this.mapOpen ? this.mapModalHtml(s) : '';
+      s.phase === 'lastMoment' ? this.lastMomentHtml(s) : this.deckView ? this.deckHtml(s, this.deckView) : this.mapOpen ? this.mapModalHtml(s) : this.guideOpen ? guideHtml(s) : '';
   }
 
   // ------------------------------------------------------------ parts
@@ -580,6 +619,7 @@ export class App {
       <div class="tb-title">Ingen lämnas kvar <span class="muted">· ${esc(encounterOf(s).title)}</span></div>
       <div class="tb-stats">
         <span class="stat">Timme <b>${s.turn}</b>/${s.maxTurn}</span>
+        <button class="btn small" data-act="guide-open">Guide</button>
         <button class="btn small" data-act="map-open">Kartan</button>
         <button class="btn small" data-act="mute">${this.sound.muted ? 'Ljud av' : 'Ljud på'}</button>
       </div>`;
@@ -600,13 +640,67 @@ export class App {
         <span class="mpips">${pips(s.hope, 10, 'hope')}</span>
         ${low ? `<span class="mnote">Lågt hopp – vi drar ${hand} kort</span>` : ''}
       </div>
+      ${s.encounterId === 'farm' ? this.alarmHtml(s) : ''}
       <div class="meter kraft ${s.kraft === 0 ? 'empty' : ''}" ${kraftTip}>
         <span class="mlabel">Kraft <b>${s.kraft}</b></span>
         <span class="mpips">${pips(s.kraft, maxKraft, 'kraft')}</span>
       </div>`;
   }
 
+  /** The farm's alarm: barking and stolen hens fill it; full, the farmer comes out. */
+  private alarmHtml(s: GameState): string {
+    const tip = `data-tip-icon="!" data-tip-title="Larm ${s.alarm}/${ALARM_MAX}" data-tip="${s.farmerOut
+      ? 'Bonden är ute. Varje timme lyser ficklampan mot en zon – den som står där i det öppna dör. Snåret och det höga gräset skyddar.'
+      : `Hundarnas skall väcker gården: +1 när de biter, +1 när någon lockar dem, +3 om ett rovdjur tar en höna. Vid ${ALARM_MAX} kommer bonden ut med ficklampan.`}"`;
+    const pips = Array.from({ length: ALARM_MAX }, (_, i) => `<span class="pip alarm ${i < s.alarm ? 'on' : ''}"></span>`).join('');
+    return `
+      <div class="meter alarm ${s.farmerOut ? 'full' : ''}" ${tip}>
+        <span class="mlabel">${s.farmerOut ? 'Bonden ute' : `Larm <b>${s.alarm}</b>/${ALARM_MAX}`}</span>
+        <span class="mpips">${pips}</span>
+      </div>`;
+  }
+
+  /** The dogs stand where they are; asleep, or turned toward a trail. */
+  private dogsHtml(s: GameState): string {
+    if (s.encounterId !== 'farm' || s.phase === 'over') return '';
+    return s.dogs
+      .map((d, i) => {
+        const [x, y, w, h] = zoneDef(s, d.zone).rect;
+        const twin = s.dogs.findIndex((o) => o.zone === d.zone) !== i;
+        const tip = s.dogsAwake
+          ? `${d.name} följer den starkaste doften${d.target ? ` mot ${zoneDef(s, d.target).name}` : ''}. Hundarna går upp till två steg i timmen och biter den som står där de stannar: en skada som blöder.`
+          : `${d.name} sover vid hundkojan. Hundarna vaknar nästa timme och följer vår doft.`;
+        return `<div class="dog ${s.dogsAwake ? 'awake' : 'asleep'}" data-act="zone" data-zone="${d.zone}" style="left:${x + w * (twin ? 0.66 : 0.85)}%;top:${y + h * 0.7}%"
+          data-tip-icon="◣" data-tip-title="${esc(d.name)}" data-tip="${esc(tip)}">
+          ${dogSilhouette()}<span class="tname">${esc(d.name)}${s.dogsAwake ? '' : ' · zzz'}</span></div>`;
+      })
+      .join('');
+  }
+
+  /** On the farm: scent trails, where the dogs end the hour, and the flashlight. */
+  private farmTelegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    for (const [z, v] of Object.entries(s.scent)) {
+      if (v <= 0 || zoneDef(s, z).goal) continue;
+      const tip = `Doft ${v}/3 i ${zoneDef(s, z).name}. Där vi står när timmen går blir doften starkare; den bleknar med 1 i timmen. Bäcken, gödselstacken och det höga gräset bryter den. Hundarna följer den starkaste doften.`;
+      out.push(`<div class="scent" style="${box(z)}"><span data-act="zone" data-zone="${z}" data-tip-icon="∴" data-tip-title="Doft ${v}/3" data-tip="${esc(tip)}">doft ${'<i></i>'.repeat(v)}</span></div>`);
+    }
+    if (s.dogsAwake) {
+      const dests = new Map<string, string[]>();
+      for (const d of s.dogs) if (d.target) { const z = dogDestination(d); dests.set(z, [...(dests.get(z) ?? []), d.name]); }
+      for (const [z, names] of dests) {
+        out.push(`<div class="dog-mark" style="${box(z)}"><span>${esc(names.join(' & '))} · skadar</span></div>`);
+      }
+    }
+    if (s.farmerOut && s.farmerSweep) {
+      out.push(`<div class="flashlight" style="${box(s.farmerSweep)}"><span>Ficklampan · dödar</span></div>`);
+    }
+    return out.join('');
+  }
+
   private telegraphHtml(s: GameState): string {
+    if (s.encounterId === 'farm') return s.phase === 'over' ? '' : this.farmTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {
@@ -692,17 +786,29 @@ export class App {
           spec === 'zone' ? `Välj en upplyst zon för ${o}.` :
           spec === 'animal' ? 'Välj ett upplyst djur.' :
           this.sel.mode === 'card' && this.sel.animal ? `Välj vart ${o} ska bära ${animal(s, this.sel.animal).name}.` : `Välj vem ${o} ska bära.`;
+      } else if (this.sel.mode === 'lure' && this.sel.animal) {
+        const a = animal(s, this.sel.animal);
+        hint = `Välj var ${a.name} ska visa sig (◆1). Hundarna vänder sig dit och skäller – larmet ökar med 1.`;
       } else if (this.sel.mode === 'lead' && this.sel.animal) {
         const a = animal(s, this.sel.animal);
-        hint = `Välj en upplyst zon för ${a.name} (◆${leadCost(a)})${a.flier ? ' – flyger upp till 2 steg' : ''}, eller spela ett av ${a.name}s kort.`;
+        hint = `Välj en upplyst zon för ${a.name} (◆${leadCost(a)})${a.flier ? ' – flyger upp till 2 steg' : ''}, eller spela ett av ${a.name}s kort.${canLure(s, a) ? ` ${a.name} kan också locka hundarna.` : ''}`;
       } else hint = 'Tryck på ett djur med ljus ring för att leda det (◆1), eller spela ett kort.';
     }
     return `
       <div class="action-row">
         <button class="btn primary" data-act="end" ${s.phase === 'play' && !this.busy ? '' : 'disabled'}>Låt timmen gå</button>
+        ${this.lureButton(s)}
         ${this.sel.mode !== 'idle' ? '<button class="btn small" data-act="cancel">Avbryt</button>' : ''}
       </div>
       <p class="hint">${esc(hint)}</p>`;
+  }
+
+  private lureButton(s: GameState): string {
+    const sel = this.sel;
+    if ((sel.mode !== 'lead' && sel.mode !== 'lure') || !sel.animal || s.phase !== 'play' || this.busy) return '';
+    const a = animal(s, sel.animal);
+    if (!canLure(s, a)) return '';
+    return `<button class="btn ${sel.mode === 'lure' ? 'active' : ''}" data-act="lure" aria-pressed="${sel.mode === 'lure'}" ${s.kraft >= 1 ? '' : 'disabled'}>Locka hundarna (◆1)</button>`;
   }
 
   private inspectHtml(s: GameState, a: Animal): string {
@@ -916,7 +1022,7 @@ export class App {
         <div class="end-poem">
           ${s.verses.filter((v) => v.kind === 'oath').map((v) => `<p>${esc(v.flipped ? v.flippedText! : v.text)}</p>`).join('')}
         </div>
-        ${o.fallen ? '' : '<p class="muted">Fortsättning följer: åkrarna, gårdshundarna, och skogen långt bortom.</p>'}
+        ${o.fallen ? '' : '<p class="muted">Fortsättning följer: åkrarna, och skogen långt bortom.</p>'}
         <div class="title-buttons">
           <button class="btn primary" data-act="new">Gå igen</button>
           <button class="btn" data-act="title">Till början</button>

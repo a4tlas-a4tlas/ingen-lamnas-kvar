@@ -20,6 +20,10 @@ export interface ZoneDef {
   smallOnly?: boolean;
   /** One full hour inside before you can go on. */
   slow?: boolean;
+  /** Bushes and grass: the farmer's flashlight doesn't find you here. */
+  cover?: boolean;
+  /** Water, grass and dung: we leave no scent for the dogs. */
+  breaksScent?: boolean;
 }
 
 export interface EncounterDef {
@@ -27,6 +31,10 @@ export interface EncounterDef {
   title: string;
   /** "Fem av oss {crossed}." */
   crossed: string;
+  /** Narrated when time runs out. */
+  timeUp: string;
+  /** "För X, {leftBehind}." on the memorial stone, for those still here when time runs out. */
+  leftBehind: string;
   night: boolean;
   maxTurn: number;
   zones: ZoneDef[];

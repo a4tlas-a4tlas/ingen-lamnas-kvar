@@ -7,6 +7,8 @@ export const ROAD: EncounterDef = {
   id: 'road',
   title: 'Vägen om natten',
   crossed: 'kom över vägen',
+  timeUp: 'Gryningen kom, grå och obeveklig. Vi kunde inte vänta längre.',
+  leftBehind: 'som blev kvar när gryningen kom',
   night: true,
   maxTurn: 10,
   zones: [

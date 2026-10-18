@@ -51,7 +51,7 @@ export function createGame(seed: number): GameState {
   for (const [a, b, v] of START_BONDS) bonds[bondKey(a, b)] = v;
 
   return {
-    version: 3,
+    version: 4,
     journey: { at: START_PLACE, visited: [START_PLACE] },
     unmourned: [],
     encounterId: 'road',
@@ -73,6 +73,12 @@ export function createGame(seed: number): GameState {
     trafficPlan: [],
     moonPlan: [],
     revealed: [],
+    dogs: [],
+    dogsAwake: false,
+    scent: {},
+    alarm: 0,
+    farmerOut: false,
+    farmerSweep: null,
     peekNext: false,
     darkRevealed: false,
     hitQueue: [],

@@ -1,8 +1,9 @@
 import type { EncounterId, GameState, ZoneId } from '../types';
+import { FARM } from './farm';
 import { ROAD } from './road';
 import type { EncounterDef, ZoneDef } from './types';
 
-export const ENCOUNTERS: Record<EncounterId, EncounterDef> = { road: ROAD };
+export const ENCOUNTERS: Record<EncounterId, EncounterDef> = { road: ROAD, farm: FARM };
 
 export function encounterOf(s: GameState): EncounterDef {
   return ENCOUNTERS[s.encounterId];

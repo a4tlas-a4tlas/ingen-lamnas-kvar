@@ -1,7 +1,8 @@
 // Every state an animal can be in, in words for the player, plus a forecast
 // of what letting the hour pass will do. Shared by tokens, the info panel and
 // the forecast box so they always say the same thing.
-import { zoneDef } from '../engine/encounters';
+import { encounterOf, zoneDef } from '../engine/encounters';
+import { ALARM_MAX, HEN_HOUSE, dogDestination } from '../engine/encounters/farm';
 import { animal, backZone, boltZone, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
 import type { InjuryKind } from '../engine/types';
 import type { Animal, GameState, ZoneId } from '../engine/types';
@@ -51,6 +52,10 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
         explain: `${a.name} har glömt eden och anfaller ${t} när timmen går, om de står nära. Trösta ${a.name}, eller flytta ${t} undan.` });
       break;
     }
+    case 'raid':
+      out.push({ key: 'raid', icon: '⚑', label: 'går mot hönsen', intent: true, tone: 'warn',
+        explain: `${a.name} är hungrig och tar en höna när timmen går, i stället för en av oss. ${a.name} får +2 tro – men larmet ökar med 3. Trösta för att stoppa.` });
+      break;
     case 'follow':
       break;
   }
@@ -129,6 +134,9 @@ export function forecast(s: GameState): ForecastLine[] {
     } else if (i.kind === 'leave') {
       out.push({ text: `${a.name} lämnar oss.`, tone: 'bad' });
       continue;
+    } else if (i.kind === 'raid') {
+      z = HEN_HOUSE;
+      out.push({ text: `${a.name} tar en höna: +2 tro för ${a.name}, men larmet ökar med 3.`, tone: 'warn' });
     } else if (i.kind === 'hunt') {
       const t = animal(s, i.target);
       if (zoneDistance(s, a.zone, t.zone) <= 1) out.push({ text: `${a.name} anfaller ${t.name}.`, tone: 'bad' });
@@ -155,7 +163,52 @@ export function forecast(s: GameState): ForecastLine[] {
     }
   }
   if (strikes.some((x) => x.dark) && !s.darkRevealed) out.push({ text: 'Något mullrar i mörkret, utan ljus. Vi vet inte i vilket körfält.', tone: 'bad' });
-  if (s.turn >= s.maxTurn) out.push({ text: 'Gryningen: alla som inte är över blir kvar.', tone: 'bad' });
+  if (s.encounterId === 'farm') out.push(...farmForecast(s, zoneOf));
+  if (s.turn >= s.maxTurn) {
+    out.push({ text: `${encounterOf(s).night ? 'Gryningen' : 'Solen står högt'}: alla som inte är över blir kvar.`, tone: 'bad' });
+  }
   if (out.length === 0) out.push({ text: 'Inget händer oss den här timmen.', tone: 'good' });
+  return out;
+}
+
+/** The farm: where the dogs end the hour and whom they bite, the alarm, and the flashlight. */
+function farmForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const at = (z: ZoneId) => s.animals.filter((a) => isActive(a) && zoneOf.get(a.id) === z && !a.flying);
+  let alarm = s.alarm;
+  if (s.animals.some((a) => isActive(a) && a.intent.kind === 'raid')) alarm += 3;
+  if (!s.dogsAwake) {
+    out.push({ text: 'Hundarna sover än. Nästa timme vaknar de och följer vår doft.', tone: 'info' });
+  } else {
+    const bitten = new Set<string>();
+    for (const d of s.dogs) {
+      if (!d.target) {
+        out.push({ text: `${d.name} hittar ingen doft och stannar.`, tone: 'good' });
+        continue;
+      }
+      const z = dogDestination(d);
+      const here = at(z).filter((a) => !bitten.has(a.id));
+      const place = zoneDef(s, z).name;
+      if (!here.length) {
+        out.push({ text: `${d.name} springer till ${place} – ingen av oss där.`, tone: 'good' });
+        continue;
+      }
+      for (const a of here) bitten.add(a.id);
+      const who = here.map((a) => a.name).join(' och ');
+      out.push({ text: `${d.name} springer till ${place} och biter ${who}: skadar (blöder).`, tone: 'warn' });
+    }
+    if (bitten.size) alarm += 1;
+  }
+  if (s.farmerOut && s.farmerSweep) {
+    const z = zoneDef(s, s.farmerSweep);
+    const caught = z.cover ? [] : at(s.farmerSweep);
+    out.push(caught.length
+      ? { text: `Ficklampan lyser på ${z.name} och hittar ${caught.map((a) => a.name).join(' och ')}: dödar!`, tone: 'bad' }
+      : { text: `Ficklampan lyser på ${z.name} – ingen av oss där.`, tone: 'good' });
+  } else if (alarm >= ALARM_MAX) {
+    out.push({ text: 'Larmet blir fullt: bonden kommer ut med ficklampan.', tone: 'bad' });
+  } else if (alarm > s.alarm) {
+    out.push({ text: `Larmet stiger till ${alarm} av ${ALARM_MAX}.`, tone: 'warn' });
+  }
   return out;
 }

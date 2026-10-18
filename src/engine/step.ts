@@ -4,6 +4,7 @@ import { TRAITS } from '../data/traits';
 import { VERSES } from '../data/verses';
 import { closestTo, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone } from './campfire';
 import { planRoad } from './encounters/road';
+import { ALARM_MAX, HEN_HOUSE, SCENT_MAX, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, oathVerse } from './setup';
 import { ENCOUNTERS, encounterOf, zoneDef } from './encounters';
@@ -15,6 +16,7 @@ import {
   bond,
   bondKey,
   canFly,
+  canLure,
   canPlay,
   cardAnimals,
   cardCost,
@@ -32,6 +34,7 @@ import {
   leadCost,
   leadTargets,
   leadZones,
+  lureZones,
   moonHidden,
   moonVisible,
   neighbors,
@@ -76,6 +79,7 @@ export function step(prev: GameState, action: Action): { state: GameState; event
       case 'swear': swear(c, action.verses); break;
       case 'play': playCard(c, action.uid, action.target, action.zone); endIfAllAcross(c); break;
       case 'lead': lead(c, action.target, action.zone); endIfAllAcross(c); break;
+      case 'lure': lure(c, action.target, action.zone); endIfAllAcross(c); break;
       case 'endTurn': endTurn(c); break;
       case 'lastMoment': resolveLastMoment(c, action); break;
       case 'travel': travel(c, action.to); break;
@@ -166,6 +170,13 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   const plan = id === 'road' ? planRoad(s, def.maxTurn) : { trafficPlan: [], moonPlan: [] };
   s.trafficPlan = plan.trafficPlan;
   s.moonPlan = plan.moonPlan;
+  const farm = id === 'farm';
+  s.dogs = farm ? newDogs() : [];
+  s.dogsAwake = false;
+  s.scent = farm ? { snaret: 1 } : {};
+  s.alarm = 0;
+  s.farmerOut = false;
+  s.farmerSweep = null;
   const start = def.zones.find((z) => z.start)!.id;
   for (const a of s.animals.filter(isPresent)) {
     a.status = 'active';
@@ -321,7 +332,7 @@ function startTurn(c: Ctx) {
 
   const hidden = moonHidden(s);
   const moon = verseStatus(s, 'manen');
-  s.kraft = 3 + (hidden && moon === 'intact' ? 1 : 0) - (!hidden && moon === 'flipped' ? 1 : 0);
+  s.kraft = 3 + (hidden && moon === 'intact' ? 1 : 0) - (moonVisible(s) && moon === 'flipped' ? 1 : 0);
 
   log(c, { kind: 'turn', text: `Timme ${s.turn} av ${s.maxTurn}` });
   if (encounterOf(s).night) narrate(c, hidden ? 'Månen gömmer sig bakom molnen.' : 'Månen lyser över asfalten.');
@@ -334,6 +345,7 @@ function startTurn(c: Ctx) {
     if (strikes.some((x) => x.dark)) narrate(c, 'Något mullrar i mörkret. Inga ljus.');
     if (s.turn === s.maxTurn) narrate(c, 'Himlen ljusnar i öster. Det här är nattens sista timme.');
   }
+  if (s.encounterId === 'farm') telegraphFarm(c);
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
     for (const a of s.animals.filter((x) => isActive(x) && hasInjury(x, 'bleeding'))) {
@@ -366,6 +378,10 @@ function chooseIntent(c: Ctx, a: Animal): Intent {
   if (a.elder && elderVerse) return { kind: 'follow' };
   if (a.belief <= 0) return { kind: 'leave' };
 
+  // By the farm, a hungry predator goes for the hens: the lesser evil.
+  if (a.predator && s.encounterId === 'farm' && a.belief <= huntsAt(s, a) + 2 && zoneDistance(s, a.zone, HEN_HOUSE) <= 1) {
+    return { kind: 'raid' };
+  }
   if (a.predator && a.belief <= huntsAt(s, a)) {
     const prey = s.animals
       .filter((p) => isActive(p) && canPrey(a, p) && zoneDistance(s, a.zone, p.zone) <= 1)
@@ -446,6 +462,100 @@ function lead(c: Ctx, target: string, zone: ZoneId) {
   if (!leadZones(s, a).includes(zone)) fail('Dit kan vi inte leda.');
   s.kraft -= leadCost(a);
   moveAnimal(c, a, zone, true);
+}
+
+// ---------------------------------------------------------------- the farm
+
+function raiseAlarm(c: Ctx, n: number) {
+  const s = c.s;
+  s.alarm = Math.min(ALARM_MAX, s.alarm + n);
+  if (s.alarm >= ALARM_MAX && !s.farmerOut) {
+    s.farmerOut = true;
+    narrate(c, 'Ett ljus tänds i huset. Dörren slår upp. Bonden kommer ut med en ficklampa.');
+  }
+}
+
+/** At the start of each hour the dogs pick up a trail, and the flashlight picks a zone. */
+function telegraphFarm(c: Ctx) {
+  const s = c.s;
+  if (s.turn === 1) narrate(c, 'Gården sover. Två hundar ligger vid hundkojan, med nosen mellan tassarna.');
+  if (!s.dogsAwake && s.turn >= 2) {
+    s.dogsAwake = true;
+    narrate(c, 'Hundarna vaknar och lyfter nosen. De har känt doften av oss.');
+  }
+  if (s.dogsAwake) {
+    const targets = dogTargets(s);
+    s.dogs.forEach((d, i) => (d.target = targets[i]));
+    for (const d of s.dogs) {
+      narrate(c, d.target ? `${d.name} följer vår doft mot ${zoneDef(s, d.target).name}.` : `${d.name} nosar runt ${zoneDef(s, d.zone).name}.`);
+    }
+  }
+  s.farmerSweep = null;
+  if (s.farmerOut) {
+    // The flashlight goes where it sees the most of us out in the open.
+    const open = encounterOf(s).zones.filter((z) => !z.cover && !z.goal);
+    const count = (z: string) => s.animals.filter((a) => isActive(a) && a.zone === z).length;
+    const best = Math.max(...open.map((z) => count(z.id)));
+    const choices = open.filter((z) => count(z.id) === best);
+    s.farmerSweep = choices[Math.floor(random(s) * choices.length)].id;
+    narrate(c, `Ficklampan söker mot ${zoneDef(s, s.farmerSweep).name}.`);
+  }
+  if (s.turn === s.maxTurn) narrate(c, 'Solen stiger över ladan. Det här är sista timmen.');
+}
+
+/** End of the hour: the dogs reach their trail and bite, the flashlight finds whoever is in the open. */
+function farmHazards(c: Ctx) {
+  const s = c.s;
+  const bitten = new Set<string>();
+  for (const d of s.dogs) {
+    if (!d.target) continue;
+    d.zone = dogDestination(d);
+    const here = s.animals.filter((a) => isActive(a) && a.zone === d.zone && !a.flying);
+    if (!here.length) {
+      narrate(c, `${d.name} nosar i ${zoneDef(s, d.zone).name}, men vi är redan borta.`);
+      continue;
+    }
+    for (const a of here) {
+      if (bitten.has(a.id)) continue;
+      bitten.add(a.id);
+      s.hitQueue.push({ victim: a.id, severity: 'injure', sudden: false, zone: d.zone, source: 'hund' });
+    }
+  }
+  if (bitten.size) {
+    narrate(c, 'Hundarna skäller och biter. Över gården tänds ett fönster.');
+    raiseAlarm(c, 1);
+  }
+  if (s.farmerOut && s.farmerSweep && !zoneDef(s, s.farmerSweep).cover) {
+    for (const a of s.animals.filter((x) => isActive(x) && x.zone === s.farmerSweep && !x.flying)) {
+      s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'bonde' });
+    }
+  }
+}
+
+/** Scent fades by one each hour; where we end the hour, it grows, unless water, grass or dung hide it. */
+function leaveScent(s: GameState) {
+  for (const z of Object.keys(s.scent)) s.scent[z] = Math.max(0, s.scent[z] - 1);
+  const occupied = new Set(s.animals.filter((a) => isActive(a) && !a.flying).map((a) => a.zone));
+  for (const id of occupied) {
+    const z = zoneDef(s, id);
+    if (z.breaksScent || z.goal) continue;
+    s.scent[id] = Math.min(SCENT_MAX, (s.scent[id] ?? 0) + 2);
+  }
+}
+
+/** The fox or the owl shows itself, and the dogs turn toward it. */
+function lure(c: Ctx, target: string, zone: ZoneId) {
+  const s = c.s;
+  if (s.phase !== 'play') fail('Inte nu.');
+  const a = animal(s, target);
+  if (!canLure(s, a)) fail('Det djuret kan inte locka hundarna.');
+  if (!lureZones(s, a).includes(zone)) fail('Dit når inte lockbetet.');
+  if (s.kraft < 1) fail('Vi har inte kraft nog.');
+  s.kraft -= 1;
+  moveAnimal(c, a, zone, true);
+  for (const d of s.dogs) d.target = zone;
+  narrate(c, `${a.name} visar sig i ${zoneDef(s, zone).name}. Hundarna vänder sig mot ${a.name} och skäller.`);
+  raiseAlarm(c, 1);
 }
 
 // ---------------------------------------------------------------- cards
@@ -597,6 +707,7 @@ function endTurn(c: Ctx) {
       for (const a of inLane) s.hitQueue.push({ victim: a.id, severity: st.severity, sudden: st.dark, zone: st.lane, source: st.vehicle });
     }
   }
+  if (s.encounterId === 'farm') farmHazards(c);
   processHits(c);
 }
 
@@ -624,6 +735,12 @@ function resolveIntents(c: Ctx) {
       }
       case 'leave':
         leaveGroup(c, a, 'doubt');
+        break;
+      case 'raid':
+        moveAnimal(c, a, HEN_HOUSE, false);
+        changeBelief(c, a, 2);
+        raiseAlarm(c, 3);
+        narrate(c, `${a.name} tog en höna. Det luktar blod och fjädrar, och hela gården vaknar.`);
         break;
       case 'hunt': {
         const p = s.animals.find((x) => x.id === i.target);
@@ -802,7 +919,8 @@ function leaveGroup(c: Ctx, a: Animal, cause: 'dawn' | 'doubt') {
   const s = c.s;
   a.status = 'left';
   removeCards(s, a.id);
-  s.verses.push({ id: `minne-${a.id}`, kind: 'memorial', text: `För ${a.name}, ${LEAVE_CAUSE[cause]}.`, flipped: false });
+  const why = cause === 'dawn' ? encounterOf(s).leftBehind : LEAVE_CAUSE[cause];
+  s.verses.push({ id: `minne-${a.id}`, kind: 'memorial', text: `För ${a.name}, ${why}.`, flipped: false });
   narrate(c, cause === 'dawn' ? `${a.name} hann inte över. Vi kunde inte vänta.` : `${a.name} vände om, ut i mörkret. Vi såg ${a.name} aldrig igen.`);
   changeHope(c, -1, cause === 'dawn' ? 'dawn' : 'leave', a.id);
   grieve(c, a);
@@ -813,9 +931,10 @@ function leaveGroup(c: Ctx, a: Animal, cause: 'dawn' | 'doubt') {
 function finishTurn(c: Ctx) {
   const s = c.s;
   for (const a of s.animals) if (isActive(a) && zoneDef(s, a.zone).slow) a.slowTime++;
+  if (s.encounterId === 'farm') leaveScent(s);
   if (!s.animals.some(isActive)) return endEncounter(c);
   if (s.turn >= s.maxTurn) {
-    narrate(c, 'Gryningen kom, grå och obeveklig. Vi kunde inte vänta längre.');
+    narrate(c, encounterOf(s).timeUp);
     for (const a of s.animals.filter(isActive)) leaveGroup(c, a, 'dawn');
     return endEncounter(c);
   }
