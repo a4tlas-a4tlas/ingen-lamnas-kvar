@@ -1,12 +1,12 @@
 import { DEATH_CAUSE, INJURY_LINES, LEAVE_CAUSE, intentLine } from '../data/text.sv';
-import { place, pathsFrom } from '../data/journey';
+import { place, pathsFrom, placesAhead } from '../data/journey';
 import { TRAITS } from '../data/traits';
 import { VERSES } from '../data/verses';
 import { closestTo, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone } from './campfire';
 import { planRoad } from './encounters/road';
 import { forkVoices, voiceStake } from './voices';
-import { CURRENT, DAM, DAM_MAX, FLOOD_HOURS, STONES, aboveTheWater, carriedAway, holdsOnTo, planRiver, swims } from './encounters/river';
-import { HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
+import { CURRENT, DAM, DAM_MAX, FLOOD_DAM_CREAK, FLOOD_HOURS, FLOOD_HOURS_TOTAL, STONES, aboveTheWater, carriedAway, holdsOnTo, planRiver, swims } from './encounters/river';
+import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, oathVerse } from './setup';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from './encounters';
@@ -172,6 +172,14 @@ function travel(c: Ctx, to: string, wait = false) {
     }
   }
   narrate(c, (s.time === 'night' ? p.arriveNight : p.arriveDay) ?? p.arrive);
+  if (p.memory) {
+    // Now we see it for ourselves: was Kvarn right?
+    const truth = s.journey.truth[to] ?? 'normal';
+    const seen = p.memory[truth];
+    if (s.journey.scouted.includes(to)) narrate(c, `Det var som Skymning hade sett: ${seen}.`);
+    else if (s.journey.guess[to] === truth) narrate(c, `Det var som Kvarn mindes: ${seen}.`);
+    else narrate(c, `Kvarn mindes fel: ${seen}.`);
+  }
   if (p.kind === 'encounter') startEncounter(c, p.encounter!);
   else if (p.kind === 'campfire') s.phase = 'campfire';
   else if (p.kind === 'end') endRun(c);
@@ -199,10 +207,18 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.alarm = 0;
   s.farmerOut = false;
   s.farmerSweep = null;
-  const river = id === 'river' ? planRiver(s, def.maxTurn) : { currentPlan: [], slipPlan: [] };
+  s.variant = s.journey.truth[s.journey.at] ?? 'normal';
+  const hard = s.variant === 'hard';
+  if (farm && hard) {
+    s.alarm = AWAKE_ALARM;
+    s.dogsAwake = true;
+    narrate(c, 'Gården är redan vaken. Hundarna står vid kojan och vädrar mot snåret.');
+  }
+  if (id === 'river' && hard) s.maxTurn = FLOOD_HOURS_TOTAL;
+  const river = id === 'river' ? planRiver(s, s.maxTurn, hard) : { currentPlan: [], slipPlan: [] };
   s.currentPlan = river.currentPlan;
   s.slipPlan = river.slipPlan;
-  s.damCreak = 0;
+  s.damCreak = id === 'river' && hard ? FLOOD_DAM_CREAK : 0;
   s.closed = [];
   s.heron = null;
   const start = def.zones.find((z) => z.start)!.id;
@@ -281,6 +297,20 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
     } else narrate(c, `${w.name} vakade medan vi sov. Natten var lång, men ingen kom.`);
   }
 
+  // 2½. The scout flies ahead in the dark, and comes back knowing what lies there.
+  const scout = plan.scout ? animal(s, plan.scout) : undefined;
+  if (scout) {
+    const ahead = placesAhead(s.journey.at, 2).filter((id) => place(id).memory && !s.journey.scouted.includes(id));
+    for (const id of ahead) {
+      s.journey.scouted.push(id);
+      const p = place(id);
+      const truth = s.journey.truth[id] ?? 'normal';
+      const wrong = s.journey.guess[id] !== truth;
+      narrate(c, `${scout.name} flög före i mörkret. ${p.name}: ${p.memory![truth]}${wrong ? ' – Kvarn mindes fel.' : ', som Kvarn mindes.'}`);
+    }
+    if (!ahead.length) narrate(c, `${scout.name} flög före i mörkret, men såg inget vi inte redan visste.`);
+  }
+
   // 3. By the embers.
   for (const [ai, bi] of plan.pairs) {
     const a = animal(s, ai);
@@ -301,8 +331,8 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
   for (const a of living(s)) {
     const heal: InjuryKind[] = a.injuries.filter((k) => k === 'bleeding' || k === 'shock');
     if (!heal.length) continue;
-    if (a === w) {
-      line(c, a.id, `${a.name} vakade och fick ingen vila. Såren får vänta.`);
+    if (a === w || a === scout) {
+      line(c, a.id, `${a.name} ${a === w ? 'vakade' : 'flög före'} och fick ingen vila. Såren får vänta.`);
       continue;
     }
     a.injuries = a.injuries.filter((k) => !heal.includes(k));
@@ -510,7 +540,7 @@ function raiseAlarm(c: Ctx, n: number) {
 /** At the start of each hour the dogs pick up a trail, and the flashlight picks a zone. */
 function telegraphFarm(c: Ctx) {
   const s = c.s;
-  if (s.turn === 1) narrate(c, 'Gården sover. Två hundar ligger vid hundkojan, med nosen mellan tassarna.');
+  if (s.turn === 1 && !s.dogsAwake) narrate(c, 'Gården sover. Två hundar ligger vid hundkojan, med nosen mellan tassarna.');
   if (!s.dogsAwake && s.turn >= 2) {
     s.dogsAwake = true;
     narrate(c, 'Hundarna vaknar och lyfter nosen. De har känt doften av oss.');
@@ -598,7 +628,7 @@ function lure(c: Ctx, target: string, zone: ZoneId) {
 /** At the start of each hour we see the current and the spray; by day the heron picks a stone. */
 function telegraphRiver(c: Ctx) {
   const s = c.s;
-  if (s.turn === 1) narrate(c, 'Ån brusar. Två stenar sticker upp ur vattnet, och uppströms ligger bävrarnas damm.');
+  if (s.turn === 1) narrate(c, 'Ån brusar. Tre stenar sticker upp ur vattnet, och uppströms ligger bävrarnas damm.');
   narrate(c, s.currentPlan[s.turn - 1] === 'strid' ? 'Strömmen är strid den här timmen. Den drar mot forsen.' : 'Strömmen är lugn den här timmen.');
   for (const z of s.slipPlan[s.turn - 1] ?? []) narrate(c, `Vågorna slår upp över ${zoneDef(s, z).name}. Den är hal.`);
   s.heron = null;

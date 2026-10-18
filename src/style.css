@@ -731,3 +731,13 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .slip-mark span { bottom: 4px; background: #c9d4e6; color: var(--ink); }
 .heron-mark { box-shadow: inset 0 0 0 2px rgba(228,192,112,0.9); }
 .heron-mark span { top: 4px; background: var(--gold); color: var(--ink); }
+
+/* ---------------------------------------------------------------- Kvarn's memory */
+
+.map-svg .place text.memory { font-size: 2.3px; font-weight: 400; font-style: italic; fill: var(--map-ink); opacity: 0.75; }
+.map-svg .place text.memory.seen { font-style: normal; font-weight: 600; opacity: 1; }
+.memory-note { margin: 0 0 4px; color: var(--gold); font-style: italic; }
+.fire-label.scout { left: 46%; top: 3%; }
+.fire-token.seat-scout .sil { transform: translateY(-4px) rotate(-6deg); filter: drop-shadow(0 0 6px rgba(239,227,200,0.5)); }
+.guide-hard { margin-top: 4px !important; opacity: 0.75; }
+.guide-hard.now { opacity: 1; color: var(--blood); }

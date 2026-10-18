@@ -15,6 +15,8 @@ export interface GuideRow {
 export interface Guide {
   title: string;
   goal: string;
+  /** What the place is like when Kvarn's memory is too kind. */
+  hard?: string;
   dangers: GuideRow[];
   shelter: GuideRow[];
   tips: string[];
@@ -77,6 +79,7 @@ export const GUIDES: Record<EncounterId, Guide> = {
   },
   farm: {
     title: 'Så tar vi oss förbi gården',
+    hard: 'Ibland är gården redan vaken: någon har sett oss, larmet börjar på 3 och hundarna är vakna från första timmen.',
     goal: `Få alla från Snåret över Stenmuren – ${FARM.maxTurn} timmar. Ladan står i vägen: varje väg över är tre steg.`,
     dangers: [
       { icon: '∴', name: `Doft (0–${SCENT_MAX})`, text: 'Där vi står när timmen går blir doften starkare. Den bleknar med 1 varje timme. Tassavtrycken i zonerna visar hur stark den är.' },
@@ -98,9 +101,10 @@ export const GUIDES: Record<EncounterId, Guide> = {
   },
   river: {
     title: 'Så tar vi oss över ån',
-    goal: `Få alla från Strandbrinken till Andra stranden – ${RIVER.maxTurn} timmar. Över stenarna är tre steg, över dammen två.`,
+    hard: 'Ibland svämmar ån över: strömmen är strid de flesta timmar, redan från första, stenarna är nästan alltid hala, och dammen är redan halvt borta (2/4).',
+    goal: `Få alla från Strandbrinken till Andra stranden – ${RIVER.maxTurn} timmar. Över stenarna eller genom strömmen är fyra steg – ingen hinner över på en timme. Över dammen är två.`,
     dangers: [
-      { icon: '≈', name: 'Hala stenar', text: 'Vågorna gör en eller två stenar hala varje timme – det syns i förväg. Den som står där när timmen går glider ner i strömmen. ”Bita ihop” håller kvar.' },
+      { icon: '≈', name: 'Hala stenar', text: 'Vågorna gör en eller två av de tre stenarna hala varje timme – det syns i förväg. Den som står där när timmen går glider ner i strömmen. ”Bita ihop” håller kvar.' },
       { icon: '↯', name: 'Strömmen', effect: 'dödar', text: 'Lugn eller strid, timme för timme. När den är strid dras små och mellanstora djur i strömmen mot forsen – sista stunden: någon intill kan gripa tag.' },
       { icon: '⌇', name: `Bäverdammen (${DAM_MAX})`, text: `Snabbast över, men den knakar: +1 för varje djur som går ut på den, +2 för de stora. Vid ${DAM_MAX} brister den – den som står där faller i strömmen, och flodvågen gör strömmen strid två timmar.` },
       { icon: '⌐', name: 'Hägern', effect: 'skadar', text: 'Bara i dagsljus. Vaktar en sten varje timme och hugger de små som står där – ett sår som blöder.' },

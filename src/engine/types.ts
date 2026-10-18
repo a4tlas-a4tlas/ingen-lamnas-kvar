@@ -164,9 +164,18 @@ export type GameEvent =
 /** oath → map → (encounter: play/lastMoment | campfire) → map … → over */
 export type Phase = 'oath' | 'map' | 'play' | 'lastMoment' | 'campfire' | 'over';
 
+/** Every place but the road can be easier or harder than it looks: the farm asleep or awake, the river calm or in flood. */
+export type Variant = 'normal' | 'hard';
+
 export interface Journey {
   at: string;
   visited: string[];
+  /** What each place really is, rolled when the run starts. */
+  truth: Record<string, Variant>;
+  /** What Kvarn remembers: right about two in three. */
+  guess: Record<string, Variant>;
+  /** Places the owl has flown ahead to see. */
+  scouted: string[];
 }
 
 export type MourningChoice = 'bury' | 'carry';
@@ -179,7 +188,9 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 6;
+  version: 7;
+  /** The variant of the encounter we're in. */
+  variant: Variant;
   journey: Journey;
   /** The time of day of the encounter we're in. */
   time: TimeOfDay;
@@ -242,6 +253,6 @@ export type Action =
   | { type: 'lure'; target: string; zone: ZoneId }
   | { type: 'endTurn' }
   | { type: 'travel'; to: string; wait?: boolean }
-  | { type: 'restAtFire'; watch?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice> }
+  | { type: 'restAtFire'; watch?: string; scout?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice> }
   | { type: 'lastMoment'; choice: 'shield'; by: string }
   | { type: 'lastMoment'; choice: 'letGo' };

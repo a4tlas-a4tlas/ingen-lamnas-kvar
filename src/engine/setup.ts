@@ -1,17 +1,32 @@
 import { CAST, START_BONDS } from '../data/animals';
 import { TRAITS, TRAIT_IDS } from '../data/traits';
-import { shuffle, type RngHolder } from './rng';
-import { START_PLACE } from '../data/journey';
+import { random, shuffle, type RngHolder } from './rng';
+import { PLACES, START_PLACE } from '../data/journey';
 import { ROAD } from './encounters/road';
 import { bondKey } from './rules';
 import { VERSES } from '../data/verses';
-import type { Animal, Card, GameState, Verse, VerseId } from './types';
+import type { Animal, Card, GameState, Journey, Variant, Verse, VerseId } from './types';
 
 /** We swear a single verse in the glen; later verses come from the journey. */
 export const OATH_VERSES = 1;
 
 export function oathVerse(id: VerseId): Verse {
   return { id, kind: 'oath', base: id, text: VERSES[id].text, flippedText: VERSES[id].flippedText, flipped: false };
+}
+
+/**
+ * What each place really is, and what Kvarn remembers. Rolled from its own stream of
+ * the seed, so the rest of the run plays out the same whatever the fog holds.
+ */
+export function rollMemory(seed: number): Pick<Journey, 'truth' | 'guess' | 'scouted'> {
+  const h: RngHolder = { rng: (seed ^ 0x5bd1e995) | 0 };
+  const truth: Record<string, Variant> = {};
+  const guess: Record<string, Variant> = {};
+  for (const p of PLACES.filter((x) => x.memory)) {
+    truth[p.id] = random(h) < 0.4 ? 'hard' : 'normal';
+    guess[p.id] = random(h) < 2 / 3 ? truth[p.id] : truth[p.id] === 'hard' ? 'normal' : 'hard';
+  }
+  return { truth, guess, scouted: [] };
 }
 
 export function createGame(seed: number): GameState {
@@ -51,8 +66,9 @@ export function createGame(seed: number): GameState {
   for (const [a, b, v] of START_BONDS) bonds[bondKey(a, b)] = v;
 
   return {
-    version: 6,
-    journey: { at: START_PLACE, visited: [START_PLACE] },
+    version: 7,
+    journey: { at: START_PLACE, visited: [START_PLACE], ...rollMemory(seed) },
+    variant: 'normal',
     time: 'night',
     clock: 'night',
     unmourned: [],

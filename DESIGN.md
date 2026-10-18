@@ -266,7 +266,7 @@ Design from the milestone 2 interview, part 1. The run becomes: oath → map →
   - **Tips**
 - **The text** lives in `src/data/guides.sv.ts`. Numbers (hours, alarm, scent) come from the rules, and a test checks that every encounter has a guide.
 
-## Milestone 3 – the journey (in progress)
+## Milestone 3 – the journey (done)
 Design from the milestone 3 interview:
 - **Path choice** mixes three things: fog (Kvarn sometimes remembers wrong), visible cost, and the animals' voices.
 - **Day/night:** the same place plays with other rules.
@@ -299,7 +299,7 @@ Design from the milestone 3 interview:
 ### Step 2: Ån, the fork and the voices (done)
 - **The fork:** from Granbacken the way splits: **Gården** ("Fast mark och en mur – men hundar") or **Ån** ("Inga hundar – men vattnet väntar inte på någon"). Both lead on to Åkrarna. The map shows each place's kind (road / farm / river).
 - **Ån** (`src/engine/encounters/river.ts`), 8 hours, start at Strandbrinken, goal at Andra stranden:
-  - **Routes across:**
+  - **Routes across** (updated in step 3: three stones, four steps):
     - **over the stones:** 3 steps (Första stenen → Andra stenen → the far bank)
     - **through the current:** 3 steps (a stone → Strömmen → the far bank)
     - **over the beaver dam:** 2 steps
@@ -333,3 +333,28 @@ Design from the milestone 3 interview:
   | river | 3.4–3.7 |
 
   The routes are close; the difference lies in how you play.
+
+### Step 3: Kvarn's foggy memory and the owl scouting (done)
+- **Every place but the road has a true variant**, rolled from its own stream of the seed (`rollMemory`), so the rest of the run plays out the same:
+  - **Gården:** *hundarna sover* (the dogs sleep) / *gården är vaken* (the farm is awake: the alarm starts at 3 and the dogs are up from the first hour)
+  - **Ån:** *ån är lugn* (calm) / *ån svämmar över* (in flood):
+    - 6 hours instead of 8
+    - a strong current in 75% of hours, from the first one
+    - every strong hour washes over all three stones
+    - the dam starts at 3/4
+  - Hard with p 0.4.
+- **Kvarn's guess** matches the truth in 2 of 3 places. The map shows "Kvarn tror: hundarna sover?" under fogged places and in the path notes.
+  - **On arrival:** "Det var som Kvarn mindes …" or "Kvarn mindes fel: ån svämmar över."
+  - The top bar names a hard variant ("Ån i dagsljus · ån svämmar över").
+- **Skymning scouts at the campfire:** a new seat, "Spanar", only for a flier with a whole wing.
+  - The scout reveals the true variant of every place within two paths ("Skymning såg: … ✓").
+  - In return Skymning doesn't heal, gets no place by the embers, and isn't counted as alone in the dark.
+- **The river got its third stone:** over the stones or through the current is now four steps, as on the road, so no one gets across in a single hour. Before, a lead-only bot carried one animal all the way over per hour, and the stones and the current never mattered.
+- **Balance** (lead-only bot, 300 runs; saved, of about 4.6 who reach the fork):
+
+  | Route | Normal | Hard |
+  |---|---|---|
+  | Gården | 3.43 | 2.93 (awake) |
+  | Ån | 3.57 | 3.14 (flood) |
+
+  The hard variants hurt clearly but aren't hopeless, which makes scouting worth its price.
