@@ -34,8 +34,8 @@ function wish(s: GameState, a: Animal, options: { to: string; encounter: Encount
 /** At a fork, up to two voices – for different paths if anyone disagrees. Nothing is said where the way doesn't fork. */
 export function forkVoices(s: GameState): Voice[] {
   if (s.phase !== 'map') return [];
-  const options = pathsFrom(s.journey.at)
-    .map((p) => place(p.to))
+  const options = pathsFrom(s, s.journey.at)
+    .map((p) => place(s, p.to))
     .filter((p) => p.kind === 'encounter')
     .map((p) => ({ to: p.id, encounter: p.encounter! }));
   if (options.length < 2) return [];

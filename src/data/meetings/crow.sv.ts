@@ -6,6 +6,9 @@ import { canFly, huntsAt, isPresent } from '../../engine/rules';
 import type { GameState } from '../../engine/types';
 
 export type MeetingEffect =
+  | 'listen'
+  | 'owlHunt'
+  | 'restHollow'
   | 'accept'
   | 'reject'
   | 'back'
@@ -125,7 +128,7 @@ export const CROW: Record<string, MeetingFrame> = {
     speaker: 'crow',
     text: (s) => {
       const lines = (s.meeting?.told ?? []).map((id) => {
-        const p = place(id);
+        const p = place(s, id);
         const truth = s.journey.truth[id] ?? 'normal';
         return `${p.name}: ${p.memory![truth]}${s.journey.guess[id] !== truth ? ' – er padda minns fel' : ''}.`;
       });

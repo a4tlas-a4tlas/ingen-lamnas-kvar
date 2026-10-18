@@ -1,11 +1,24 @@
 // Every meeting in frames, by name.
 import { CROW, isHere, type MeetingFrame, type MeetingOption } from './crow.sv';
+import { IHALIGT_TRAD, KOLTRASTEN } from './dalen.sv';
 import { PROPOSAL } from './proposal.sv';
 import type { GameState, MeetingId } from '../../engine/types';
 
-export const MEETINGS: Record<MeetingId, Record<string, MeetingFrame>> = { crow: CROW, proposal: PROPOSAL };
+export interface MeetingDef {
+  title: string;
+  /** What stands in the picture: the crow, the one asking a promise, or a thing of the place. */
+  art: 'crow' | 'proposer' | 'bird' | 'tree';
+  frames: Record<string, MeetingFrame>;
+}
 
-export const currentFrame = (s: GameState) => (s.meeting ? MEETINGS[s.meeting.id][s.meeting.frame] : undefined);
+export const MEETINGS: Record<MeetingId, MeetingDef> = {
+  crow: { title: 'Kråkan vid elden', art: 'crow', frames: CROW },
+  proposal: { title: 'Ett löfte', art: 'proposer', frames: PROPOSAL },
+  koltrasten: { title: 'Koltrasten', art: 'bird', frames: KOLTRASTEN },
+  ihaligtTrad: { title: 'Det ihåliga trädet', art: 'tree', frames: IHALIGT_TRAD },
+};
+
+export const currentFrame = (s: GameState) => (s.meeting ? MEETINGS[s.meeting.id].frames[s.meeting.frame] : undefined);
 
 /** Who speaks an option, now. */
 export const speakerOf = (s: GameState, o: MeetingOption) => (typeof o.by === 'function' ? o.by(s) : o.by);

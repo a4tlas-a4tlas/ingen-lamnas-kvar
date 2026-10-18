@@ -105,7 +105,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 10 && s.phase !== 'over' ? s : null;
+    return s.version === 11 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -683,7 +683,7 @@ export class App {
 
   private topbarHtml(s: GameState): string {
     return `
-      <div class="tb-title">Ingen lämnas kvar <span class="muted">· ${esc(byTime(s, encounterOf(s).title))}${s.variant === 'hard' && place(s.journey.at).memory ? ` · ${esc(place(s.journey.at).memory!.hard)}` : ''}</span></div>
+      <div class="tb-title">Ingen lämnas kvar <span class="muted">· ${esc(byTime(s, encounterOf(s).title))}${s.variant === 'hard' && place(s, s.journey.at).memory ? ` · ${esc(place(s, s.journey.at).memory!.hard)}` : ''}</span></div>
       <div class="tb-stats">
         <span class="stat">Timme <b>${s.turn}</b>/${s.maxTurn}</span>
         <button class="btn small" data-act="guide-open">Guide</button>
@@ -1096,8 +1096,8 @@ export class App {
   private renderMap(s: GameState) {
     this.mounted = false;
     this.mapOpen = false;
-    const here = place(s.journey.at);
-    const onward = pathsFrom(here.id).map((p) => ({ path: p, to: place(p.to) }));
+    const here = place(s, s.journey.at);
+    const onward = pathsFrom(s, here.id).map((p) => ({ path: p, to: place(s, p.to) }));
     const known = (id: string) => s.journey.visited.includes(id);
     this.root.innerHTML = `
       <div class="screen between map-screen">
@@ -1112,12 +1112,12 @@ export class App {
               const memo = memoryLine(s, to.id);
               const note = (path.note ? `<p class="muted small">${esc(path.note)}</p>` : '') + (memo ? `<p class="small memory-note">${esc(memo)}</p>` : '');
               const breaks = (time: 'day' | 'night') => brokenByTravel(s, to.id, time).map((v) => `<p class="small promise-warn">⚠ Bryter ${esc(animal(s, v.promise.by).name)}s löfte: ”${esc(v.text)}”</p>`).join('');
-              if (to.kind !== 'encounter') return `<button class="btn primary" data-act="travel" data-to="${to.id}">Gå mot ${name}</button>${note}`;
+              if (to.kind !== 'encounter') return `<button class="btn primary" data-act="travel" data-to="${to.id}" data-kind="${to.kind}">Gå mot ${name}</button>${note}`;
               // An encounter comes at the natural time of day, unless we wait for the other one.
               const now = s.clock;
               const later = otherTime(now);
               return `<div class="leg">
-                <button class="btn primary" data-act="travel" data-to="${to.id}">Gå mot ${name} – i ${TIME_NAMES[now]}</button>
+                <button class="btn primary" data-act="travel" data-to="${to.id}" data-kind="${to.encounter}">Gå mot ${name} – i ${TIME_NAMES[now]}</button>
                 <p class="small time-note">${now === 'night' ? '☾' : '☼'} ${esc(TIME_NOTES[to.encounter!][now])}</p>
                 ${breaks(now)}
                 <button class="btn" data-act="travel" data-to="${to.id}" data-wait="1" ${s.hope > 0 ? '' : 'disabled'}>Vänta till ${later === 'night' ? 'natten' : 'dagen'} (−1 hopp)</button>
@@ -1133,6 +1133,7 @@ export class App {
           <section class="log between-log">${this.logHtml(s.log.slice(-14))}</section>
           <button class="btn small mute-btn" data-act="mute">${this.sound.muted ? 'Ljud av' : 'Ljud på'}</button>
         </aside>
+        ${meetingHtml(s, this.meetingPickerHtml(s))}
       </div>`;
     const log = this.root.querySelector<HTMLElement>('.between-log');
     if (log) log.scrollTop = log.scrollHeight;
@@ -1237,7 +1238,7 @@ export class App {
     return `<div class="voices">${voices
       .map((v) => {
         const a = animal(s, v.who);
-        const to = place(v.to);
+        const to = place(s, v.to);
         const name = s.journey.visited.includes(to.id) ? to.name : to.fogName;
         const d = voiceStake(s, a);
         return `<div class="voice" style="--owner:${speciesColor(a.species)}">
@@ -1259,7 +1260,7 @@ export class App {
     this.root.innerHTML = `
       <div class="screen between fire-screen">
         <div class="fire-wrap">
-          <h2>${esc(place(s.journey.at).name)} <span class="muted">· lägerelden</span></h2>
+          <h2>${esc(place(s, s.journey.at).name)} <span class="muted">· lägerelden</span></h2>
           ${fireSceneSvg(s, this.fireSeats, { crow: !!s.meeting || s.fireDebt.apart.length > 0 || s.fireDebt.embers > 0, picked: this.firePicked ?? undefined })}
           ${memorialHtml(s)}
         </div>
@@ -1275,7 +1276,7 @@ export class App {
     const last = [...s.log].reverse().filter((e) => e.kind === 'narrate').slice(0, 2).reverse();
     this.root.innerHTML = `
       <div class="screen end-screen">
-        <h2>${o.fallen ? 'Eden föll' : esc(place(s.journey.at).name)}</h2>
+        <h2>${o.fallen ? 'Eden föll' : esc(place(s, s.journey.at).name)}</h2>
         ${last.map((e) => `<p class="lead-text">${esc(e.text)}</p>`).join('')}
         ${survivors.length ? `<h3>Vi som gick vidare</h3><ul class="roster">${rosterHtml(s)}</ul>` : ''}
         ${memorialHtml(s)}

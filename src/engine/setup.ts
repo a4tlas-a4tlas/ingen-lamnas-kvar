@@ -1,11 +1,13 @@
 import { CAST, START_BONDS, type AnimalDef } from '../data/animals';
 import { TRAITS, TRAIT_IDS } from '../data/traits';
-import { random, shuffle, type RngHolder } from './rng';
-import { PLACES, START_PLACE } from '../data/journey';
+import { shuffle, type RngHolder } from './rng';
+import { START_PLACE } from '../data/journey';
+import { DALEN } from '../data/regions/dalen';
+import { generateRegion } from './regions';
 import { ROAD } from './encounters/road';
 import { bondKey } from './rules';
 import { VERSES } from '../data/verses';
-import type { Animal, Card, GameState, Journey, Variant, Verse, VerseId, ZoneId } from './types';
+import type { Animal, Card, GameState, Journey, Verse, VerseId, ZoneId } from './types';
 
 /** We swear a single verse in the glen; later verses come from the journey. */
 export const OATH_VERSES = 1;
@@ -15,18 +17,12 @@ export function oathVerse(id: VerseId): Verse {
 }
 
 /**
- * What each place really is, and what Kvarn remembers. Rolled from its own stream of
- * the seed, so the rest of the run plays out the same whatever the fog holds.
+ * The first region's map, with what each place really is and what Kvarn remembers.
+ * Drawn from its own stream of the seed, so the rest of the run plays out the same.
  */
-export function rollMemory(seed: number): Pick<Journey, 'truth' | 'guess' | 'scouted'> {
-  const h: RngHolder = { rng: (seed ^ 0x5bd1e995) | 0 };
-  const truth: Record<string, Variant> = {};
-  const guess: Record<string, Variant> = {};
-  for (const p of PLACES.filter((x) => x.memory)) {
-    truth[p.id] = random(h) < 0.4 ? 'hard' : 'normal';
-    guess[p.id] = random(h) < 2 / 3 ? truth[p.id] : truth[p.id] === 'hard' ? 'normal' : 'hard';
-  }
-  return { truth, guess, scouted: [] };
+export function firstRegion(seed: number): Journey {
+  const map = generateRegion(DALEN, seed);
+  return { region: DALEN.id, nodes: map.nodes, at: START_PLACE, visited: [START_PLACE], truth: map.truth, guess: map.guess, scouted: [] };
 }
 
 /** An animal from its definition: species card plus two traits (fixed ones first, the rest rolled), and their cards. */
@@ -75,8 +71,8 @@ export function createGame(seed: number): GameState {
   for (const [a, b, v] of START_BONDS) bonds[bondKey(a, b)] = v;
 
   return {
-    version: 10,
-    journey: { at: START_PLACE, visited: [START_PLACE], ...rollMemory(seed) },
+    version: 11,
+    journey: firstRegion(seed),
     variant: 'normal',
     time: 'night',
     clock: 'night',

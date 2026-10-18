@@ -160,8 +160,8 @@ function swear(c: Ctx, verses: VerseId[]) {
 function travel(c: Ctx, to: string, wait = false) {
   const s = c.s;
   if (s.phase !== 'map') fail('Vi kan inte gå vidare nu.');
-  if (!pathsFrom(s.journey.at).some((p) => p.to === to)) fail('Dit leder ingen väg härifrån.');
-  const p = place(to);
+  if (!pathsFrom(s, s.journey.at).some((p) => p.to === to)) fail('Dit leder ingen väg härifrån.');
+  const p = place(s, to);
   if (wait && p.kind !== 'encounter') fail('Här finns inget att vänta på.');
   const voices = forkVoices(s);
   s.journey.at = to;
@@ -204,6 +204,7 @@ function travel(c: Ctx, to: string, wait = false) {
     if (crowOffers(s)) s.meeting = { id: 'crow', frame: 'start', used: [], told: [] };
     else if (s.proposal) s.meeting = { id: 'proposal', frame: 'ask', used: [], told: [] };
   }
+  else if (p.kind === 'meeting' || p.kind === 'find') s.meeting = { id: p.meeting!, frame: 'start', used: [], told: [] };
   else if (p.kind === 'end') endRun(c);
 }
 
@@ -377,7 +378,7 @@ function revealAhead(c: Ctx, opening: string, nothing: string): string[] {
   const ahead = unseenAhead(s);
   for (const id of ahead) {
     s.journey.scouted.push(id);
-    const p = place(id);
+    const p = place(s, id);
     const truth = s.journey.truth[id] ?? 'normal';
     const wrong = s.journey.guess[id] !== truth;
     narrate(c, `${opening} ${p.name}: ${p.memory![truth]}${wrong ? ' – Kvarn mindes fel.' : ', som Kvarn mindes.'}`);
@@ -402,6 +403,29 @@ function respond(c: Ctx, optionId: string, uid?: number) {
   const asked = s.proposal;
   const told = () => { m.told = revealAhead(c, 'Kråkan berättade:', 'Kråkan hade inget att berätta.'); };
   switch (option.effect) {
+    case 'listen':
+      changeHope(c, 1, 'laugh');
+      for (const a of s.animals.filter(isPresent)) changeBelief(c, a, 1);
+      break;
+    case 'owlHunt':
+      changeBelief(c, animal(s, 'skymning'), 2);
+      changeHope(c, -1, 'song');
+      break;
+    case 'restHollow': {
+      // Whoever keeps watch outside gets no rest: the one who offered, or the most hale of the prey.
+      const watcher = speaker ?? s.animals.filter((a) => isPresent(a) && !a.predator).sort((a, b) => a.injuries.length - b.injuries.length || b.belief - a.belief)[0];
+      for (const a of s.animals.filter((x) => isPresent(x) && x !== watcher)) {
+        const healed: InjuryKind[] = a.injuries.filter((k) => k === 'bleeding' || k === 'shock');
+        if (!healed.length) continue;
+        a.injuries = a.injuries.filter((k) => !healed.includes(k));
+        line(c, a.id, `${a.name} vilade i trädet.`);
+      }
+      if (watcher) {
+        changeBelief(c, watcher, -1);
+        line(c, watcher.id, `${watcher.name} höll vakt utanför, i kylan.`);
+      }
+      break;
+    }
     case 'accept': {
       const p = asked!;
       s.verses.push({ id: `lofte-${s.verses.length}`, kind: 'promise', text: promiseText(s, p), flippedText: promiseText(s, p, true), flipped: false, promise: { ...p } });

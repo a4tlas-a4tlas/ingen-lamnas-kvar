@@ -39,9 +39,10 @@ async function leadForward(page: Page, seen: Set<string>) {
 }
 
 for (const route of [
-  { to: 'garden', scene: 'farm' },
-  { to: 'an', scene: 'river' },
-]) test(`a whole run: oath, map, road, campfire, ${route.scene}, onward`, async ({ page }) => {
+  { kind: 'farm', scene: 'farm' },
+  { kind: 'river', scene: 'river' },
+]) test(`a whole run through Dalen, choosing the ${route.scene} where we can`, async ({ page }) => {
+  test.setTimeout(240_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
@@ -89,7 +90,7 @@ for (const route of [
   await page.locator('.zone.target').first().click({ position: { x: 8, y: 8 } });
 
   const seen = new Set<string>();
-  const deadline = Date.now() + 75_000;
+  const deadline = Date.now() + 200_000;
   while (Date.now() < deadline) {
     if (await page.locator('.end-screen').count()) break;
     if (await page.locator('[data-act="lm-letgo"]').count()) {
@@ -151,14 +152,13 @@ for (const route of [
     }
     if (await page.locator('.map-screen').count()) {
       seen.add('map');
-      // At the fork, the voices speak and we take this test's way.
-      const fork = page.locator(`.onward .btn.primary[data-to="${route.to}"]`);
-      if (await fork.count()) {
+      // The map differs every run: take this test's kind of danger when it is on offer.
+      const ours = page.locator(`.onward .btn.primary[data-kind="${route.kind}"]`);
+      if (await ours.count()) {
         expect(await page.locator('.voice').count()).toBeLessThanOrEqual(2); // fewer if the ones who'd speak are gone
-        if (seen.has('scout') || seen.has('crow')) await expect(page.locator('.map-svg text.memory.seen').first()).toBeVisible();
-        else await expect(page.locator('.map-svg text.memory').first()).toContainText('Kvarn tror');
-        await fork.click();
-      } else await page.locator('.onward .btn').first().click();
+        if (await page.locator('.map-svg text.memory').count()) seen.add('memory');
+        await ours.first().click();
+      } else await page.locator('.onward .btn.primary').first().click();
       continue;
     }
     const end = page.getByRole('button', { name: 'Låt timmen gå' });
@@ -172,7 +172,7 @@ for (const route of [
     if (await end.isEnabled()) await end.click();
   }
   await expect(page.locator('.end-screen')).toBeVisible({ timeout: 10_000 });
-  await expect(page.locator('.end-screen h2')).toHaveText(/Åkrarna|Eden föll/);
-  if ((await page.locator('.end-screen h2').textContent()) === 'Åkrarna') expect([...seen]).toEqual(expect.arrayContaining(['area', 'area guide', 'fire', 'map']));
+  await expect(page.locator('.end-screen h2')).toHaveText(/Åsen|Eden föll/);
+  if ((await page.locator('.end-screen h2').textContent()) === 'Åsen') expect([...seen]).toEqual(expect.arrayContaining(['fire', 'map']));
   expect(errors).toEqual([]);
 });

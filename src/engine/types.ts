@@ -161,7 +161,7 @@ export interface LogEntry {
 }
 
 /** Why hope moved, so the UI can let an animal speak about it. */
-export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh' | 'fire' | 'wait' | 'trapped';
+export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh' | 'fire' | 'wait' | 'trapped' | 'song';
 
 export type TimeOfDay = 'day' | 'night';
 
@@ -182,7 +182,38 @@ export type Phase = 'oath' | 'map' | 'play' | 'lastMoment' | 'campfire' | 'over'
 /** Every place but the road can be easier or harder than it looks: the farm asleep or awake, the river calm or in flood. */
 export type Variant = 'normal' | 'hard';
 
+export type PlaceKind = 'start' | 'encounter' | 'campfire' | 'meeting' | 'find' | 'end';
+
+/** A place on the region's map: what it is, where it is drawn, and where we can go from it. */
+export interface MapNode {
+  id: string;
+  /** The row it lies in: 0 is where the region starts. */
+  row: number;
+  kind: PlaceKind;
+  encounter?: EncounterId;
+  /** The story part held here, for meetings and finds. */
+  meeting?: MeetingId;
+  name: string;
+  /** What Kvarn half remembers before we get there. */
+  fogName: string;
+  /** Said when we arrive; an encounter can say something else by day or by night. */
+  arrive: string;
+  arriveDay?: string;
+  arriveNight?: string;
+  /** Kvarn's memory of the place, normal or hard: "hundarna sover" / "gården är vaken". */
+  memory?: { normal: string; hard: string };
+  /** Shown when choosing the way here. */
+  note?: string;
+  /** Position on the map, in percent (x right, y down). */
+  x: number;
+  y: number;
+  next: string[];
+}
+
 export interface Journey {
+  /** The region we walk through, and its map, drawn anew every run. */
+  region: string;
+  nodes: MapNode[];
   at: string;
   visited: string[];
   /** What each place really is, rolled when the run starts. */
@@ -196,7 +227,7 @@ export interface Journey {
 export type MourningChoice = 'bury' | 'carry';
 
 /** A meeting in frames (the crow at the fire): where we are in it, and what has been said. */
-export type MeetingId = 'crow' | 'proposal';
+export type MeetingId = 'crow' | 'proposal' | 'koltrasten' | 'ihaligtTrad';
 
 export interface Meeting {
   id: MeetingId;
@@ -236,7 +267,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 10;
+  version: 11;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;

@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { defaultPlan, planProblem } from '../../src/engine/campfire';
-import { createGame } from '../../src/engine/setup';
 import { step } from '../../src/engine/step';
 import type { GameState } from '../../src/engine/types';
-import { CROW_AWAY, calmGame, get, run } from './helpers';
+import { CROW_AWAY, calmGame, classicGame, get, run } from './helpers';
 
 /** Everyone across the road: we stand on the map, ready for the fire. */
 function acrossTheRoad(): GameState {
@@ -16,20 +15,20 @@ function acrossTheRoad(): GameState {
 
 describe('the journey', () => {
   it('starts on the map in the glen after the oath', () => {
-    const s = run(createGame(3), { type: 'swear', verses: ['manen'] });
+    const s = run(classicGame(3), { type: 'swear', verses: ['manen'] });
     expect(s.phase).toBe('map');
     expect(s.journey).toMatchObject({ at: 'dalen', visited: ['dalen'], scouted: [] });
   });
 
   it('only travels along paths that exist', () => {
-    const s = run(createGame(3), { type: 'swear', verses: ['manen'] });
+    const s = run(classicGame(3), { type: 'swear', verses: ['manen'] });
     const r = step(s, { type: 'travel', to: 'akrarna' });
     expect(r.events[0].kind).toBe('error');
     expect(r.state.journey.at).toBe('dalen');
   });
 
   it('a place starts what it is: the road is an encounter, the hill a campfire', () => {
-    let s = run(createGame(3), { type: 'swear', verses: ['manen'] }, { type: 'travel', to: 'vagen' });
+    let s = run(classicGame(3), { type: 'swear', verses: ['manen'] }, { type: 'travel', to: 'vagen' });
     expect(s.phase).toBe('play');
     expect(s.encounterId).toBe('road');
     expect(s.trafficPlan).toHaveLength(10);

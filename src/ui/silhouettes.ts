@@ -98,6 +98,23 @@ export function silhouette(species: Species, color = shapes[species].paper): str
   return `<svg class="sil" viewBox="0 0 64 48" aria-hidden="true" style="color:${color}" fill="currentColor">${shapes[species].svg}</svg>`;
 }
 
+/** What stands in a story part's picture: a thing of the place. */
+export function sceneArt(kind: 'bird' | 'tree' | 'proposer' | 'crow'): string {
+  if (kind === 'bird')
+    return `<svg class="sil" viewBox="0 0 64 48" aria-hidden="true">
+      <path d="M2 40 Q30 30 62 34" stroke="#3a2a1e" stroke-width="2" fill="none"/>
+      <path d="M22 30 Q26 18 38 20 L44 17 L48 19 L43 23 Q42 31 32 33 Z" fill="#0b0d12"/>
+      <path d="M48 19 L53 19.5 L48 21 Z" fill="#e4a83a"/><path d="M22 30 L12 34 L23 33 Z" fill="#0b0d12"/>
+      <circle cx="44" cy="19.5" r="0.9" fill="#e4a83a"/>
+      <path d="M50 10 q3 -2 6 0 M54 6 q3 -2 6 0" stroke="#efe3c8" stroke-width="1" fill="none" opacity="0.7"/>
+    </svg>`;
+  return `<svg class="sil" viewBox="0 0 64 48" aria-hidden="true">
+    <path d="M20 46 Q18 24 24 12 Q32 4 40 12 Q46 24 44 46 Z" fill="#4a3826"/>
+    <ellipse cx="32" cy="30" rx="6" ry="9" fill="#120c08"/>
+    <path d="M24 12 Q14 6 10 10 M40 12 Q50 4 56 9" stroke="#4a3826" stroke-width="3" fill="none"/>
+  </svg>`;
+}
+
 /** The crow at the campfire: a stranger, all black but for the eye. */
 export function crowSilhouette(): string {
   return `<svg class="sil crow-sil" viewBox="0 0 64 48" aria-hidden="true" fill="#0b0d12">
