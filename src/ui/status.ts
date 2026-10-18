@@ -1,10 +1,11 @@
 // Every state an animal can be in, in words for the player, plus a forecast
 // of what letting the hour pass will do. Shared by tokens, the info panel and
 // the forecast box so they always say the same thing.
-import { zoneDef } from '../engine/encounters';
+import { encounterOf, zoneDef } from '../engine/encounters';
+import { newcomer } from '../data/animals';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
-import { animal, backZone, boltZone, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
+import { RESCUE_TRUST, animal, backZone, boltZone, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
 import type { InjuryKind } from '../engine/types';
 import type { Animal, GameState, ZoneId } from '../engine/types';
 
@@ -190,6 +191,10 @@ export function forecast(s: GameState): ForecastLine[] {
   if (strikes.some((x) => x.dark) && !s.darkRevealed) out.push({ text: 'Något mullrar i mörkret, utan ljus. Vi vet inte i vilket körfält.', tone: 'bad' });
   if (s.encounterId === 'farm') out.push(...farmForecast(s, zoneOf));
   if (s.encounterId === 'river') out.push(...riverForecast(s, zoneOf));
+  if (s.rescue) {
+    const name = newcomer(s.rescue.who).name;
+    out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${RESCUE_TRUST}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
+  }
   if (s.turn >= s.maxTurn) {
     out.push({ text: 'Sista timmen: alla som inte är över när den går blir kvar.', tone: 'bad' });
   }

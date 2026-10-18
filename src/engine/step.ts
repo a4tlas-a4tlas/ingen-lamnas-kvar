@@ -8,7 +8,8 @@ import { forkVoices, voiceStake } from './voices';
 import { CURRENT, DAM, DAM_MAX, FLOOD_DAM_CREAK, FLOOD_HOURS, FLOOD_HOURS_TOTAL, STONES, aboveTheWater, carriedAway, holdsOnTo, planRiver, swims } from './encounters/river';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
-import { OATH_VERSES, oathVerse } from './setup';
+import { OATH_VERSES, makeAnimal, oathVerse } from './setup';
+import { newcomer } from '../data/animals';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from './encounters';
 import {
   animal,
@@ -37,6 +38,9 @@ import {
   leadTargets,
   leadZones,
   lureZones,
+  isFast,
+  RESCUE_TRUST,
+  rescueBlockReason,
   moonHidden,
   moonVisible,
   neighbors,
@@ -82,6 +86,7 @@ export function step(prev: GameState, action: Action): { state: GameState; event
       case 'play': playCard(c, action.uid, action.target, action.zone); endIfAllAcross(c); break;
       case 'lead': lead(c, action.target, action.zone); endIfAllAcross(c); break;
       case 'lure': lure(c, action.target, action.zone); endIfAllAcross(c); break;
+      case 'rescue': rescue(c, action.by); break;
       case 'endTurn': endTurn(c); break;
       case 'lastMoment': resolveLastMoment(c, action); break;
       case 'travel': travel(c, action.to, action.wait); break;
@@ -221,6 +226,9 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.damCreak = id === 'river' && hard ? FLOOD_DAM_CREAK : 0;
   s.closed = [];
   s.heron = null;
+  // Someone is trapped here, the first time we come.
+  s.rescue = def.rescue && !s.met.includes(def.rescue.who) ? { who: def.rescue.who, zone: def.rescue.zone, trust: 0 } : null;
+  if (s.rescue) narrate(c, def.rescue!.found);
   const start = def.zones.find((z) => z.start)!.id;
   for (const a of s.animals.filter(isPresent)) {
     a.status = 'active';
@@ -459,7 +467,7 @@ function chooseIntent(c: Ctx, a: Animal): Intent {
   const weights: [Intent, number][] = [
     [{ kind: 'freeze' }, elderNear ? 0 : 1 + (a.traits.includes('skygg') ? 2 : 0) + (hasInjury(a, 'shock') ? 2 : 0)],
     [{ kind: 'flee' }, backZone(s, a) ? 1 : 0],
-    [{ kind: 'bolt' }, 1 + (a.traits.includes('otalig') ? 2 : 0)],
+    [{ kind: 'bolt' }, 1 + (a.traits.includes('otalig') ? 2 : 0) + (isFast(a) ? 2 : 0)],
   ];
   const total = weights.reduce((t, [, w]) => t + w, 0);
   let r = random(s) * total;
@@ -694,6 +702,35 @@ function riverHazards(c: Ctx) {
   }
 }
 
+// ---------------------------------------------------------------- the rescue
+
+/** Reach out to the trapped one, or – once it trusts us – free it. Freed, it is one of us. */
+function rescue(c: Ctx, by: string) {
+  const s = c.s;
+  if (s.phase !== 'play' || !s.rescue) fail('Ingen att rädda här.');
+  const a = animal(s, by);
+  const blocked = rescueBlockReason(s, a);
+  if (blocked) fail(blocked);
+  const r = s.rescue;
+  const def = newcomer(r.who);
+  s.kraft -= 1;
+  if (r.trust < RESCUE_TRUST) {
+    r.trust++;
+    line(c, a.id, r.trust < RESCUE_TRUST
+      ? `${a.name} kryper närmare och talar lågt. ${def.name} slutar sparka.`
+      : `${def.name} låter ${a.name} komma ända fram.`);
+    return;
+  }
+  const made = makeAnimal(def, s, () => s.nextUid++, r.zone);
+  const hare = made.animal;
+  s.animals.push(hare);
+  s.discard.push(...made.cards);
+  addBond(c, hare, a, 1);
+  s.met.push(r.who);
+  s.rescue = null;
+  narrate(c, `${a.name} ${encounterOf(s).rescue!.freed}. ${def.name} är fri – och stannar hos oss.`);
+}
+
 // ---------------------------------------------------------------- cards
 
 function playCard(c: Ctx, uid: number, target?: string, zone?: ZoneId) {
@@ -723,6 +760,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
   switch (card.kind) {
     case 'snabbaTassar':
     case 'smaSteg':
+    case 'sprang':
       moveAnimal(c, o, zone!, true);
       break;
     case 'rusa':
@@ -1089,6 +1127,14 @@ function endIfAllAcross(c: Ctx) {
 /** Survivors go on to the map; if no one made it, the oath falls and the run ends. */
 function endEncounter(c: Ctx) {
   const s = c.s;
+  if (s.rescue) {
+    // Not one of us yet – no verse breaks for it. But we heard it, and we went on.
+    const r = encounterOf(s).rescue!;
+    narrate(c, `Vi lämnade ${newcomer(s.rescue.who).name} ${r.trapped}.`);
+    s.met.push(s.rescue.who);
+    s.rescue = null;
+    changeHope(c, -1, 'trapped');
+  }
   const safe = s.animals.filter((a) => a.status === 'safe');
   const crossed = encounterOf(s).crossed;
   if (safe.length === 0) {

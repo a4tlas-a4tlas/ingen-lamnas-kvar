@@ -49,6 +49,14 @@ export const HOUR_STEPS: string[] = [
   'Symbolerna över djuren visar deras egen vilja – fryser, vill tillbaka, rusar, jagar. Håll muspekaren över en symbol för att se vad den betyder. Trösta för att bryta den.',
 ];
 
+/** When someone is trapped in the area. */
+export const RESCUE_ROWS: GuideRow[] = [
+  { icon: '?', name: 'Någon sitter fast', text: 'En främling är fången här och rädd för oss. Ett eget kort ligger bredvid handen så länge den väntar.' },
+  { icon: '♡', name: 'Nå fram (◆1)', text: 'Ett djur inom ett steg kryper närmare: +1 tillit. Rovdjur skrämmer bara. Vid 2 litar den på oss.' },
+  { icon: '✓', name: 'Befria (◆1)', text: 'Ett djur bredvid befriar den. Då är den en av oss – med egna kort, och lika sårbar som vi.' },
+  { icon: '…', name: 'Om vi går', text: 'Lämnar vi platsen utan den blir den kvar. Inget löfte bryts – den var inte en av oss än – men vi hör den länge.' },
+];
+
 /** What hits mean everywhere. */
 export const HIT_ROWS: GuideRow[] = [
   { icon: '≀', name: 'Skadar', effect: 'skadar', text: 'Djuret överlever men bär en skada vidare: haltar, bruten tass eller vinge, blöder eller chock. Blödning och chock läker vid lägerelden.' },

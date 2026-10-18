@@ -59,6 +59,18 @@ const shapes: Record<Species, { paper: string; svg: string }> = {
       <circle cx="59" cy="24.5" r="1.1" fill="${CUT}"/>
       <path d="M62.5 26 l1.5 -1 M62.5 26 l1.5 1" stroke="${CUT}" stroke-width="0.8"/>`,
   },
+  hare: {
+    paper: '#b8a07e',
+    svg: `
+      <ellipse cx="30" cy="31" rx="15" ry="9"/>
+      <circle cx="16" cy="29" r="4.5" fill="#efe3c8"/>
+      <ellipse cx="44" cy="25" rx="7" ry="6"/>
+      <path d="M43 20 Q40 6 44 3 Q47 8 46 20 Z"/><path d="M47 20 Q48 7 53 5 Q53 11 49 21 Z"/>
+      <path d="M22 37 Q16 44 26 44 L30 38 Z"/>
+      <rect x="37" y="36" width="3" height="8" rx="1"/><rect x="42" y="35" width="3" height="9" rx="1"/>
+      <circle cx="47" cy="24" r="1.1" fill="${CUT}"/>
+      <path d="M50 27 l2 0.6" stroke="${CUT}" stroke-width="0.8"/>`,
+  },
   mice: {
     paper: '#cdb894',
     svg: [

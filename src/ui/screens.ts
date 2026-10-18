@@ -4,7 +4,7 @@ import { FOREST, PATHS, PLACES, pathsFrom, type Place } from '../data/journey';
 import { EMBER_PAIRS, type FirePlan, hungryWatcher, inheritanceLine, living, planProblem, sitsAlone } from '../engine/campfire';
 import { encounterOf, type EncounterDef, type ZoneDef } from '../engine/encounters';
 import { animal, bond, canFly } from '../engine/rules';
-import { GUIDES, HIT_ROWS, HOUR_STEPS, TIME_NAMES, TIME_NOTES, type GuideRow } from '../data/guides.sv';
+import { GUIDES, HIT_ROWS, HOUR_STEPS, RESCUE_ROWS, TIME_NAMES, TIME_NOTES, type GuideRow } from '../data/guides.sv';
 import type { Animal, GameState } from '../engine/types';
 import { silhouette, speciesColor } from './silhouettes';
 import { animalStatuses } from './status';
@@ -345,6 +345,7 @@ export function guideHtml(s: GameState): string {
           <section><h3>Faror</h3>${rowsHtml([...g.dangers, ...HIT_ROWS])}</section>
           <section><h3>Skydd &amp; knep</h3>${rowsHtml(g.shelter)}</section>
         </div>
+        ${s.rescue ? `<section><h3>Någon att rädda</h3>${rowsHtml(RESCUE_ROWS)}</section>` : ''}
         <section class="guide-tips"><h3>Tips</h3><ul>${g.tips.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></section>
         <button class="btn primary" data-act="guide-close">Jag förstår</button>
       </div>

@@ -1,4 +1,4 @@
-import { CAST } from '../data/animals';
+import { CAST, animalDef, newcomer } from '../data/animals';
 import { CARDS, TAG_NAMES } from '../data/cards';
 import { HOPE_LINES, KRAFT_OUT_LINES } from '../data/text.sv';
 import { byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
@@ -24,6 +24,9 @@ import {
   leadTargets,
   leadZones,
   lureZones,
+  RESCUE_TRUST,
+  rescueBlockReason,
+  rescueHelpers,
   moonHidden,
   verseStatus,
 } from '../engine/rules';
@@ -56,7 +59,7 @@ function firstVisit(id: string): boolean {
   return true;
 }
 
-type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | { mode: 'lead' | 'lure'; animal?: string };
+type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | { mode: 'lead' | 'lure'; animal?: string } | { mode: 'rescue'; animal?: string };
 
 const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
 type DeckView = 'draw' | 'discard' | 'all';
@@ -92,14 +95,14 @@ function chipHtml(st: Status, withLabel: boolean): string {
   return `<span class="chip tone-${st.tone}${st.intent ? ' intent' : ''}" ${tip} aria-label="${esc(`${st.label}: ${st.explain}`)}">${st.icon}${withLabel ? ` ${esc(st.label)}` : ''}</span>`;
 }
 
-const kindName = (id: string) => CAST.find((d) => d.id === id)?.kindName ?? '';
+const kindName = (id: string) => animalDef(id)?.kindName ?? '';
 
 function loadSave(): GameState | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 7 && s.phase !== 'over' ? s : null;
+    return s.version === 8 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -256,6 +259,11 @@ export class App {
         const plan = planFromSeats(this.fireSeats, this.fireMourning);
         return this.dispatch({ type: 'restAtFire', watch: plan.watch, scout: plan.scout, pairs: plan.pairs, mourning: plan.mourning });
       }
+      case 'rescue-card':
+        if (this.sel.mode === 'rescue') return this.cancel();
+        this.sel = { mode: 'rescue' };
+        this.hint = rescueHelpers(s).length ? '' : 'Ingen av oss kan nå fram just nu. Led någon närmare.';
+        return this.render();
       case 'lure':
         if (this.sel.mode === 'lead' && this.sel.animal) this.sel = { mode: 'lure', animal: this.sel.animal };
         else if (this.sel.mode === 'lure') this.sel = { mode: 'lead', animal: this.sel.animal };
@@ -306,6 +314,7 @@ export class App {
 
   private targetAnimals(): string[] {
     const s = this.state!;
+    if (this.sel.mode === 'rescue') return rescueHelpers(s);
     const card = this.selectedCard();
     if (card) {
       const spec = cardTarget(card);
@@ -331,6 +340,11 @@ export class App {
 
   private pickAnimal(id: string) {
     const s = this.state!;
+    if (this.sel.mode === 'rescue') {
+      if (rescueHelpers(s).includes(id)) return this.dispatch({ type: 'rescue', by: id });
+      this.hint = rescueBlockReason(s, animal(s, id)) ?? '';
+      return this.render();
+    }
     const card = this.selectedCard();
     if (card && this.sel.mode === 'card' && this.targetAnimals().includes(id)) {
       if (cardTarget(card) === 'animal') return this.dispatch({ type: 'play', uid: card.uid, target: id });
@@ -601,7 +615,7 @@ export class App {
     const zones = this.targetZones();
     scene.querySelectorAll<HTMLElement>('.zone').forEach((z) => z.classList.toggle('target', zones.includes(z.dataset.zone as ZoneId)));
     q('.telegraph').innerHTML = this.telegraphHtml(s);
-    q('.dogs').innerHTML = this.dogsHtml(s);
+    q('.dogs').innerHTML = this.dogsHtml(s) + this.rescueHtml(s);
     this.updateTokens(s, q('.tokens'), hurt);
     q('.actions').innerHTML = this.actionsHtml(s);
     q('.forecast').innerHTML = s.phase === 'play' ? this.forecastHtml(s) : '';
@@ -759,6 +773,7 @@ export class App {
     const targets = this.targetAnimals();
     const byZone = new Map<ZoneId, Animal[]>();
     for (const a of s.animals) if (isPresent(a)) byZone.set(a.zone, [...(byZone.get(a.zone) ?? []), a]);
+    layer.classList.toggle('crowded', Math.max(0, ...[...byZone.values()].map((g) => g.length)) > 6);
     const selAnimal = this.sel.mode !== 'idle' ? this.sel.animal : undefined;
     const selCard = this.selectedCard();
     const movable = new Set(s.phase === 'play' && !this.busy && this.sel.mode !== 'card' ? leadTargets(s) : []);
@@ -819,6 +834,11 @@ export class App {
           spec === 'zone' ? `Välj en upplyst zon för ${o}.` :
           spec === 'animal' ? 'Välj ett upplyst djur.' :
           this.sel.mode === 'card' && this.sel.animal ? `Välj vart ${o} ska bära ${animal(s, this.sel.animal).name}.` : `Välj vem ${o} ska bära.`;
+      } else if (this.sel.mode === 'rescue' && s.rescue) {
+        const who = newcomer(s.rescue.who).name;
+        hint = s.rescue.trust >= RESCUE_TRUST
+          ? `Välj ett upplyst djur bredvid ${who} som befriar (◆1).`
+          : `Välj ett upplyst djur inom ett steg från ${who} som når fram (◆1). Rovdjur skrämmer bara.`;
       } else if (this.sel.mode === 'lure' && this.sel.animal) {
         const a = animal(s, this.sel.animal);
         hint = `Välj var ${a.name} ska visa sig (◆1). Hundarna vänder sig dit och skäller – larmet ökar med 1.`;
@@ -876,7 +896,38 @@ export class App {
         });
       })
       .join('');
-    return cards;
+    return cards + this.rescueCardHtml(s);
+  }
+
+  /** While someone is trapped, a card of its own lies beside the hand: reach out, then free. */
+  private rescueCardHtml(s: GameState): string {
+    const r = s.rescue;
+    if (!r || s.phase !== 'play') return '';
+    const who = newcomer(r.who).name;
+    const free = r.trust >= RESCUE_TRUST;
+    const helpers = rescueHelpers(s);
+    const selected = this.sel.mode === 'rescue';
+    return `<button class="card special ${helpers.length ? '' : 'unplayable'} ${selected ? 'selected' : ''}" data-act="rescue-card" style="--owner:#e9dfc6">
+      <span class="cband">${silhouette(newcomer(r.who).species, 'var(--ink)')}<span class="cowner">${esc(who)}</span><span class="ccost" title="Kraft">1</span></span>
+      <span class="cname">${free ? 'Befria' : 'Nå fram'}</span>
+      <span class="ctag">Räddning · tillit ${r.trust}/${RESCUE_TRUST}</span>
+      <span class="ctext">${esc(free
+        ? `Ett djur bredvid ${who} befriar ${who}. Sedan är ${who} en av oss.`
+        : `Ett djur inom ett steg från ${who} kryper närmare: +1 tillit. Rovdjur skrämmer bara.`)}</span>
+      ${helpers.length ? '' : `<span class="creason">${esc(free ? `Ingen står bredvid ${who}.` : `Ingen av oss är nära nog.`)}</span>`}
+    </button>`;
+  }
+
+  /** The trapped one, where it waits. */
+  private rescueHtml(s: GameState): string {
+    const r = s.rescue;
+    if (!r || s.phase === 'over') return '';
+    const def = newcomer(r.who);
+    const [x, y, w, h] = zoneDef(s, r.zone).rect;
+    const tip = `${def.name} sitter ${encounterOf(s).rescue!.trapped} och är rädd för oss. Använd kortet ”Nå fram” från ett djur inom ett steg (+1 tillit per gång, rovdjur skrämmer bara). Vid ${RESCUE_TRUST}/${RESCUE_TRUST} blir kortet ”Befria”: ett djur bredvid befriar ${def.name}, som då blir en av oss.`;
+    return `<div class="newcomer" data-act="zone" data-zone="${r.zone}" style="left:${x + w * 0.2}%;top:${y + h * 0.55}%"
+      data-tip-icon="?" data-tip-title="${esc(def.name)} · tillit ${r.trust}/${RESCUE_TRUST}" data-tip="${esc(tip)}">
+      ${silhouette(def.species)}<span class="tname">${esc(def.name)} · ${r.trust}/${RESCUE_TRUST}</span></div>`;
   }
 
   private pilesHtml(s: GameState): string {

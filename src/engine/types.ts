@@ -14,7 +14,7 @@ export type InjuryKind = 'halt' | 'broken' | 'bleeding' | 'shock';
 
 /** Every danger is telegraphed as one or the other. */
 export type Severity = 'injure' | 'kill';
-export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice' | 'adder';
+export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice' | 'adder' | 'hare';
 /** Only small animals fit through the culvert. */
 export type Size = 'small' | 'medium' | 'large';
 export type TraitId =
@@ -48,6 +48,7 @@ export type CardKind =
   | 'skratt'
   | 'taEmot'
   | 'giftIReserv'
+  | 'sprang'
   | 'minne';
 
 /** active = still on the road side, safe = reached the far ditch. */
@@ -146,7 +147,7 @@ export interface LogEntry {
 }
 
 /** Why hope moved, so the UI can let an animal speak about it. */
-export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh' | 'fire' | 'wait';
+export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory' | 'laugh' | 'fire' | 'wait' | 'trapped';
 
 export type TimeOfDay = 'day' | 'night';
 
@@ -180,6 +181,13 @@ export interface Journey {
 
 export type MourningChoice = 'bury' | 'carry';
 
+export interface Rescue {
+  /** The newcomer's id in NEWCOMERS. */
+  who: string;
+  zone: ZoneId;
+  trust: number;
+}
+
 export interface Outcome {
   safe: string[];
   dead: string[];
@@ -188,7 +196,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 7;
+  version: 8;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;
@@ -238,6 +246,10 @@ export interface GameState {
   closed: ZoneId[];
   /** The stone the heron watches this hour (by day). */
   heron: ZoneId | null;
+  /** Someone trapped in this encounter, not yet one of us: they must come to trust us before we can free them. */
+  rescue: Rescue | null;
+  /** Newcomers we have met this run – rescued or left behind. Each is met only once. */
+  met: string[];
   peekNext: boolean;
   darkRevealed: boolean;
   hitQueue: Hit[];
@@ -253,6 +265,7 @@ export type Action =
   | { type: 'lure'; target: string; zone: ZoneId }
   | { type: 'endTurn' }
   | { type: 'travel'; to: string; wait?: boolean }
+  | { type: 'rescue'; by: string }
   | { type: 'restAtFire'; watch?: string; scout?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice> }
   | { type: 'lastMoment'; choice: 'shield'; by: string }
   | { type: 'lastMoment'; choice: 'letGo' };

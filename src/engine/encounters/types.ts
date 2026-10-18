@@ -44,6 +44,8 @@ export interface EncounterDef {
   leftBehind: ByTime;
   /** Said in the last hour. */
   lastHour: ByTime;
+  /** Someone trapped here, the first time we come: where, and the words for it. */
+  rescue?: { who: string; zone: ZoneId; found: string; trapped: string; freed: string };
   maxTurn: number;
   zones: ZoneDef[];
   /** Paths toward the goal; walking them in reverse goes back. First listed is the main way. */
