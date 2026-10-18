@@ -43,6 +43,9 @@ export const ALARM_MAX = 5;
 /** At night the farmer sleeps deep: it takes more barking to wake him. */
 export const ALARM_MAX_NIGHT = 7;
 
+/** An awake farm: someone has already seen us, and the dogs are up from the first hour. */
+export const AWAKE_ALARM = 3;
+
 export function alarmMax(s: GameState): number {
   return s.time === 'night' ? ALARM_MAX_NIGHT : ALARM_MAX;
 }

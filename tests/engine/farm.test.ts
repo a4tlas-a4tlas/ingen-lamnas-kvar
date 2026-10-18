@@ -13,6 +13,7 @@ function farmGame(verse: 'ingenLamnas' | 'viJagarInte' | 'manen' = 'ingenLamnas'
   for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
   s = run(s, { type: 'travel', to: 'granbacken' });
   s = run(s, { type: 'restAtFire', ...defaultPlan(s) });
+  s.journey.truth = { garden: 'normal', an: 'normal' };
   s = run(s, { type: 'travel', to: 'garden' });
   for (const a of s.animals) {
     a.belief = 8;

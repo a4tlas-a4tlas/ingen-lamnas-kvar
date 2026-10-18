@@ -15,6 +15,8 @@ export interface Place {
   arrive: string;
   arriveDay?: string;
   arriveNight?: string;
+  /** Kvarn's memory of the place, normal or hard: "hundarna sover" / "gården är vaken". */
+  memory?: { normal: string; hard: string };
   /** Position on the map, in percent (x right, y down). */
   x: number;
   y: number;
@@ -36,9 +38,11 @@ export const PLACES: Place[] = [
   { id: 'granbacken', kind: 'campfire', name: 'Granbacken', fogName: 'Ett skydd under granarna?', x: 60, y: 52,
     arrive: 'Under de täta granarna når vinden inte in. Här kan vi vila.' },
   { id: 'garden', kind: 'encounter', encounter: 'farm', name: 'Gården', fogName: 'Ett hus? Kvarn minns inte.', x: 26, y: 38,
+    memory: { normal: 'hundarna sover', hard: 'gården är vaken' },
     arrive: 'En gård i gryningen. Röda väggar, en stenmur, och två hundar som sover vid kojan.',
     arriveNight: 'En gård i mörkret. Fönstren är släckta, och vid kojan sover två hundar med nosen mot vinden.' },
   { id: 'an', kind: 'encounter', encounter: 'river', name: 'Ån', fogName: 'Vatten? Kvarn hör det porla.', x: 84, y: 40,
+    memory: { normal: 'ån är lugn', hard: 'ån svämmar över' },
     arrive: 'Ån brusar mellan stenarna. På andra sidan väntar åkrarna.',
     arriveNight: 'Ån brusar i mörkret. Vattnet är svart och kallt, och stenarna glänser.' },
   { id: 'akrarna', kind: 'end', name: 'Åkrarna', fogName: 'Åkrarna – fortsättning följer', x: 58, y: 23,
@@ -67,4 +71,15 @@ export function place(id: string): Place {
 
 export function pathsFrom(id: string): Path[] {
   return PATHS.filter((p) => p.from === id);
+}
+
+/** Every place within `depth` paths ahead of here: how far the owl flies in a night. */
+export function placesAhead(from: string, depth: number): string[] {
+  const out: string[] = [];
+  let frontier = [from];
+  for (let d = 0; d < depth; d++) {
+    frontier = frontier.flatMap((id) => pathsFrom(id).map((p) => p.to)).filter((id) => !out.includes(id));
+    out.push(...new Set(frontier));
+  }
+  return out;
 }

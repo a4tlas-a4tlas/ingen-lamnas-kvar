@@ -31,7 +31,7 @@ import { OATH_VERSES, createGame } from '../engine/setup';
 import { step } from '../engine/step';
 import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
-import { assignSeat, fireSceneSvg, firePanelHtml, guideHtml, mapSvg, memorialHtml, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
+import { assignSeat, fireSceneSvg, firePanelHtml, guideHtml, mapSvg, memoryLine, memorialHtml, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
 import { defaultPlan } from '../engine/campfire';
 import { forkVoices, voiceStake } from '../engine/voices';
 import { pathsFrom, place } from '../data/journey';
@@ -99,7 +99,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 6 && s.phase !== 'over' ? s : null;
+    return s.version === 7 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -254,7 +254,7 @@ export class App {
       case 'fire-rest': {
         if (!this.fireSeats) return;
         const plan = planFromSeats(this.fireSeats, this.fireMourning);
-        return this.dispatch({ type: 'restAtFire', watch: plan.watch, pairs: plan.pairs, mourning: plan.mourning });
+        return this.dispatch({ type: 'restAtFire', watch: plan.watch, scout: plan.scout, pairs: plan.pairs, mourning: plan.mourning });
       }
       case 'lure':
         if (this.sel.mode === 'lead' && this.sel.animal) this.sel = { mode: 'lure', animal: this.sel.animal };
@@ -621,7 +621,7 @@ export class App {
 
   private topbarHtml(s: GameState): string {
     return `
-      <div class="tb-title">Ingen lämnas kvar <span class="muted">· ${esc(byTime(s, encounterOf(s).title))}</span></div>
+      <div class="tb-title">Ingen lämnas kvar <span class="muted">· ${esc(byTime(s, encounterOf(s).title))}${s.variant === 'hard' && place(s.journey.at).memory ? ` · ${esc(place(s.journey.at).memory!.hard)}` : ''}</span></div>
       <div class="tb-stats">
         <span class="stat">Timme <b>${s.turn}</b>/${s.maxTurn}</span>
         <button class="btn small" data-act="guide-open">Guide</button>
@@ -1002,7 +1002,8 @@ export class App {
           <div class="onward">
             ${onward.map(({ path, to }) => {
               const name = esc(known(to.id) ? to.name : to.fogName);
-              const note = path.note ? `<p class="muted small">${esc(path.note)}</p>` : '';
+              const memo = memoryLine(s, to.id);
+              const note = (path.note ? `<p class="muted small">${esc(path.note)}</p>` : '') + (memo ? `<p class="small memory-note">${esc(memo)}</p>` : '');
               if (to.kind !== 'encounter') return `<button class="btn primary" data-act="travel" data-to="${to.id}">Gå mot ${name}</button>${note}`;
               // An encounter comes at the natural time of day, unless we wait for the other one.
               const now = s.clock;

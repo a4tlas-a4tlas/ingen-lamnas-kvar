@@ -244,10 +244,12 @@ function riverSvg(): string {
   </g>
   <g class="dam-ruin" fill="#6e5236" filter="url(#cut)">${ruin.join('')}</g>
   <g filter="url(#cut)">
-    <ellipse cx="${x(37)}" cy="${y(67)}" rx="52" ry="26" fill="#7f8584"/>
-    <ellipse cx="${x(35)}" cy="${y(64)}" rx="36" ry="12" fill="#9aa09d"/>
-    <ellipse cx="${x(37)}" cy="${y(40)}" rx="50" ry="25" fill="#7f8584"/>
-    <ellipse cx="${x(39)}" cy="${y(37)}" rx="34" ry="11" fill="#9aa09d"/>
+    <ellipse cx="${x(37)}" cy="${y(71)}" rx="50" ry="19" fill="#7f8584"/>
+    <ellipse cx="${x(35)}" cy="${y(69)}" rx="34" ry="9" fill="#9aa09d"/>
+    <ellipse cx="${x(39)}" cy="${y(53.5)}" rx="48" ry="18" fill="#7f8584"/>
+    <ellipse cx="${x(41)}" cy="${y(51.5)}" rx="32" ry="8" fill="#9aa09d"/>
+    <ellipse cx="${x(36)}" cy="${y(36)}" rx="46" ry="18" fill="#7f8584"/>
+    <ellipse cx="${x(34)}" cy="${y(34)}" rx="30" ry="8" fill="#9aa09d"/>
   </g>
   <rect y="${y(78)}" width="400" height="${y(22)}" fill="#4f5f3a" filter="url(#cut)"/>
   <path d="M0 ${y(79)} q100 10 200 2 t200 4 V${y(82)} H0 Z" fill="#6b5a3e"/>

@@ -18,7 +18,7 @@ describe('the journey', () => {
   it('starts on the map in the glen after the oath', () => {
     const s = run(createGame(3), { type: 'swear', verses: ['manen'] });
     expect(s.phase).toBe('map');
-    expect(s.journey).toEqual({ at: 'dalen', visited: ['dalen'] });
+    expect(s.journey).toMatchObject({ at: 'dalen', visited: ['dalen'], scouted: [] });
   });
 
   it('only travels along paths that exist', () => {

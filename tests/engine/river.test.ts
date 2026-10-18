@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultPlan } from '../../src/engine/campfire';
 import { DAM_MAX } from '../../src/engine/encounters/river';
+import { zoneDistance } from '../../src/engine/rules';
 import { oathVerse } from '../../src/engine/setup';
 import { forkVoices, voiceStake } from '../../src/engine/voices';
 import type { GameState } from '../../src/engine/types';
@@ -13,7 +14,10 @@ function atTheFork(verse: 'ingenLamnas' | 'denAldste' = 'ingenLamnas'): GameStat
   s.kraft = 99;
   for (const a of s.animals) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
   s = run(s, { type: 'travel', to: 'granbacken' });
-  return run(s, { type: 'restAtFire', ...defaultPlan(s) });
+  s = run(s, { type: 'restAtFire', ...defaultPlan(s) });
+  // These tests are about the river itself, not about Kvarn's memory of it.
+  s.journey.truth = { garden: 'normal', an: 'normal' };
+  return s;
 }
 
 function riverGame(wait = false): GameState {
@@ -84,6 +88,13 @@ describe('the fork', () => {
 });
 
 describe('Ån', () => {
+  it('over the stones or through the current is four steps; only the dam is quicker', () => {
+    const s = riverGame();
+    expect(zoneDistance(s, 'strand', 'farStrand')).toBe(2);
+    s.closed = ['dammen'];
+    expect(zoneDistance(s, 'strand', 'farStrand')).toBe(4);
+  });
+
   it('a slippery stone throws whoever stands there into the current', () => {
     let s = riverGame();
     get(s, 'frona').zone = 'sten1';

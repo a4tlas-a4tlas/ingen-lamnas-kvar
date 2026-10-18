@@ -1,6 +1,6 @@
 // Read-only campfire rules, shared by the engine (resolution) and the UI (planning).
 import { TRAITS } from '../data/traits';
-import { bond, canPrey, huntsAt, isPresent } from './rules';
+import { bond, canFly, canPrey, huntsAt, isPresent } from './rules';
 import type { Animal, GameState, MourningChoice, TraitId } from './types';
 
 /** Two pairs of places by the embers. Whoever has none sits alone in the dark. */
@@ -8,6 +8,8 @@ export const EMBER_PAIRS = 2;
 
 export interface FirePlan {
   watch?: string;
+  /** A flier who flies ahead in the dark to see what Kvarn only remembers. */
+  scout?: string;
   pairs: [string, string][];
   mourning: Record<string, MourningChoice>;
 }
@@ -40,7 +42,7 @@ export function hungryWatcher(s: GameState, a: Animal): boolean {
 
 export function sitsAlone(s: GameState, plan: FirePlan): Animal[] {
   const seated = new Set(plan.pairs.flat());
-  return living(s).filter((a) => a.id !== plan.watch && !seated.has(a.id));
+  return living(s).filter((a) => a.id !== plan.watch && a.id !== plan.scout && !seated.has(a.id));
 }
 
 /** A sensible starting plan: a calm, trusted watcher and the closest pairs by the embers. */
@@ -77,6 +79,11 @@ export function planProblem(s: GameState, plan: FirePlan): string | null {
   const seated = plan.pairs.flat();
   if (seated.some((id) => !ids.has(id) || id === plan.watch)) return 'Den som vakar kan inte sitta vid glöden.';
   if (new Set(seated).size !== seated.length) return 'Ingen kan sitta på två platser.';
+  if (plan.scout !== undefined) {
+    const sc = living(s).find((a) => a.id === plan.scout);
+    if (!sc || !canFly(sc)) return 'Bara den som kan flyga kan spana.';
+    if (sc.id === plan.watch || seated.includes(sc.id)) return 'Den som spanar kan inte också vaka eller sitta vid glöden.';
+  }
   for (const d of s.unmourned) if (plan.mourning[d] !== 'bury' && plan.mourning[d] !== 'carry') return 'Välj hur vi minns de döda.';
   return null;
 }
