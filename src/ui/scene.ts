@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -183,9 +183,79 @@ function farmSvg(): string {
     <rect class="farm-window" x="${x(40)}" y="${y(31.5)}" width="${x(5)}" height="${y(3)}"/>
     <rect class="farm-window" x="${x(63)}" y="${y(31.5)}" width="${x(5)}" height="${y(3)}"/>
   </g>
-  <g class="farm-stars" fill="#fff6dc">
+  <g class="night-stars" fill="#fff6dc">
     <circle cx="40" cy="12" r="1.2"/><circle cx="110" cy="26" r="1"/><circle cx="170" cy="8" r="1.3"/>
     <circle cx="240" cy="22" r="1"/><circle cx="300" cy="10" r="1.2"/><circle cx="360" cy="28" r="1"/>
+  </g>
+</svg>`;
+}
+
+function reed(x: number, base: number, h: number): string {
+  return `<path d="M${x} ${base} q${-1} ${-h * 0.5} ${1.5} ${-h}" stroke="currentColor" stroke-width="2" fill="none"/><ellipse cx="${x + 1.4}" cy="${base - h + 4}" rx="2.2" ry="5"/>`;
+}
+
+/** Ån: the far bank at the top, the water across the middle flowing right into the rapids, the near bank below. */
+function riverSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const flow: string[] = [];
+  for (let r = 0; r < 9; r++) {
+    for (let i = 0; i < 4; i++) {
+      const fx = x(24) + i * 46 + (r % 2) * 22;
+      const fy = y(28) + r * 28;
+      flow.push(`<path d="M${fx} ${fy} q10 -5 20 0 t20 0" />`);
+    }
+  }
+  const fast: string[] = [];
+  for (let r = 0; r < 10; r++) fast.push(`<path d="M${x(56)} ${y(29) + r * 25} q${18 + (r % 3) * 6} -6 ${40 + (r % 2) * 10} 0 t44 0" />`);
+  const foam: string[] = [];
+  for (let i = 0; i < 16; i++) foam.push(`<circle cx="${x(92) + (i % 4) * 7}" cy="${y(28) + i * 16}" r="${4 + (i % 3) * 2}"/>`);
+  const logs: string[] = [];
+  for (let i = 0; i < 12; i++) logs.push(`<rect x="${6 + (i % 2) * 6}" y="${y(26) + i * 21.5}" width="${70 - (i % 3) * 6}" height="12" rx="5" transform="rotate(${(i % 2 ? 4 : -4)} 44 ${y(26) + i * 21.5 + 6})"/>`);
+  const ruin: string[] = [];
+  for (let i = 0; i < 6; i++) ruin.push(`<rect x="${4 + (i % 3) * 22}" y="${y(30) + i * 44}" width="${30 - (i % 2) * 8}" height="9" rx="4" transform="rotate(${-30 + i * 17} ${20 + i * 8} ${y(30) + i * 44})"/>`);
+  const reedsNear: string[] = [];
+  for (let i = 0; i < 26; i++) reedsNear.push(reed(4 + i * 15.5 + (i % 3) * 2, y(100) - 4 - (i % 2) * 8, 46 + (i % 4) * 10));
+  const reedsFar: string[] = [];
+  for (let i = 0; i < 18; i++) reedsFar.push(reed(10 + i * 22, y(26.5), 20 + (i % 3) * 6));
+  const birches = [40, 150, 270, 350].map((bx, i) =>
+    `<rect x="${bx}" y="${y(4) + (i % 2) * 6}" width="5" height="${y(10)}" fill="#ddd6c4"/><ellipse cx="${bx + 2}" cy="${y(5) + (i % 2) * 6}" rx="18" ry="16" fill="#4f6a3e"/>`).join('');
+
+  return `
+<svg class="scene-bg river" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="riversky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7b8da6"/><stop offset="1" stop-color="#d9c7a6"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3f6478"/><stop offset="0.6" stop-color="#365a6e"/><stop offset="1" stop-color="#2c4a5c"/>
+    </linearGradient>${DEFS}
+  </defs>
+  <rect width="400" height="${y(14)}" fill="url(#riversky)"/>
+  <g filter="url(#cut)">${birches}</g>
+  <rect y="${y(12)}" width="400" height="${y(15)}" fill="#55704a" filter="url(#cut)"/>
+  <g color="#3b5534" fill="#6b5536" filter="url(#cut)">${reedsFar.join('')}</g>
+  <rect y="${y(26)}" width="400" height="${y(52)}" fill="url(#water)"/>
+  <g stroke="#a8c4cf" stroke-width="1.6" fill="none" opacity="0.45">${flow.join('')}</g>
+  <g class="fast-water" stroke="#dbe9ec" stroke-width="2" fill="none" opacity="0.55">${fast.join('')}</g>
+  <g fill="#eef3f0" opacity="0.85" filter="url(#cut)">${foam.join('')}</g>
+  <g class="dam-whole" fill="#6e5236" filter="url(#cut)">${logs.join('')}
+    <path d="M10 ${y(40)} l60 6 M14 ${y(58)} l56 -5" stroke="#3e2c1c" stroke-width="2"/>
+  </g>
+  <g class="dam-ruin" fill="#6e5236" filter="url(#cut)">${ruin.join('')}</g>
+  <g filter="url(#cut)">
+    <ellipse cx="${x(37)}" cy="${y(67)}" rx="52" ry="26" fill="#7f8584"/>
+    <ellipse cx="${x(35)}" cy="${y(64)}" rx="36" ry="12" fill="#9aa09d"/>
+    <ellipse cx="${x(37)}" cy="${y(40)}" rx="50" ry="25" fill="#7f8584"/>
+    <ellipse cx="${x(39)}" cy="${y(37)}" rx="34" ry="11" fill="#9aa09d"/>
+  </g>
+  <rect y="${y(78)}" width="400" height="${y(22)}" fill="#4f5f3a" filter="url(#cut)"/>
+  <path d="M0 ${y(79)} q100 10 200 2 t200 4 V${y(82)} H0 Z" fill="#6b5a3e"/>
+  <g color="#2f4128" fill="#5a4630" filter="url(#cut)">${reedsNear.join('')}</g>
+  <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.6"/>
+  <g class="night-stars" fill="#fff6dc">
+    <circle cx="60" cy="14" r="1.2"/><circle cx="130" cy="30" r="1"/><circle cx="210" cy="10" r="1.3"/>
+    <circle cx="280" cy="26" r="1"/><circle cx="330" cy="12" r="1.2"/>
   </g>
 </svg>`;
 }

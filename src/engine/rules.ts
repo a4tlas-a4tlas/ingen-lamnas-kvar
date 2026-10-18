@@ -76,7 +76,7 @@ export const canFly = (a: Animal) => a.flier && !hasInjury(a, 'broken');
 // ---------------------------------------------------------------- the zone graph
 
 export function zoneOpen(s: GameState, z: ZoneId): boolean {
-  return !zoneDef(s, z).hidden || s.revealed.includes(z);
+  return (!zoneDef(s, z).hidden || s.revealed.includes(z)) && !s.closed.includes(z);
 }
 
 /** Whether this animal can step into a zone at all (it must be found, and fit). */

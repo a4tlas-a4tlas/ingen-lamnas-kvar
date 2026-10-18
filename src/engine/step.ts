@@ -4,6 +4,8 @@ import { TRAITS } from '../data/traits';
 import { VERSES } from '../data/verses';
 import { closestTo, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone } from './campfire';
 import { planRoad } from './encounters/road';
+import { forkVoices, voiceStake } from './voices';
+import { CURRENT, DAM, DAM_MAX, FLOOD_HOURS, STONES, aboveTheWater, carriedAway, holdsOnTo, planRiver, swims } from './encounters/river';
 import { HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, oathVerse } from './setup';
@@ -147,9 +149,21 @@ function travel(c: Ctx, to: string, wait = false) {
   if (!pathsFrom(s.journey.at).some((p) => p.to === to)) fail('Dit leder ingen väg härifrån.');
   const p = place(to);
   if (wait && p.kind !== 'encounter') fail('Här finns inget att vänta på.');
+  const voices = forkVoices(s);
   s.journey.at = to;
   if (!s.journey.visited.includes(to)) s.journey.visited.push(to);
   log(c, { kind: 'turn', text: p.name });
+  for (const v of voices) {
+    const a = animal(s, v.who);
+    const d = voiceStake(s, a);
+    if (v.to === to) {
+      changeBelief(c, a, d);
+      line(c, a.id, `${a.name} nickar. Vi gick den väg ${a.name} bad om.`);
+    } else {
+      changeBelief(c, a, -d);
+      line(c, a.id, `${a.name} ser ner i marken och följer efter.`);
+    }
+  }
   if (p.kind === 'encounter') {
     s.time = wait ? otherTime(s.clock) : s.clock;
     if (wait) {
@@ -185,6 +199,12 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.alarm = 0;
   s.farmerOut = false;
   s.farmerSweep = null;
+  const river = id === 'river' ? planRiver(s, def.maxTurn) : { currentPlan: [], slipPlan: [] };
+  s.currentPlan = river.currentPlan;
+  s.slipPlan = river.slipPlan;
+  s.damCreak = 0;
+  s.closed = [];
+  s.heron = null;
   const start = def.zones.find((z) => z.start)!.id;
   for (const a of s.animals.filter(isPresent)) {
     a.status = 'active';
@@ -354,6 +374,7 @@ function startTurn(c: Ctx) {
     if (strikes.some((x) => x.dark)) narrate(c, 'Något mullrar i mörkret. Inga ljus.');
   }
   if (s.encounterId === 'farm') telegraphFarm(c);
+  if (s.encounterId === 'river') telegraphRiver(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -441,6 +462,7 @@ function moveAnimal(c: Ctx, a: Animal, to: ZoneId, byPlayer: boolean) {
   if (zone.slow) a.slowTime = 0;
   // Fliers never walk: they take off, and stay airborne for the rest of the hour.
   if (canFly(a)) a.flying = true;
+  if (s.encounterId === 'river' && to === DAM && !a.flying) creakDam(c, a);
 
   if (byPlayer && !canFly(a) && zone.road && moonVisible(s) && verseStatus(s, 'manen') === 'intact') {
     line(c, a.id, `${a.name} går ut på asfalten i månens ljus.`);
@@ -569,6 +591,77 @@ function lure(c: Ctx, target: string, zone: ZoneId) {
   for (const d of s.dogs) d.target = zone;
   narrate(c, `${a.name} visar sig i ${zoneDef(s, zone).name}. Hundarna vänder sig mot ${a.name} och skäller.`);
   raiseAlarm(c, 1);
+}
+
+// ---------------------------------------------------------------- the river
+
+/** At the start of each hour we see the current and the spray; by day the heron picks a stone. */
+function telegraphRiver(c: Ctx) {
+  const s = c.s;
+  if (s.turn === 1) narrate(c, 'Ån brusar. Två stenar sticker upp ur vattnet, och uppströms ligger bävrarnas damm.');
+  narrate(c, s.currentPlan[s.turn - 1] === 'strid' ? 'Strömmen är strid den här timmen. Den drar mot forsen.' : 'Strömmen är lugn den här timmen.');
+  for (const z of s.slipPlan[s.turn - 1] ?? []) narrate(c, `Vågorna slår upp över ${zoneDef(s, z).name}. Den är hal.`);
+  s.heron = null;
+  if (s.time === 'day' && s.turn >= 2) {
+    // The heron watches the stone where the most small ones stand.
+    const small = (z: ZoneId) => s.animals.filter((a) => isActive(a) && a.zone === z && a.size === 'small').length;
+    const best = Math.max(...STONES.map(small));
+    const choices = STONES.filter((z) => small(z) === best);
+    s.heron = choices[Math.floor(random(s) * choices.length)];
+    narrate(c, `En häger står stilla vid ${zoneDef(s, s.heron).name} och väntar.`);
+  }
+}
+
+/** Every step on the dam makes it creak; the large count twice. At the limit it breaks. */
+function creakDam(c: Ctx, a: Animal) {
+  const s = c.s;
+  s.damCreak = Math.min(DAM_MAX, s.damCreak + (a.size === 'large' ? 2 : 1));
+  if (s.damCreak < DAM_MAX) {
+    narrate(c, `Dammen knakar under ${a.name}.`);
+    return;
+  }
+  narrate(c, 'Dammen brister. Pinnar och lera ger vika, och vattnet forsar fram.');
+  s.closed.push(DAM);
+  for (const o of s.animals.filter((x) => isActive(x) && x.zone === DAM)) {
+    o.zone = CURRENT;
+    line(c, o.id, `${o.name} faller ner i strömmen.`);
+  }
+  // The flood wave: the current is strong now and for the next hour.
+  for (let t = s.turn - 1; t < Math.min(s.turn - 1 + FLOOD_HOURS, s.currentPlan.length); t++) s.currentPlan[t] = 'strid';
+}
+
+/** End of the hour: the wet stones throw us into the current, the current carries, the heron strikes, the night's cold bites. */
+function riverHazards(c: Ctx) {
+  const s = c.s;
+  for (const z of s.slipPlan[s.turn - 1] ?? []) {
+    for (const a of s.animals.filter((x) => isActive(x) && x.zone === z && !aboveTheWater(x))) {
+      if (a.braced) {
+        a.braced = false;
+        line(c, a.id, `${a.name} biter ihop och håller sig kvar på den hala stenen.`);
+        continue;
+      }
+      a.zone = CURRENT;
+      line(c, a.id, `${a.name} halkar på ${zoneDef(s, z).name} och glider ner i strömmen.`);
+    }
+  }
+  for (const a of s.animals.filter((x) => isActive(x) && x.zone === CURRENT && !aboveTheWater(x))) {
+    if (carriedAway(s, a)) {
+      s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: CURRENT, source: 'forsen' });
+    } else if (s.currentPlan[s.turn - 1] === 'strid') {
+      const anchor = holdsOnTo(s, a);
+      line(c, a.id, swims(a) ? `${a.name} simmar lugnt i det strida vattnet.` : a.size === 'large' ? `${a.name} står stadigt i strömmen.` : `${a.name} håller sig fast i ${anchor!.name}.`);
+    }
+  }
+  if (s.heron) {
+    for (const a of s.animals.filter((x) => isActive(x) && x.zone === s.heron && x.size === 'small' && !x.flying)) {
+      s.hitQueue.push({ victim: a.id, severity: 'injure', sudden: false, zone: a.zone, source: 'häger' });
+    }
+  }
+  if (s.time === 'night') {
+    const cold = s.animals.filter((x) => isActive(x) && !aboveTheWater(x) && zoneDef(s, x.zone).water);
+    for (const a of cold) changeBelief(c, a, -1);
+    if (cold.length) narrate(c, `Det kalla vattnet tar i ${cold.map((a) => a.name).join(' och ')}.`);
+  }
 }
 
 // ---------------------------------------------------------------- cards
@@ -721,6 +814,7 @@ function endTurn(c: Ctx) {
     }
   }
   if (s.encounterId === 'farm') farmHazards(c);
+  if (s.encounterId === 'river') riverHazards(c);
   processHits(c);
 }
 
@@ -796,7 +890,7 @@ function processHits(c: Ctx) {
       }
       s.pending = h;
       s.phase = 'lastMoment';
-      narrate(c, `Ljuset fyller allt. ${v.name} har ett ögonblick kvar.`);
+      narrate(c, h.source === 'forsen' ? `Strömmen drar ${v.name} mot forsen. Ett ögonblick kvar.` : `Ljuset fyller allt. ${v.name} har ett ögonblick kvar.`);
       return;
     }
     applyHit(c, v, h);
@@ -804,11 +898,11 @@ function processHits(c: Ctx) {
   finishTurn(c);
 }
 
-const HIT_BY: Record<string, string> = { bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden' };
+const HIT_BY: Record<string, string> = { bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
-  const pool: InjuryKind[] = h.source === 'hund' || h.source === 'bett' ? ['bleeding'] : ['halt', 'broken'];
+  const pool: InjuryKind[] = h.source === 'hund' || h.source === 'bett' || h.source === 'häger' ? ['bleeding'] : ['halt', 'broken'];
   const fresh = pool.filter((k) => !hasInjury(v, k));
   if (fresh.length) return fresh[Math.floor(random(c.s) * fresh.length)];
   return hasInjury(v, 'bleeding') ? null : 'bleeding';
@@ -847,7 +941,9 @@ function resolveLastMoment(c: Ctx, action: Extract<Action, { type: 'lastMoment' 
     const by = animal(s, action.by);
     s.pending = undefined;
     s.phase = 'play';
-    narrate(c, `${by.name} kastade sig emellan och knuffade undan ${v.name}.`);
+    narrate(c, h.source === 'forsen'
+      ? `${by.name} grep tag i ${v.name} och höll emot, mot stenarna, mot strömmen.`
+      : `${by.name} kastade sig emellan och knuffade undan ${v.name}.`);
     addBond(c, by, v, 2);
     changeBelief(c, v, 2);
     // The one who throws themselves in the way is hurt, not killed.

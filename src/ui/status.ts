@@ -3,6 +3,7 @@
 // the forecast box so they always say the same thing.
 import { zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
+import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
 import { animal, backZone, boltZone, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
 import type { InjuryKind } from '../engine/types';
 import type { Animal, GameState, ZoneId } from '../engine/types';
@@ -72,12 +73,36 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
       ? { key: 'culvert', icon: '◌', label: 'kan krypa ut', tone: 'info', explain: `${a.name} har krupit genom ${zone.name} och kan ta sig ut nu.` }
       : { key: 'culvert', icon: '◌', label: 'kryper', tone: 'info', explain: `${a.name} kryper genom ${zone.name}. Bilar når inte hit. Ute om en timme.` });
   }
+  if (s.encounterId === 'river') out.push(...riverStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
       explain: `${a.name}s tro är låg. Sjunker den till ${huntsAt(s, a)} kan ${a.name} glömma eden och börja jaga.` });
   } else if (a.belief <= 3 && a.intent.kind === 'follow') {
     out.push({ key: 'doubt', icon: '✶', label: 'tvivlar', tone: 'warn', explain: `${a.name}s tro är låg (${a.belief}). Snart kan ${a.name} frysa, fly eller rusa på egen hand.` });
+  }
+  return out;
+}
+
+/** On the river: a wet stone, the current, the heron. */
+function riverStatuses(s: GameState, a: Animal): Status[] {
+  const out: Status[] = [];
+  if (aboveTheWater(a)) return out;
+  const strid = s.currentPlan[s.turn - 1] === 'strid';
+  if ((s.slipPlan[s.turn - 1] ?? []).includes(a.zone)) {
+    out.push({ key: 'slip', icon: '≈', label: 'hal sten', tone: strid && a.size !== 'large' && !swims(a) ? 'bad' : 'warn',
+      explain: `Stenen är hal den här timmen. ${a.name} glider ner i strömmen när timmen går – om inte ${a.name} flyttas eller biter ihop.${strid ? ' Och strömmen är strid.' : ''}` });
+  }
+  if (a.zone === CURRENT) {
+    const anchor = holdsOnTo(s, a);
+    if (swims(a)) out.push({ key: 'current', icon: '∽', label: 'simmar', tone: 'good', explain: `${a.name} simmar. Strömmen tar inte ${a.name}.` });
+    else if (a.size === 'large') out.push({ key: 'current', icon: '◉', label: 'står emot', tone: 'good', explain: `${a.name} är stor nog att stå i strömmen. Den som står bredvid kan hålla sig fast.` });
+    else if (anchor) out.push({ key: 'current', icon: '◉', label: `håller sig i ${anchor.name}`, tone: 'good', explain: `${a.name} håller sig fast i ${anchor.name} och dras inte med av strömmen.` });
+    else if (strid) out.push({ key: 'current', icon: '↯', label: 'dras mot forsen', tone: 'bad', explain: `Strömmen är strid. ${a.name} dras mot forsen när timmen går. Led ${a.name} upp på en sten eller i land, eller ställ Gamla Ljung bredvid.` });
+    else out.push({ key: 'current', icon: '∽', label: 'i strömmen', tone: 'info', explain: `Strömmen är lugn just nu. Blir den strid dras ${a.name} mot forsen.` });
+  }
+  if (s.heron === a.zone && a.size === 'small') {
+    out.push({ key: 'heron', icon: '⌐', label: 'hägern', tone: 'warn', explain: `Hägern hugger efter ${a.name} när timmen går: ett sår som blöder.` });
   }
   return out;
 }
@@ -164,6 +189,7 @@ export function forecast(s: GameState): ForecastLine[] {
   }
   if (strikes.some((x) => x.dark) && !s.darkRevealed) out.push({ text: 'Något mullrar i mörkret, utan ljus. Vi vet inte i vilket körfält.', tone: 'bad' });
   if (s.encounterId === 'farm') out.push(...farmForecast(s, zoneOf));
+  if (s.encounterId === 'river') out.push(...riverForecast(s, zoneOf));
   if (s.turn >= s.maxTurn) {
     out.push({ text: 'Sista timmen: alla som inte är över när den går blir kvar.', tone: 'bad' });
   }
@@ -209,6 +235,47 @@ function farmForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[]
     out.push({ text: 'Larmet blir fullt: bonden kommer ut med ficklampan.', tone: 'bad' });
   } else if (alarm > s.alarm) {
     out.push({ text: `Larmet stiger till ${alarm} av ${alarmMax(s)}.`, tone: 'warn' });
+  }
+  return out;
+}
+
+/** The river: who slips, who the current takes, the heron, the cold, and the creaking dam. */
+function riverForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const active = s.animals.filter((a) => isActive(a) && zoneOf.has(a.id));
+  for (const z of s.slipPlan[s.turn - 1] ?? []) {
+    const slip = active.filter((a) => zoneOf.get(a.id) === z && !aboveTheWater(a) && !a.braced);
+    for (const a of slip) zoneOf.set(a.id, CURRENT);
+    out.push(slip.length
+      ? { text: `${zoneDef(s, z).name[0].toUpperCase()}${zoneDef(s, z).name.slice(1)} är hal: ${slip.map((a) => a.name).join(' och ')} glider ner i strömmen.`, tone: 'warn' }
+      : { text: `${zoneDef(s, z).name[0].toUpperCase()}${zoneDef(s, z).name.slice(1)} är hal – ingen av oss där.`, tone: 'good' });
+  }
+  const inCurrent = active.filter((a) => zoneOf.get(a.id) === CURRENT && !aboveTheWater(a));
+  const anchor = inCurrent.find((a) => a.size === 'large');
+  if (s.currentPlan[s.turn - 1] === 'strid') {
+    const taken = inCurrent.filter((a) => a.size !== 'large' && !swims(a) && !anchor);
+    out.push(taken.length
+      ? { text: `Strömmen är strid: ${taken.map((a) => a.name).join(' och ')} dras mot forsen – dödar!`, tone: 'bad' }
+      : { text: 'Strömmen är strid – men ingen av oss dras med.', tone: 'good' });
+    if (anchor) for (const a of inCurrent.filter((x) => x !== anchor && !swims(x))) out.push({ text: `${a.name} håller sig fast i ${anchor.name}.`, tone: 'good' });
+  } else {
+    out.push({ text: 'Strömmen är lugn den här timmen.', tone: 'good' });
+  }
+  if (s.peekNext && s.turn < s.maxTurn) out.push({ text: `Nästa timme är strömmen ${s.currentPlan[s.turn]}.`, tone: 'info' });
+  if (s.heron) {
+    const pecked = active.filter((a) => zoneOf.get(a.id) === s.heron && a.size === 'small' && !a.flying);
+    out.push(pecked.length
+      ? { text: `Hägern hugger på ${zoneDef(s, s.heron).name}: ${pecked.map((a) => a.name).join(' och ')} – skadar (blöder).`, tone: 'warn' }
+      : { text: `Hägern väntar vid ${zoneDef(s, s.heron).name} – ingen av de små där.`, tone: 'good' });
+  }
+  if (s.time === 'night') {
+    const cold = active.filter((a) => zoneDef(s, zoneOf.get(a.id)!).water && !aboveTheWater(a));
+    if (cold.length) out.push({ text: `Kylan i vattnet: ${cold.map((a) => a.name).join(' och ')} tappar 1 tro.`, tone: 'warn' });
+  }
+  if (!s.closed.includes('dammen')) {
+    const left = DAM_MAX - s.damCreak;
+    if (left === 1) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: nästa som går ut på den bryter den.`, tone: 'warn' });
+    else if (left === 2) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: ett stort djur till bryter den.`, tone: 'warn' });
   }
   return out;
 }

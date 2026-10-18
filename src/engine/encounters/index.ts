@@ -1,9 +1,10 @@
 import type { EncounterId, GameState, TimeOfDay, ZoneId } from '../types';
 import { FARM } from './farm';
+import { RIVER } from './river';
 import { ROAD } from './road';
 import type { ByTime, EncounterDef, ZoneDef } from './types';
 
-export const ENCOUNTERS: Record<EncounterId, EncounterDef> = { road: ROAD, farm: FARM };
+export const ENCOUNTERS: Record<EncounterId, EncounterDef> = { road: ROAD, farm: FARM, river: RIVER };
 
 export function encounterOf(s: GameState): EncounterDef {
   return ENCOUNTERS[s.encounterId];

@@ -295,3 +295,41 @@ Design from the milestone 3 interview:
   | Farm | 3.4 | 3.4 |
 
   Neither time dominates. The difference is in what a human can do: a lure by day, peeking at traffic by night.
+
+### Step 2: Ån, the fork and the voices (done)
+- **The fork:** from Granbacken the way splits: **Gården** ("Fast mark och en mur – men hundar") or **Ån** ("Inga hundar – men vattnet väntar inte på någon"). Both lead on to Åkrarna. The map shows each place's kind (road / farm / river).
+- **Ån** (`src/engine/encounters/river.ts`), 8 hours, start at Strandbrinken, goal at Andra stranden:
+  - **Routes across:**
+    - **over the stones:** 3 steps (Första stenen → Andra stenen → the far bank)
+    - **through the current:** 3 steps (a stone → Strömmen → the far bank)
+    - **over the beaver dam:** 2 steps
+  - **Hala stenar** (slippery stones): each hour 0–2 stones are telegraphed as wet. Whoever stands there when the hour passes slips into Strömmen. *Bita ihop* (brace) holds you on the stone.
+  - **Strömmen** (the current): calm or strong hour by hour (50%, never in the first hour).
+    - A strong current carries small and medium animals toward the rapids. That's a killing hit with a last moment: "X grep tag i Y och höll emot".
+    - **Who isn't carried away:**
+      - the large (Gamla Ljung), and anyone in the current next to the large one
+      - the toad: Kvarn swims
+      - fliers with a whole wing
+  - **Bäverdammen** (the beaver dam): "Dammen n/4", +1 per step, +2 for the large.
+    - At 4 it breaks: whoever is on it falls into the current, the dam closes (`s.closed`), and the flood wave keeps the current strong for 2 hours.
+    - The forecast warns before the last step.
+  - **By day, the heron** watches the stone where most small animals stand and pecks them (injures: bleeding).
+  - **At night, the cold:** anyone in the water (a stone or the current) loses 1 belief.
+- **The voices** (`src/engine/voices.ts`, `src/data/voices.sv.ts`): at a fork, up to two animals speak up, preferably for different paths.
+  - **Nature (weight 1):**
+    - Kvarn and Gamla Ljung want the river
+    - Fröna fear the water
+    - Sotfot and Skymning fear the dogs
+  - **The body speaks louder (weight 2):**
+    - limping → afraid of the stones
+    - bleeding → "Hundarna känner lukten av mitt blod"
+    - hungry predator → wants the hens
+  - **Effect:** going their way gives +1 belief, going against them gives −1. Under *Vi lyssnar på den äldste* the elder counts double.
+- Balance (lead-only bot, 300 runs from the fork):
+
+  | Route | Saved, of 4.5 who arrive |
+  |---|---|
+  | farm | 3.3–3.4 |
+  | river | 3.4–3.7 |
+
+  The routes are close; the difference lies in how you play.

@@ -24,6 +24,10 @@ export interface ZoneDef {
   cover?: boolean;
   /** Water, grass and dung: we leave no scent for the dogs. */
   breaksScent?: boolean;
+  /** In or on the river: the night's cold bites here. */
+  water?: boolean;
+  /** A stepping stone: spray can make it slippery. */
+  stone?: boolean;
 }
 
 /** A text that differs by day and by night. */
