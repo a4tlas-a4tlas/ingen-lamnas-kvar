@@ -578,3 +578,30 @@ Design from the milestone 6 interview:
   3. **Vilken väg?** The regions not yet walked are drawn, up to two, and we choose among them. Until a second one exists, Kvarn "remembers only one way".
 - **Åkrarna, for now:** a map with old dangers in new places (Grusvägen, Gården vid åkern, Kanalen), a few of the story parts that travel, the fires Halmstacken and Vindskyddet, and the end *Bortom åkrarna*, where the run ends for now. Its own dangers and boss come in the next steps.
 - **Hovering a button brightens it instead of lifting it.** A lifting button could slip out from under the pointer at its edge and flicker; the browser test caught it.
+
+### Step 2: Rovfåglarna – Fältet under himlen (done)
+Åkrarna's first danger of its own (`src/engine/encounters/raptor.ts`), 8 hours.
+- **The board,** from the start up to the goal (every way up is three steps):
+
+  | Zone | What it is |
+  |---|---|
+  | **Åkerrenen** | start, cover for all |
+  | **Första, Andra and Tredje fåran** | the furrows: cover only for the small |
+  | **Öppna fältet** | open |
+  | **Stenröset** | cover for the small and medium |
+  | **Häcken** | the goal |
+
+  A new zone flag, `coverFor`, gives cover by size.
+- **By day: Vråken (the buzzard).**
+  - Its shadow is shown where it will strike, and it glides at most one zone an hour, toward whoever of us stands most exposed. The first hour it only circles.
+  - When the hour passes it takes the smallest one without cover:
+    - a small one is carried off (kills, with a last moment)
+    - a medium one is clawed (bleeding)
+    - a large one it can't lift
+- **At night: Berguven (the eagle owl).** It isn't seen, only heard: the wingbeats over one of two places, and it strikes in one of them. It hears wings first, so a flying Skymning becomes its target (injured), and the rest of us are spared that hour. Skymning can choose to be the decoy.
+- **The air belongs to the birds here:** lifting off is no escape. A shield from a large animal ("Ta emot" from Gamla Ljung) makes the bird let go.
+- **Kvarn's memory:**
+  - *"en vråk kretsar"* (normal)
+  - *"ett vråkpar jagar"* (hard): two birds, two strikes, never over the same place
+- **On the map:** *Fälten* is one of Åkrarna's dangers. Skymning and Fröna speak against it at forks.
+- **Balance:** a lead-only bot, without cards or comforting, brings 4.5 of 6 across by day and 5.1 at night (4.6 and 4.8 with the pair). The bird kills about one animal in two runs.

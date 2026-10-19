@@ -178,6 +178,7 @@ for (const route of [
     }
     if (await page.locator(`.scene.${route.scene}`).count()) seen.add('area');
     if (await page.locator('.scene.machines').count()) seen.add('machines');
+    if (await page.locator('.scene.raptor').count()) seen.add('raptor');
     await leadForward(page, seen);
     if (await page.locator('.end-screen, .map-screen, [data-act="lm-letgo"]').count()) continue;
     if (await end.isEnabled({ timeout: 2_000 }).catch(() => false)) await end.click();
