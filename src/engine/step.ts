@@ -11,6 +11,7 @@ import { planRoad } from './encounters/road';
 import { forkVoices, voiceStake } from './voices';
 import { CURRENT, DAM, DAM_MAX, FLOOD_DAM_CREAK, FLOOD_HOURS, FLOOD_HOURS_TOTAL, STONES, aboveTheWater, carriedAway, holdsOnTo, planRiver, swims } from './encounters/river';
 import { planMachines, roarZones } from './encounters/machines';
+import { exposedIn, prey, shadowOptions } from './encounters/raptor';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, makeAnimal, oathVerse, regionJourney } from './setup';
@@ -295,6 +296,8 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   const machines = id === 'machines' ? planMachines(s, s.maxTurn) : { fellPlan: [], dozePlan: [] };
   s.fellPlan = machines.fellPlan;
   s.dozePlan = machines.dozePlan;
+  // Over the fields one bird circles – or, where Kvarn's memory was too kind, a pair.
+  s.raptors = id === 'raptor' ? Array.from({ length: hard ? 2 : 1 }, () => ({ zone: null, maybe: [] })) : [];
   // Someone is trapped here, the first time we come.
   s.rescue = def.rescue && !s.met.includes(def.rescue.who) ? { who: def.rescue.who, zone: def.rescue.zone, trust: 0 } : null;
   if (s.rescue) narrate(c, def.rescue!.found);
@@ -780,6 +783,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'farm') telegraphFarm(c);
   if (s.encounterId === 'river') telegraphRiver(c);
   if (s.encounterId === 'machines') telegraphMachines(c);
+  if (s.encounterId === 'raptor') telegraphRaptors(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1114,6 +1118,69 @@ function machinesHazards(c: Ctx) {
   }
 }
 
+// ---------------------------------------------------------------- the fields
+
+/**
+ * At the start of each hour the birds choose where to strike: toward whoever stands
+ * most exposed, at most one zone from where they were. By day we see the shadow;
+ * at night we only hear the wings, over one of two places.
+ */
+function telegraphRaptors(c: Ctx) {
+  const s = c.s;
+  const night = s.time === 'night';
+  if (s.turn === 1) {
+    narrate(c, night
+      ? 'Det är tyst över fälten. Men någonting sitter i den döda eken vid diket, och vänder på huvudet.'
+      : `${s.raptors.length > 1 ? 'Två vråkar' : 'En vråk'} kretsar högt över fälten. ${s.raptors.length > 1 ? 'De har' : 'Den har'} sett oss, men väntar.`);
+    return;
+  }
+  const taken: ZoneId[] = [];
+  for (const b of s.raptors) {
+    const from = b.zone ?? b.maybe[0] ?? null;
+    const options = shadowOptions(from).filter((z) => !taken.includes(z));
+    const best = Math.max(...options.map((z) => exposedIn(s, z)));
+    const top = options.filter((z) => exposedIn(s, z) === best);
+    const target = top[Math.floor(random(s) * top.length)];
+    taken.push(target);
+    if (night) {
+      const other = options.filter((z) => z !== target);
+      const decoy = other.length ? other[Math.floor(random(s) * other.length)] : target;
+      b.zone = null;
+      b.maybe = random(s) < 0.5 ? [target, decoy] : [decoy, target];
+      narrate(c, `Vingslag i mörkret – över ${zoneDef(s, b.maybe[0]).name} eller ${zoneDef(s, b.maybe[1]).name}.`);
+    } else {
+      b.zone = target;
+      b.maybe = [];
+      narrate(c, `Skuggan glider över ${zoneDef(s, target).name}.`);
+    }
+  }
+}
+
+/** End of the hour: the birds strike. A small one is carried off, a medium one clawed; at night, wings in the air are heard first. */
+function raptorHazards(c: Ctx) {
+  const s = c.s;
+  if (s.turn === 1) return;
+  const source = s.time === 'night' ? 'berguv' : 'vråk';
+  const bird = HIT_BY[source];
+  for (const b of s.raptors) {
+    const flier = s.time === 'night' ? s.animals.find((a) => isActive(a) && a.flying && !s.hitQueue.some((h) => h.victim === a.id)) : undefined;
+    if (flier) {
+      narrate(c, `Berguven hör ${flier.name}s vingar.`);
+      s.hitQueue.push({ victim: flier.id, severity: 'injure', sudden: false, zone: flier.zone, source });
+      continue;
+    }
+    const z = b.zone ?? b.maybe[Math.floor(random(s) * b.maybe.length)];
+    if (!z) continue;
+    const v = prey(s, z);
+    if (!v || s.hitQueue.some((h) => h.victim === v.id)) {
+      const hid = s.animals.some((a) => isActive(a) && a.zone === z);
+      narrate(c, hid ? `${bird} slår ner i ${zoneDef(s, z).name} – men vi låg för väl gömda.` : `${bird} slår ner i ${zoneDef(s, z).name}. Ingen av oss var där.`);
+      continue;
+    }
+    s.hitQueue.push({ victim: v.id, severity: v.size === 'small' ? 'kill' : 'injure', sudden: false, zone: z, source });
+  }
+}
+
 // ---------------------------------------------------------------- the rescue
 
 /** Reach out to the trapped one, or – once it trusts us – free it. Freed, it is one of us. */
@@ -1296,6 +1363,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'farm') farmHazards(c);
   if (s.encounterId === 'river') riverHazards(c);
   if (s.encounterId === 'machines') machinesHazards(c);
+  if (s.encounterId === 'raptor') raptorHazards(c);
   processHits(c);
 }
 
@@ -1348,7 +1416,8 @@ function processHits(c: Ctx) {
     const h = s.hitQueue.shift()!;
     let v = animal(s, h.victim);
     if (!isActive(v)) continue;
-    if (v.flying) {
+    // Over the fields the air is the bird's: lifting off is no escape.
+    if (v.flying && !BIRDS.includes(h.source)) {
       line(c, v.id, `${v.name} lyfter i sista stund.`);
       continue;
     }
@@ -1357,6 +1426,11 @@ function processHits(c: Ctx) {
       line(c, p.id, `${p.name} tar smällen i stället för ${v.name}.`);
       v = p;
       h.victim = p.id;
+      // The bird cannot lift the large: it lets go.
+      if (BIRDS.includes(h.source) && v.size === 'large') {
+        line(c, v.id, `${HIT_BY[h.source]} släpper taget om ${v.name} och stiger igen.`);
+        continue;
+      }
     }
     if (v.braced) {
       v.braced = false;
@@ -1387,16 +1461,21 @@ const LAST_MOMENT: Record<string, string> = {
   forsen: 'Strömmen drar {name} mot forsen. Ett ögonblick kvar.',
   fällaren: 'Det knakar ovanför {name}. En gran lutar, och faller. Ett ögonblick kvar.',
   schaktaren: 'Schaktaren rullar in, och jorden rör sig under {name}. Ett ögonblick kvar.',
+  vråk: 'Vråken slår ner. Klorna har redan {name}. Ett ögonblick kvar.',
+  berguv: 'Något stort och tyst faller ur mörkret över {name}. Ett ögonblick kvar.',
 };
+
+/** The birds of prey over the fields: in the air there is no escaping them. */
+const BIRDS = ['vråk', 'berguv'];
 
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'bonde'];
 
-const HIT_BY: Record<string, string> = { fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
+const HIT_BY: Record<string, string> = { vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
-  const pool: InjuryKind[] = h.source === 'hund' || h.source === 'bett' || h.source === 'häger' ? ['bleeding'] : ['halt', 'broken'];
+  const pool: InjuryKind[] = ['hund', 'bett', 'häger', ...BIRDS].includes(h.source) ? ['bleeding'] : ['halt', 'broken'];
   const fresh = pool.filter((k) => !hasInjury(v, k));
   if (fresh.length) return fresh[Math.floor(random(c.s) * fresh.length)];
   return hasInjury(v, 'bleeding') ? null : 'bleeding';

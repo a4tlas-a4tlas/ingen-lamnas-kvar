@@ -1,6 +1,6 @@
 // Åkrarna: the open fields beyond the ridge. Wide sky, no trees, and nowhere to hide
-// but the furrows. Its own dangers and its boss come in the next steps; for now the
-// fields are walked with old dangers in new places.
+// but the furrows. The birds of prey are its own; more dangers and its boss come in
+// the next steps, and old dangers stand in new places meanwhile.
 import { DALEN, type RegionDef } from './dalen';
 
 const [, farm, river] = DALEN.dangers;
@@ -19,6 +19,13 @@ export const AKRARNA: RegionDef = {
     note: 'En väg. Färre bilar än hemma – men inget att gömma sig bakom.',
   },
   dangers: [
+    {
+      key: 'falten', kind: 'encounter', encounter: 'raptor', name: 'Fälten', fogName: 'Något kretsar över fälten?',
+      memory: { normal: 'en vråk kretsar', hard: 'ett vråkpar jagar' },
+      arrive: 'Fälten ligger öppna under en stor himmel. Högt där uppe kretsar något.',
+      arriveNight: 'Fälten ligger svarta och tysta. Ingenting rör sig – det är det som är det farliga.',
+      note: 'Öppet, och himmel. Inget skydd utom fårorna.',
+    },
     {
       ...farm, key: 'akergarden', name: 'Gården vid åkern', fogName: 'En röd lada?',
       arrive: 'En gård mitt bland fälten. Ladan är större än den hemma, och hundarna också.',

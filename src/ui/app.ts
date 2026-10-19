@@ -107,7 +107,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 14 && s.phase !== 'over' ? s : null;
+    return s.version === 15 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -775,6 +775,15 @@ export class App {
     return out.join('');
   }
 
+  /** The fields: the buzzard's shadow where it will strike; at night only wingbeats, over one of two places. */
+  private raptorTelegraphHtml(s: GameState): string {
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    if (s.turn === 1) return '';
+    return s.raptors.map((b) => b.zone
+      ? `<div class="shadow-mark" style="${box(b.zone)}"><i></i><span>Vråken · tar de små</span></div>`
+      : b.maybe.map((z) => `<div class="wing-mark" style="${box(z)}"><span>vingslag?</span></div>`).join('')).join('');
+  }
+
   /** The river: the current in the water, the wet stones, the heron. */
   private riverTelegraphHtml(s: GameState): string {
     const out: string[] = [];
@@ -830,6 +839,7 @@ export class App {
     if (s.encounterId === 'farm') return s.phase === 'over' ? '' : this.farmTelegraphHtml(s);
     if (s.encounterId === 'river') return s.phase === 'over' ? '' : this.riverTelegraphHtml(s);
     if (s.encounterId === 'machines') return s.phase === 'over' ? '' : this.machinesTelegraphHtml(s);
+    if (s.encounterId === 'raptor') return s.phase === 'over' ? '' : this.raptorTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {

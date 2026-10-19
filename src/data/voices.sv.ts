@@ -10,10 +10,16 @@ export interface Leaning {
 /** Each animal's own nature. */
 export const LEANINGS: Record<string, Partial<Record<EncounterId, Leaning>>> = {
   kvarn: { river: { pull: 1, line: 'Vattnet är mitt hem. Ta ån – jag visar er stenarna.' } },
-  frona: { river: { pull: -1, line: 'Vi kan inte simma. Inte ån, snälla.' } },
+  frona: {
+    river: { pull: -1, line: 'Vi kan inte simma. Inte ån, snälla.' },
+    raptor: { pull: -1, line: 'Skuggan. Vi såg skuggan över fälten. Inte där.' },
+  },
   sotfot: { farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' } },
   ljung: { river: { pull: 1, line: 'Strömmen rubbar inte mig. Håll er i mig, så går vi över.' } },
-  skymning: { farm: { pull: -1, line: 'Jag har sett gården från ovan. Hundarna sover inte så djupt som ni tror.' } },
+  skymning: {
+    farm: { pull: -1, line: 'Jag har sett gården från ovan. Hundarna sover inte så djupt som ni tror.' },
+    raptor: { pull: -1, line: 'Där ute är det jag som är bytet. Inte fälten.' },
+  },
 };
 
 /** What the body says louder than nature: injuries and hunger. */

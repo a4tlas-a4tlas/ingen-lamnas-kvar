@@ -37,6 +37,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
     day: 'Hägern vaktar en sten varje timme och hugger efter de små.',
     night: 'Ingen häger – men vattnet är kallt: den som står i ån när timmen går tappar 1 tro.',
   },
+  raptor: {
+    day: 'Vråken jagar med ögonen: skuggan visar var den slår ner.',
+    night: 'Berguven syns inte – den hörs, över en av två platser. Och den jagar i luften.',
+  },
   machines: {
     day: 'Maskinerna arbetar i gryningen. Det går inte att vänta på mörkret.',
     night: 'Maskinerna arbetar i gryningen. Det går inte att vänta på mörkret.',
@@ -153,6 +157,27 @@ export const GUIDES: Record<EncounterId, Guide> = {
       'Lämna Gläntan i tid – den går först.',
       'Stå aldrig där fällaren vänder sig när timmen går.',
       'Hygget leder till båda granridåerna. Det är sista platsen schaktaren tar.',
+    ],
+  },
+  raptor: {
+    title: 'Så tar vi oss över fälten',
+    hard: 'Ibland är de två: ett vråkpar som jagar tillsammans, med två skuggor och två hugg varje timme.',
+    goal: 'Få alla från Åkerrenen till Häcken – 8 timmar. Upp genom en fåra, sedan över det öppna fältet eller stenröset: tre steg.',
+    dangers: [
+      { icon: '◒', name: 'Vråken', effect: 'dödar', text: 'Bara i dagsljus. Skuggan visar var den slår ner när timmen går, och den glider högst en zon i timmen – mot dem av oss som syns. Den tar den minsta som inte har skydd: en liten bärs bort (sista stunden), en mellanstor får klorna i sig och blöder. Första timmen kretsar den bara.' },
+      { icon: '◌', name: 'Berguven', effect: 'dödar', text: 'Bara om natten. Den syns inte – vingslagen hörs över en av två platser, och den slår ner i en av dem. Den jagar i luften: flyger Skymning hör den vingarna först.' },
+      { icon: '⇡', name: 'Luften', text: 'Här är luften fåglarnas. Den som flyger är inte skyddad – tvärtom.' },
+    ],
+    shelter: [
+      { icon: '♣', name: 'Åkerrenen', text: 'Gräset vid kanten gömmer alla.' },
+      { icon: '≡', name: 'Fårorna', text: 'Djupa nog för de små. En räv eller uggla syns.' },
+      { icon: '◍', name: 'Stenröset', text: 'Gömmer små och mellanstora mellan stenarna.' },
+      { icon: '◉', name: 'De stora', text: 'Gamla Ljung kan inte lyftas. ”Ta emot” på en liten: fågeln släpper taget.' },
+    ],
+    tips: [
+      'Läs skuggan och gå dit den inte kan nå – eller dit vi är gömda.',
+      'Det öppna fältet är snabbt men naket. Stenröset är tryggare för de flesta.',
+      'Låt Skymning gå på marken här.',
     ],
   },
 };

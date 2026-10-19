@@ -39,6 +39,8 @@ function icon(p: Place): string {
     case 'encounter':
       if (p.encounter === 'farm') return '<path d="M-2 1.4 V-0.4 L0 -1.8 L2 -0.4 V1.4 Z" /><rect x="-0.5" y="0.2" width="1" height="1.2" fill="var(--map-paper)" />';
       if (p.encounter === 'machines') return MACHINE_ICON;
+      // A bird of prey: a V of wings.
+      if (p.encounter === 'raptor') return '<path d="M-2.6 -0.6 Q-1.3 -1.6 0 0.4 Q1.3 -1.6 2.6 -0.6 Q1.3 -0.4 0 1.4 Q-1.3 -0.4 -2.6 -0.6 Z" />';
       if (p.encounter === 'river') return '<path d="M-2.4 -0.8 q0.6 -0.6 1.2 0 t1.2 0 t1.2 0 t1.2 0 M-2.4 0.6 q0.6 -0.6 1.2 0 t1.2 0 t1.2 0 t1.2 0" fill="none" stroke="currentColor" stroke-width="0.45" />';
       return '<rect x="-2.2" y="-0.9" width="4.4" height="1.8" rx="0.3" /><path d="M-1.6 0 h0.8 M-0.2 0 h0.8 M1.2 0 h0.6" stroke="var(--map-paper)" stroke-width="0.3" />';
     case 'campfire':

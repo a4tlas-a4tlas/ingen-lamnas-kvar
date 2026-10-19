@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -326,6 +326,49 @@ function machinesSvg(): string {
     <rect x="${x(76)}" y="${y(93)}" width="54" height="16" rx="3"/><rect x="${x(80)}" y="${y(88)}" width="22" height="14" fill="#2a2420"/>
     <rect x="${x(72)}" y="${y(92)}" width="8" height="22"/>
     <rect x="${x(76)}" y="${y(98)}" width="56" height="8" rx="4" fill="#2a2420"/>
+  </g>
+</svg>`;
+}
+
+/** Fältet under himlen: a hedge at the top, the open stubble field and the stone pile, three furrows, the grassy field edge. */
+function fieldSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const hedge: string[] = [];
+  for (let i = 0; i < 16; i++) hedge.push(`<ellipse cx="${6 + i * 26}" cy="${y(17) - (i % 3) * 3}" rx="${22 + (i % 2) * 6}" ry="${20 + (i % 3) * 4}"/>`);
+  const stubble: string[] = [];
+  for (let r = 0; r < 5; r++) for (let i = 0; i < 14; i++) stubble.push(`<path d="M${6 + i * 17 + (r % 2) * 8} ${y(27) + r * 20} v-6"/>`);
+  const rocks: string[] = [];
+  for (let i = 0; i < 8; i++) {
+    const rx = x(64) + (i % 4) * 36 + (i % 2) * 6;
+    const ry = y(30) + Math.floor(i / 4) * 44;
+    rocks.push(`<ellipse cx="${rx}" cy="${ry}" rx="${18 + (i % 2) * 5}" ry="${12 + (i % 3) * 2}" fill="#8a8a7e"/><ellipse cx="${rx - 3}" cy="${ry - 4}" rx="${9 + (i % 2) * 3}" ry="4" fill="#a8a89a"/>`);
+  }
+  const ridges: string[] = [];
+  for (const fx of [x(16.5), x(50), x(83.5)]) for (let r = 0; r < 6; r++) ridges.push(`<path d="M${fx - 46} ${y(48) + r * 25} q46 -12 92 0" />`);
+  const tufts: string[] = [];
+  for (let i = 0; i < 22; i++) tufts.push(tuft(8 + i * 18.5, y(100) - 2 - (i % 3) * 3, 1.5 + (i % 4) * 0.25));
+  return `
+<svg class="scene-bg field" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="fieldsky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fa6c0"/><stop offset="1" stop-color="#e3d2a6"/>
+    </linearGradient>${DEFS}
+  </defs>
+  <rect width="400" height="${y(14)}" fill="url(#fieldsky)"/>
+  <g fill="#3f5a30" filter="url(#cut)">${hedge.join('')}</g>
+  <rect y="${y(24)}" width="${x(60)}" height="${y(22)}" fill="#c9ad6a"/>
+  <g stroke="#9a7f42" stroke-width="2">${stubble.join('')}</g>
+  <rect x="${x(60)}" y="${y(24)}" width="${x(40)}" height="${y(22)}" fill="#a39a74"/>
+  <g filter="url(#cut)">${rocks.join('')}</g>
+  <rect y="${y(46)}" width="400" height="${y(30)}" fill="#7a5c3a"/>
+  <g stroke="#5a4028" stroke-width="5" fill="none">${ridges.join('')}</g>
+  <path d="M${x(33)} ${y(46)} V${y(76)} M${x(67)} ${y(46)} V${y(76)}" stroke="#4a331f" stroke-width="3"/>
+  <rect y="${y(76)}" width="400" height="${y(24)}" fill="#6e8048" filter="url(#cut)"/>
+  <g fill="#566a36" filter="url(#cut)">${tufts.join('')}</g>
+  <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.6"/>
+  <g class="night-stars" fill="#fff6dc">
+    <circle cx="40" cy="20" r="1.2"/><circle cx="120" cy="40" r="1"/><circle cx="220" cy="18" r="1.3"/><circle cx="300" cy="44" r="1"/><circle cx="370" cy="24" r="1.2"/>
   </g>
 </svg>`;
 }

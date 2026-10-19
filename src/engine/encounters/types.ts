@@ -1,4 +1,4 @@
-import type { EncounterId, ZoneId, TimeOfDay } from '../types';
+import type { EncounterId, Size, ZoneId, TimeOfDay } from '../types';
 
 export interface ZoneDef {
   id: ZoneId;
@@ -30,6 +30,8 @@ export interface ZoneDef {
   stone?: boolean;
   /** Trees stand here: the felling machine wants them. */
   trees?: boolean;
+  /** Cover only for these sizes: a furrow hides a mouse, not a fox. */
+  coverFor?: Size[];
 }
 
 /** A text that differs by day and by night. */
