@@ -38,7 +38,7 @@ export const HOPE_LINES: Record<HopeReason, string[]> = {
   song: ['Den sjöng ju bara.', 'Det var det vackraste vi hört på länge.'],
   food: ['Första gången vi är mätta sedan dalen.', 'Spara lite till sen.'],
   cold: ['Den tittade på oss hela tiden.', 'Det var så kallt i natt.'],
-  lost: ['Vet någon ens vart vi går?', 'Kvarn hade vetat.'],
+  lost: ['Vet någon ens vart vi går?', 'Den som mindes vägen hade vetat.'],
   trapped: ['Jag hör den fortfarande.', 'Vi kunde ha hjälpt den.', 'Den var ju nästan en av oss.'],
   wait: ['Varje timme vi väntar är en timme närmare maskinerna.', 'Jag tycker inte om att vänta.', 'Är det verkligen bättre så här?'],
 };

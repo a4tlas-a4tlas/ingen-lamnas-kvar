@@ -18,7 +18,7 @@ export const FARM: EncounterDef = {
   },
   maxTurn: 8,
   rescue: {
-    who: 'tistel',
+    species: 'hare',
     zone: 'honshuset',
     found: 'Vid hönshuset sitter en hare fast i en snara. Den sparkar och gnyr, och ser på oss med vita ögon.',
     trapped: 'i snaran vid hönshuset',

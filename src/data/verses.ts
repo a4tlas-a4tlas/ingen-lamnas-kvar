@@ -36,8 +36,8 @@ export const VERSES: Record<VerseId, VerseDef> = {
   denAldste: {
     text: 'Vi lyssnar på den äldste.',
     flippedText: 'Den äldste tystnade.',
-    promise: 'Gamla Ljung tvivlar aldrig, och ingen fryser i hens närhet.',
-    breaks: 'Om Gamla Ljung dör eller lämnas.',
+    promise: 'Den äldste av oss tvivlar aldrig, och ingen fryser i dess närhet.',
+    breaks: 'Om den äldste dör eller lämnas.',
     flipCost: '−1 hopp och alla −1 tro.',
   },
   manen: {

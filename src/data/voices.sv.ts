@@ -1,5 +1,5 @@
 // What the animals say when the way forks: who wants which path, and why.
-import type { EncounterId } from '../engine/types';
+import type { EncounterId, Species } from '../engine/types';
 
 export interface Leaning {
   /** +1: wants to go there; −1: wants anything but there. */
@@ -7,16 +7,16 @@ export interface Leaning {
   line: string;
 }
 
-/** Each animal's own nature. */
-export const LEANINGS: Record<string, Partial<Record<EncounterId, Leaning>>> = {
-  kvarn: { river: { pull: 1, line: 'Vattnet är mitt hem. Ta ån – jag visar er stenarna.' } },
-  frona: {
+/** Each kind's own nature. */
+export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leaning>>>> = {
+  toad: { river: { pull: 1, line: 'Vattnet är mitt hem. Ta ån – jag visar er stenarna.' } },
+  mice: {
     river: { pull: -1, line: 'Vi kan inte simma. Inte ån, snälla.' },
     raptor: { pull: -1, line: 'Skuggan. Vi såg skuggan över fälten. Inte där.' },
   },
-  sotfot: { farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' } },
-  ljung: { river: { pull: 1, line: 'Strömmen rubbar inte mig. Håll er i mig, så går vi över.' } },
-  skymning: {
+  fox: { farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' } },
+  badger: { river: { pull: 1, line: 'Strömmen rubbar inte mig. Håll er i mig, så går vi över.' } },
+  owl: {
     farm: { pull: -1, line: 'Jag har sett gården från ovan. Hundarna sover inte så djupt som ni tror.' },
     raptor: { pull: -1, line: 'Där ute är det jag som är bytet. Inte fälten.' },
   },

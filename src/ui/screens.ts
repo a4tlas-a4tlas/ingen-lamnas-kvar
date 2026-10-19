@@ -1,5 +1,6 @@
 // HTML for the screens between encounters: the guide's map, the campfire and
 // the memorial stone. Pure functions of state (plus the campfire plan).
+import { guideName } from '../engine/roles';
 import { FOREST, pathsFrom, type Place } from '../data/journey';
 import { type FirePlan, emberPairs, hungryWatcher, inheritanceLine, living, lockedAtFire, planProblem, sitsAlone } from '../engine/campfire';
 import { MEETINGS, currentFrame, labelOf, meetingOptions, speakerOf } from '../data/meetings';
@@ -107,7 +108,7 @@ export function mapSvg(s: GameState, interactive: boolean): string {
   }).join('');
 
   return `
-    <svg class="map-svg" viewBox="0 0 80 100" role="img" aria-label="Kvarns karta över vägen">
+    <svg class="map-svg" viewBox="0 0 80 100" role="img" aria-label="${esc(guideName(s))}s karta över vägen">
       <defs><filter id="fog" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2" /></filter></defs>
       <g class="pines">${pencilPines()}</g>
       <text class="forest-name" x="${mx(FOREST.x)}" y="${FOREST.y}" text-anchor="middle">${FOREST.name}</text>
@@ -124,8 +125,8 @@ export function mapSvg(s: GameState, interactive: boolean): string {
 export function memoryLine(s: GameState, id: string): string | null {
   const p = s.journey.nodes.find((x) => x.id === id);
   if (!p?.memory || s.journey.visited.includes(id)) return null;
-  if (s.journey.scouted.includes(id)) return `Skymning såg: ${p.memory[s.journey.truth[id] ?? 'normal']} ✓`;
-  return `Kvarn tror: ${p.memory[s.journey.guess[id] ?? 'normal']}?`;
+  if (s.journey.scouted.includes(id)) return `Sett från ovan: ${p.memory[s.journey.truth[id] ?? 'normal']} ✓`;
+  return `${guideName(s)} tror: ${p.memory[s.journey.guess[id] ?? 'normal']}?`;
 }
 
 // ---------------------------------------------------------------- the memorial stone
@@ -293,7 +294,7 @@ export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mo
   const notes: string[] = [];
   if (w && hungryWatcher(s, w)) notes.push(`⚠ ${esc(w.name)} är hungrig. Att låta ${esc(w.name)} vaka över de små är ett prov på tillit – det kan gå illa, eller bli början på något nytt.`);
   if (w && w.injuries.some((k) => k === 'bleeding' || k === 'shock')) notes.push(`${esc(w.name)} vakar och får ingen vila – det som kunde läka får vänta.`);
-  if (sc) notes.push(`${esc(sc.name)} flyger före i mörkret och ser vad som väntar – i stället för Kvarns minne. Men ${esc(sc.name)} får ingen vila och ingen plats vid glöden.`);
+  if (sc) notes.push(`${esc(sc.name)} flyger före i mörkret och ser vad som väntar – i stället för ${esc(guideName(s))}s minne. Men ${esc(sc.name)} får ingen vila och ingen plats vid glöden.`);
   for (const id of s.fireDebt.apart) notes.push(`${esc(animal(s, id).name)} sitter hos kråkan och berättar om dalen i natt – ingen vila, men inte ensam.`);
   for (const id of s.fireDebt.dark) notes.push(`${esc(animal(s, id).name)} gav sin plats vid glöden till kråkan och sitter i mörkret.`);
   if (healers.length) notes.push(`Läker i natt: ${healers.map((a) => esc(a.name)).join(', ')}.`);
@@ -366,7 +367,7 @@ export function meetingHtml(s: GameState, picker = ''): string {
         <div class="meet-art">${main}
           ${facing ? `<div class="meet-speaker" style="color:${speciesColor(facing.species)}">${silhouette(facing.species)}<span>${esc(facing.name)}</span></div>` : ''}</div>
         <div class="meet-body">
-          <h2 id="meet-title">${esc(def.title)}</h2>
+          <h2 id="meet-title">${esc(typeof def.title === 'function' ? def.title(s) : def.title)}</h2>
           <p class="meet-text ${frame.speaker === 'story' ? 'story' : ''}">${esc(frame.text(s))}</p>
           ${card ? `<div class="promise-card"><b>${esc(card.title)}</b>${card.lines.map((l) => `<span>${esc(l)}</span>`).join('')}</div>` : ''}
           ${picker || `<div class="meet-options">${options.map((o) => {

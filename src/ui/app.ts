@@ -1,4 +1,5 @@
-import { CAST, animalDef, newcomer } from '../data/animals';
+import { SPECIES, START_GROUP } from '../data/animals';
+import { guideName } from '../engine/roles';
 import { CARDS, TAG_NAMES } from '../data/cards';
 import { HOPE_LINES, KRAFT_OUT_LINES } from '../data/text.sv';
 import { roarZones } from '../engine/encounters/machines';
@@ -100,14 +101,14 @@ function chipHtml(st: Status, withLabel: boolean): string {
   return `<span class="chip tone-${st.tone}${st.intent ? ' intent' : ''}" ${tip} aria-label="${esc(`${st.label}: ${st.explain}`)}">${st.icon}${withLabel ? ` ${esc(st.label)}` : ''}</span>`;
 }
 
-const kindName = (id: string) => animalDef(id)?.kindName ?? '';
+const kindName = (s: GameState, id: string) => SPECIES[animal(s, id).species].kindName;
 
 function loadSave(): GameState | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 15 && s.phase !== 'over' ? s : null;
+    return s.version === 16 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -539,7 +540,7 @@ export class App {
     const hasSave = loadSave() !== null;
     this.root.innerHTML = `
       <div class="screen title-screen">
-        <div class="title-cast">${CAST.map((d) => silhouette(d.species)).join('')}</div>
+        <div class="title-cast">${START_GROUP.map((d) => silhouette(d.species)).join('')}</div>
         <h1>Ingen lämnas kvar</h1>
         <p class="sub">Vi lämnade dalen i skymningen.<br>Framför oss låg vägen.</p>
         <div class="title-buttons">
@@ -598,7 +599,7 @@ export class App {
           ${s.animals.map((a) => `
             <div class="cast-card">
               ${silhouette(a.species)}
-              <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(a.id)}${a.predator ? ' · rovdjur' : ''}${a.count ? ` · ${a.count} st` : ''}</span></div>
+              <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(s, a.id)}${a.predator ? ' · rovdjur' : ''}${a.count ? ` · ${a.count} st` : ''}</span></div>
               <div class="muted">${a.traits.map((t) => TRAITS[t].name).join(', ')} · tro ${a.belief}</div>
             </div>`).join('')}
         </div>
@@ -927,7 +928,7 @@ export class App {
           spec === 'animal' ? 'Välj ett upplyst djur.' :
           this.sel.mode === 'card' && this.sel.animal ? `Välj vart ${o} ska bära ${animal(s, this.sel.animal).name}.` : `Välj vem ${o} ska bära.`;
       } else if (this.sel.mode === 'rescue' && s.rescue) {
-        const who = newcomer(s.rescue.who).name;
+        const who = s.rescue.name;
         hint = s.rescue.trust >= RESCUE_TRUST
           ? `Välj ett upplyst djur bredvid ${who} som befriar (◆1).`
           : `Välj ett upplyst djur inom ett steg från ${who} som når fram (◆1). Rovdjur skrämmer bara.`;
@@ -964,7 +965,7 @@ export class App {
       .join('');
     return `
       <div class="inspect">
-        <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(a.id)}${a.predator ? ' · rovdjur' : ''}${a.elder ? ' · den äldste' : ''}</span></div>
+        <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(s, a.id)}${a.predator ? ' · rovdjur' : ''}${a.elder ? ' · den äldste' : ''}</span></div>
         <div class="muted">${a.traits.map((t) => `${TRAITS[t].name} – ${TRAITS[t].note}`).join(' · ')}</div>
         <div>Tro ${a.belief}${a.count !== undefined ? ` · ${a.count} kvar` : ''}${a.injuries.length ? '' : ' · oskadd'}</div>
         <ul class="status-list">${animalStatuses(s, a).map((st) => `<li>${chipHtml(st, true)}<span>${esc(st.explain)}</span></li>`).join('') || `<li class="muted">${a.status === 'active' ? `${esc(a.name)} följer oss. Inga särskilda tillstånd.` : ''}</li>`}</ul>
@@ -995,12 +996,12 @@ export class App {
   private rescueCardHtml(s: GameState): string {
     const r = s.rescue;
     if (!r || s.phase !== 'play') return '';
-    const who = newcomer(r.who).name;
+    const who = r.name;
     const free = r.trust >= RESCUE_TRUST;
     const helpers = rescueHelpers(s);
     const selected = this.sel.mode === 'rescue';
     return `<button class="card special ${helpers.length ? '' : 'unplayable'} ${selected ? 'selected' : ''}" data-act="rescue-card" style="--owner:#e9dfc6">
-      <span class="cband">${silhouette(newcomer(r.who).species, 'var(--ink)')}<span class="cowner">${esc(who)}</span><span class="ccost" title="Kraft">1</span></span>
+      <span class="cband">${silhouette(r.species, 'var(--ink)')}<span class="cowner">${esc(who)}</span><span class="ccost" title="Kraft">1</span></span>
       <span class="cname">${free ? 'Befria' : 'Nå fram'}</span>
       <span class="ctag">Räddning · tillit ${r.trust}/${RESCUE_TRUST}</span>
       <span class="ctext">${esc(free
@@ -1014,7 +1015,7 @@ export class App {
   private rescueHtml(s: GameState): string {
     const r = s.rescue;
     if (!r || s.phase === 'over') return '';
-    const def = newcomer(r.who);
+    const def = { name: r.name, species: r.species };
     const [x, y, w, h] = zoneDef(s, r.zone).rect;
     const tip = `${def.name} sitter ${encounterOf(s).rescue!.trapped} och är rädd för oss. Använd kortet ”Nå fram” från ett djur inom ett steg (+1 tillit per gång, rovdjur skrämmer bara). Vid ${RESCUE_TRUST}/${RESCUE_TRUST} blir kortet ”Befria”: ett djur bredvid befriar ${def.name}, som då blir en av oss.`;
     return `<div class="newcomer" data-act="zone" data-zone="${r.zone}" style="left:${x + w * 0.2}%;top:${y + h * 0.55}%"
@@ -1147,7 +1148,7 @@ export class App {
       <div class="screen between map-screen">
         <div class="map-paper">${mapSvg(s, true)}</div>
         <aside class="between-side">
-          <p class="muted small">Kvarns minne av vägen · ${esc(REGIONS[s.journey.region].name)}</p>
+          <p class="muted small">${esc(guideName(s))}s minne av vägen · ${esc(REGIONS[s.journey.region].name)}</p>
           <h2>${esc(here.name)}</h2>
           ${this.voicesHtml(s)}
           <div class="onward">

@@ -16,7 +16,7 @@ export interface GuideRow {
 export interface Guide {
   title: string;
   goal: string;
-  /** What the place is like when Kvarn's memory is too kind. */
+  /** What the place is like when the guide's memory is too kind. */
   hard?: string;
   dangers: GuideRow[];
   shelter: GuideRow[];
@@ -84,8 +84,8 @@ export const GUIDES: Record<EncounterId, Guide> = {
     ],
     shelter: [
       { icon: '═', name: 'Mittremsan', text: 'Bilarna når inte hit. En plats att vänta på mellan körfälten.' },
-      { icon: '◌', name: 'Trumman', text: 'En gömd väg under asfalten. Kvarns kort ”Gamla vägar” visar den. Bara små djur får plats, det tar en timme att krypa igenom, och bilar når inte dit.' },
-      { icon: '⇡', name: 'Ugglan flyger', text: 'Skymning flyger upp till två steg och kan inte träffas i luften.' },
+      { icon: '◌', name: 'Trumman', text: 'En gömd väg under asfalten. Paddans kort ”Gamla vägar” visar den. Bara små djur får plats, det tar en timme att krypa igenom, och bilar når inte dit.' },
+      { icon: '⇡', name: 'Ugglan flyger', text: 'Ugglan flyger upp till två steg och kan inte träffas i luften.' },
       { icon: '⛨', name: 'Bära och skydda', text: '”Bära” flyttar ett djur och skyddar det; ”Ta emot” tar träffen åt någon i samma zon.' },
     ],
     tips: [
@@ -128,13 +128,13 @@ export const GUIDES: Record<EncounterId, Guide> = {
       { icon: '❄', name: 'Kylan', text: 'Bara om natten. Den som står i ån när timmen går – på en sten eller i strömmen – tappar 1 tro.' },
     ],
     shelter: [
-      { icon: '◉', name: 'De stora står emot', text: 'Gamla Ljung står stadigt i strömmen, och den som står i strömmen bredvid Gamla Ljung håller sig fast och dras inte med.' },
-      { icon: '∽', name: 'Kvarn simmar', text: 'Strömmen tar inte Kvarn. Vattnet är Kvarns hem.' },
-      { icon: '⇡', name: 'Ugglan flyger', text: 'Skymning flyger över allt: halka, ström och damm rör inte Skymning – så länge vingen är hel.' },
+      { icon: '◉', name: 'De stora står emot', text: 'De stora står stadigt i strömmen, och den som står i strömmen bredvid ett stort djur håller sig fast och dras inte med.' },
+      { icon: '∽', name: 'Paddan simmar', text: 'Strömmen tar inte paddan. Vattnet är dess hem.' },
+      { icon: '⇡', name: 'Ugglan flyger', text: 'Ugglan flyger över allt: halka, ström och damm rör den inte – så länge vingen är hel.' },
       { icon: '◈', name: 'Bita ihop', text: 'Håller kvar den som står på en hal sten den här timmen.' },
     ],
     tips: [
-      'Läs strömmen: gå ut i den bara när den är lugn – eller med Gamla Ljung bredvid.',
+      'Läs strömmen: gå ut i den bara när den är lugn – eller med ett stort djur bredvid.',
       'Dammen bär några få. Låt de svagaste gå där, och spara den till sist.',
       'Stå aldrig på en sten som är hal när timmen går.',
     ],
@@ -151,7 +151,7 @@ export const GUIDES: Record<EncounterId, Guide> = {
       { icon: '♣', name: 'Träden', text: 'Björkdungen och granridåerna stänger ute bruset. Men de är just det fällaren tar: läs vart den vänder sig.' },
       { icon: '⌂', name: 'Hygget och Stenröset', text: 'Inga träd att fälla – men öppet för bruset, och schaktaren kommer.' },
       { icon: '⌇', name: 'Grävskopans spår', text: 'Har vi läst spåren vet vi i vilken ordning maskinerna tar dalen: vi ser fällarens nästa timme, och hela schaktarens väg.' },
-      { icon: '⇡', name: 'Ugglan flyger', text: 'Skymning är i luften: träden når inte dit, och bruset inte heller.' },
+      { icon: '⇡', name: 'Ugglan flyger', text: 'Ugglan är i luften: träden når inte dit, och bruset inte heller.' },
     ],
     tips: [
       'Lämna Gläntan i tid – den går först.',
@@ -165,19 +165,19 @@ export const GUIDES: Record<EncounterId, Guide> = {
     goal: 'Få alla från Åkerrenen till Häcken – 8 timmar. Upp genom en fåra, sedan över det öppna fältet eller stenröset: tre steg.',
     dangers: [
       { icon: '◒', name: 'Vråken', effect: 'dödar', text: 'Bara i dagsljus. Skuggan visar var den slår ner när timmen går, och den glider högst en zon i timmen – mot dem av oss som syns. Den tar den minsta som inte har skydd: en liten bärs bort (sista stunden), en mellanstor får klorna i sig och blöder. Första timmen kretsar den bara.' },
-      { icon: '◌', name: 'Berguven', effect: 'dödar', text: 'Bara om natten. Den syns inte – vingslagen hörs över en av två platser, och den slår ner i en av dem. Den jagar i luften: flyger Skymning hör den vingarna först.' },
+      { icon: '◌', name: 'Berguven', effect: 'dödar', text: 'Bara om natten. Den syns inte – vingslagen hörs över en av två platser, och den slår ner i en av dem. Den jagar i luften: flyger ugglan hör den vingarna först.' },
       { icon: '⇡', name: 'Luften', text: 'Här är luften fåglarnas. Den som flyger är inte skyddad – tvärtom.' },
     ],
     shelter: [
       { icon: '♣', name: 'Åkerrenen', text: 'Gräset vid kanten gömmer alla.' },
       { icon: '≡', name: 'Fårorna', text: 'Djupa nog för de små. En räv eller uggla syns.' },
       { icon: '◍', name: 'Stenröset', text: 'Gömmer små och mellanstora mellan stenarna.' },
-      { icon: '◉', name: 'De stora', text: 'Gamla Ljung kan inte lyftas. ”Ta emot” på en liten: fågeln släpper taget.' },
+      { icon: '◉', name: 'De stora', text: 'De stora kan inte lyftas. ”Ta emot” från ett stort djur på en liten: fågeln släpper taget.' },
     ],
     tips: [
       'Läs skuggan och gå dit den inte kan nå – eller dit vi är gömda.',
       'Det öppna fältet är snabbt men naket. Stenröset är tryggare för de flesta.',
-      'Låt Skymning gå på marken här.',
+      'Låt ugglan gå på marken här.',
     ],
   },
 };

@@ -32,9 +32,16 @@ export const CLASSIC: MapNode[] = [
   { ...node(DALEN.end, 'akrarna', 4, []), kind: 'end', encounter: undefined, name: 'Åkrarna' },
 ];
 
+/** The names the first group had, so tests can read like the story: every run draws new ones. */
+export const CLASSIC_NAMES: Record<string, string> = { badger: 'Gamla Ljung', toad: 'Kvarn', fox: 'Sotfot', owl: 'Skymning', adder: 'Sicksack', mice: 'Fröna' };
+export function named(s: GameState): GameState {
+  for (const a of s.animals) a.name = CLASSIC_NAMES[a.id] ?? a.name;
+  return s;
+}
+
 /** A new game on the fixed little map, with Kvarn remembering every place right. */
 export function classicGame(seed: number): GameState {
-  const s = createGame(seed);
+  const s = named(createGame(seed));
   s.journey = { ...s.journey, nodes: structuredClone(CLASSIC), truth: { garden: 'normal', an: 'normal' }, guess: { garden: 'normal', an: 'normal' } };
   return s;
 }

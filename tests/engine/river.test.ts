@@ -72,9 +72,9 @@ describe('the fork', () => {
 
   it('an injury speaks louder than nature: a limping animal fears the stones', () => {
     const s = atTheFork();
-    get(s, 'frona').injuries = [];
-    get(s, 'sotfot').injuries = ['halt'];
-    const v = forkVoices(s).find((x) => x.who === 'sotfot');
+    get(s, 'mice').injuries = [];
+    get(s, 'fox').injuries = ['halt'];
+    const v = forkVoices(s).find((x) => x.who === 'fox');
     expect(v?.to).toBe('garden');
     expect(v?.weight).toBe(2);
   });
@@ -82,8 +82,8 @@ describe('the fork', () => {
   it('under "Vi lyssnar på den äldste" the elder’s voice counts double', () => {
     const s = atTheFork();
     s.verses = [oathVerse('denAldste')];
-    expect(voiceStake(s, get(s, 'ljung'))).toBe(2);
-    expect(voiceStake(s, get(s, 'kvarn'))).toBe(1);
+    expect(voiceStake(s, get(s, 'badger'))).toBe(2);
+    expect(voiceStake(s, get(s, 'toad'))).toBe(1);
   });
 });
 
@@ -97,53 +97,53 @@ describe('Ån', () => {
 
   it('a slippery stone throws whoever stands there into the current', () => {
     let s = riverGame();
-    get(s, 'frona').zone = 'sten1';
+    get(s, 'mice').zone = 'sten1';
     s.slipPlan[0] = ['sten1'];
     s = pass(s);
-    expect(get(s, 'frona').zone).toBe('strommen');
-    expect(get(s, 'frona').status).toBe('active');
+    expect(get(s, 'mice').zone).toBe('strommen');
+    expect(get(s, 'mice').status).toBe('active');
   });
 
   it('biting down holds you on the stone', () => {
     let s = riverGame();
-    get(s, 'frona').zone = 'sten1';
-    get(s, 'frona').braced = true;
+    get(s, 'mice').zone = 'sten1';
+    get(s, 'mice').braced = true;
     s.slipPlan[0] = ['sten1'];
     s = pass(s);
-    expect(get(s, 'frona').zone).toBe('sten1');
+    expect(get(s, 'mice').zone).toBe('sten1');
   });
 
   it('a strong current carries the small toward the rapids: the last moment', () => {
     let s = riverGame();
-    only(s, 'sotfot', 'kvarn');
-    get(s, 'sotfot').zone = 'strommen';
+    only(s, 'fox', 'toad');
+    get(s, 'fox').zone = 'strommen';
     s.currentPlan[0] = 'strid';
     s = run(s, { type: 'endTurn' });
     expect(s.phase).toBe('lastMoment');
     expect(s.pending?.source).toBe('forsen');
     s = run(s, { type: 'lastMoment', choice: 'letGo' });
-    expect(get(s, 'sotfot').status).toBe('dead');
+    expect(get(s, 'fox').status).toBe('dead');
   });
 
   it('whoever stands next to the badger holds on; the toad swims; the owl lifts off', () => {
     let s = riverGame();
-    only(s, 'sotfot', 'ljung', 'kvarn', 'skymning');
-    for (const id of ['sotfot', 'ljung', 'kvarn', 'skymning']) get(s, id).zone = 'strommen';
+    only(s, 'fox', 'badger', 'toad', 'owl');
+    for (const id of ['fox', 'badger', 'toad', 'owl']) get(s, id).zone = 'strommen';
     s.currentPlan[0] = 'strid';
     s = pass(s);
     expect(s.phase).toBe('play');
-    expect(['sotfot', 'ljung', 'kvarn', 'skymning'].every((id) => get(s, id).status === 'active')).toBe(true);
+    expect(['fox', 'badger', 'toad', 'owl'].every((id) => get(s, id).status === 'active')).toBe(true);
   });
 
   it(`the dam creaks under every step and breaks at ${DAM_MAX}; the large count twice`, () => {
     let s = riverGame();
-    s = run(s, { type: 'lead', target: 'ljung', zone: 'dammen' });
+    s = run(s, { type: 'lead', target: 'badger', zone: 'dammen' });
     expect(s.damCreak).toBe(2);
-    s = run(s, { type: 'lead', target: 'kvarn', zone: 'dammen' });
+    s = run(s, { type: 'lead', target: 'toad', zone: 'dammen' });
     expect(s.damCreak).toBe(3);
-    s = run(s, { type: 'lead', target: 'frona', zone: 'dammen' });
+    s = run(s, { type: 'lead', target: 'mice', zone: 'dammen' });
     expect(s.closed).toContain('dammen');
-    expect(['ljung', 'kvarn', 'frona'].every((id) => get(s, id).zone === 'strommen')).toBe(true);
+    expect(['badger', 'toad', 'mice'].every((id) => get(s, id).zone === 'strommen')).toBe(true);
     expect(s.currentPlan.slice(0, 2)).toEqual(['strid', 'strid']);
   });
 
@@ -151,9 +151,9 @@ describe('Ån', () => {
     let s = riverGame();
     expect(s.time).toBe('day');
     s = pass(s);
-    get(s, 'kvarn').zone = 'sten1';
-    get(s, 'frona').zone = 'sten2';
-    get(s, 'sicksack').zone = 'sten2';
+    get(s, 'toad').zone = 'sten1';
+    get(s, 'mice').zone = 'sten2';
+    get(s, 'adder').zone = 'sten2';
     s.slipPlan[s.turn - 1] = [];
     s.currentPlan[s.turn - 1] = 'lugn';
     // Re-run the hour's telegraph by passing once more from a fresh hour.
@@ -165,18 +165,18 @@ describe('Ån', () => {
     let s = riverGame();
     s = pass(s);
     s.heron = 'sten1';
-    get(s, 'kvarn').zone = 'sten1';
+    get(s, 'toad').zone = 'sten1';
     s.slipPlan[s.turn - 1] = [];
     s = pass(s);
-    expect(get(s, 'kvarn').injuries).toContain('bleeding');
+    expect(get(s, 'toad').injuries).toContain('bleeding');
   });
 
   it('at night there is no heron, but the cold water bites', () => {
     let s = riverGame(true);
     expect(s.time).toBe('night');
-    get(s, 'ljung').zone = 'sten1';
+    get(s, 'badger').zone = 'sten1';
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'ljung').belief).toBe(7);
+    expect(get(s, 'badger').belief).toBe(7);
     s.slipPlan = s.slipPlan.map(() => []);
     s = pass(s);
     expect(s.heron).toBeNull();

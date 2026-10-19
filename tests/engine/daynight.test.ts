@@ -71,10 +71,10 @@ describe('day and night', () => {
     expect(alarmMax(s)).toBe(ALARM_MAX_NIGHT);
     s.alarm = 5;
     s.dogsAwake = true;
-    expect(canLure(s, get(s, 'sotfot'))).toBe(false);
+    expect(canLure(s, get(s, 'fox'))).toBe(false);
     expect(s.farmerOut).toBe(false);
     s.time = 'day';
-    expect(canLure(s, get(s, 'sotfot'))).toBe(true);
+    expect(canLure(s, get(s, 'fox'))).toBe(true);
   });
 
   it('at night the scent lingers: it fades only every other hour', () => {

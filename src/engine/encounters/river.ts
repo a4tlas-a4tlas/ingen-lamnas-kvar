@@ -19,7 +19,7 @@ export const RIVER: EncounterDef = {
   },
   maxTurn: 8,
   rescue: {
-    who: 'tistel',
+    species: 'hare',
     zone: 'sten3',
     found: 'På tredje stenen sitter en hare, avskuren av vattnet. Den darrar och vågar inte hoppa.',
     trapped: 'på tredje stenen',
@@ -78,8 +78,8 @@ export function planRiver(h: RngHolder, maxTurn: number, flood = false): { curre
   return { currentPlan, slipPlan };
 }
 
-/** The toad swims: the current doesn't take Kvarn. */
-export const swims = (a: Animal) => a.species === 'toad';
+/** Swimmers (the toad): the current doesn't take them. */
+export const swims = (a: Animal) => a.swimmer;
 
 /** A flier with a whole wing just lifts off the water: no slipping, no current, no cold. */
 export const aboveTheWater = (a: Animal) => a.flying || (a.flier && !a.injuries.includes('broken'));

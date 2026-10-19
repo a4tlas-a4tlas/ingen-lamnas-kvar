@@ -51,12 +51,12 @@ describe('the journey', () => {
     expect(s.run).toMatchObject({ between: true, offered: ['akrarna'] });
     expect(s.meeting).toMatchObject({ id: 'interlude', frame: 'start' });
     // Gamla Ljung grieves the glen; saying it aloud lets it go a little.
-    get(s, 'ljung').grief = ['dalen'];
-    const belief = get(s, 'ljung').belief;
-    s = run(s, { type: 'respond', option: 'look-ljung' });
-    expect(get(s, 'ljung').belief).toBe(Math.min(10, belief + 1));
-    expect(get(s, 'ljung').grief).toEqual([]);
-    expect(step(s, { type: 'respond', option: 'look-ljung' }).events[0].kind).toBe('error');
+    get(s, 'badger').grief = ['dalen'];
+    const belief = get(s, 'badger').belief;
+    s = run(s, { type: 'respond', option: 'look-0' });
+    expect(get(s, 'badger').belief).toBe(Math.min(10, belief + 1));
+    expect(get(s, 'badger').grief).toEqual([]);
+    expect(step(s, { type: 'respond', option: 'look-0' }).events[0].kind).toBe('error');
     s = run(s, { type: 'respond', option: 'onward' });
     // The glen leaves a promise in someone.
     expect(s.meeting).toMatchObject({ id: 'proposal' });
@@ -102,61 +102,61 @@ describe('the campfire', () => {
   it('pairs by the embers grow closer; whoever has no place sits alone', () => {
     let s = atFire();
     const before = (id: string) => get(s, id).belief;
-    const b = { ljung: before('ljung'), kvarn: before('kvarn'), sotfot: before('sotfot'), skymning: before('skymning'), frona: before('frona'), sicksack: before('sicksack') };
-    s = run(s, { type: 'restAtFire', watch: 'ljung', pairs: [['kvarn', 'frona'], ['sotfot', 'skymning']], mourning: {} });
-    expect(get(s, 'kvarn').belief).toBe(b.kvarn + 1);
-    expect(get(s, 'sotfot').belief).toBe(b.sotfot + 1);
-    expect(get(s, 'sicksack').belief).toBe(b.sicksack - 1);
-    expect(s.bonds['frona|kvarn']).toBe(2);
+    const b = { ljung: before('badger'), kvarn: before('toad'), sotfot: before('fox'), skymning: before('owl'), frona: before('mice'), sicksack: before('adder') };
+    s = run(s, { type: 'restAtFire', watch: 'badger', pairs: [['toad', 'mice'], ['fox', 'owl']], mourning: {} });
+    expect(get(s, 'toad').belief).toBe(b.kvarn + 1);
+    expect(get(s, 'fox').belief).toBe(b.sotfot + 1);
+    expect(get(s, 'adder').belief).toBe(b.sicksack - 1);
+    expect(s.bonds['mice|toad']).toBe(2);
     expect(s.phase).toBe('map');
   });
 
   it('rest heals bleeding and shock for all but the watcher; limps stay', () => {
     let s = atFire();
-    get(s, 'kvarn').injuries = ['bleeding', 'halt'];
-    get(s, 'ljung').injuries = ['shock'];
-    s = run(s, { type: 'restAtFire', watch: 'ljung', pairs: [], mourning: {} });
-    expect(get(s, 'kvarn').injuries).toEqual(['halt']);
-    expect(get(s, 'ljung').injuries).toEqual(['shock']);
+    get(s, 'toad').injuries = ['bleeding', 'halt'];
+    get(s, 'badger').injuries = ['shock'];
+    s = run(s, { type: 'restAtFire', watch: 'badger', pairs: [], mourning: {} });
+    expect(get(s, 'toad').injuries).toEqual(['halt']);
+    expect(get(s, 'badger').injuries).toEqual(['shock']);
   });
 
   it('needs a watcher, and no one can be in two places', () => {
     const s = atFire();
     expect(planProblem(s, { pairs: [], mourning: {} })).toBe('Någon måste hålla vakt.');
-    expect(planProblem(s, { watch: 'ljung', pairs: [['ljung', 'kvarn']], mourning: {} })).toBe('Den som vakar kan inte sitta vid glöden.');
+    expect(planProblem(s, { watch: 'badger', pairs: [['badger', 'toad']], mourning: {} })).toBe('Den som vakar kan inte sitta vid glöden.');
   });
 
   it('a hungry predator on watch either hunts or earns our trust', () => {
     let s = atFire();
-    const fox = get(s, 'sotfot');
+    const fox = get(s, 'fox');
     fox.belief = 1;
-    s = run(s, { type: 'restAtFire', watch: 'sotfot', pairs: [], mourning: {} });
-    const hunted = s.animals.some((a) => a.id !== 'sotfot' && (a.injuries.includes('bleeding') || (a.count !== undefined && a.count < 6)));
-    const trusted = get(s, 'sotfot').belief === 3;
+    s = run(s, { type: 'restAtFire', watch: 'fox', pairs: [], mourning: {} });
+    const hunted = s.animals.some((a) => a.id !== 'fox' && (a.injuries.includes('bleeding') || (a.count !== undefined && a.count < 6)));
+    const trusted = get(s, 'fox').belief === 3;
     expect(hunted !== trusted).toBe(true);
   });
 
   it('mourning: the closest inherits a trait card; burying makes the memory gentler', () => {
     let s = atFire();
     // Kvarn has died on the road; Gamla Ljung was closest.
-    const k = get(s, 'kvarn');
+    const k = get(s, 'toad');
     k.status = 'dead';
-    s.unmourned = ['kvarn'];
-    s.discard.push({ uid: 999, kind: 'minne', owner: 'kvarn', memoryOf: 'kvarn' });
-    const trait = k.traits.find((t) => !get(s, 'ljung').traits.includes(t))!;
-    s = run(s, { type: 'restAtFire', watch: 'frona', pairs: [], mourning: { kvarn: 'bury' } });
-    expect(get(s, 'ljung').traits).toContain(trait);
-    expect(s.discard.some((c) => c.owner === 'ljung' && c.inheritedFrom === 'kvarn')).toBe(true);
+    s.unmourned = ['toad'];
+    s.discard.push({ uid: 999, kind: 'minne', owner: 'toad', memoryOf: 'toad' });
+    const trait = k.traits.find((t) => !get(s, 'badger').traits.includes(t))!;
+    s = run(s, { type: 'restAtFire', watch: 'mice', pairs: [], mourning: { toad: 'bury' } });
+    expect(get(s, 'badger').traits).toContain(trait);
+    expect(s.discard.some((c) => c.owner === 'badger' && c.inheritedFrom === 'toad')).toBe(true);
     expect(s.discard.find((c) => c.uid === 999)?.buried).toBe(true);
-    expect(get(s, 'ljung').grief).toEqual([]);
+    expect(get(s, 'badger').grief).toEqual([]);
   });
 
   it('carrying the dead leaves the closest in mourning', () => {
     let s = atFire();
-    get(s, 'kvarn').status = 'dead';
-    s.unmourned = ['kvarn'];
-    s = run(s, { type: 'restAtFire', watch: 'frona', pairs: [], mourning: { kvarn: 'carry' } });
-    expect(get(s, 'ljung').grief).toEqual(['kvarn']);
+    get(s, 'toad').status = 'dead';
+    s.unmourned = ['toad'];
+    s = run(s, { type: 'restAtFire', watch: 'mice', pairs: [], mourning: { toad: 'carry' } });
+    expect(get(s, 'badger').grief).toEqual(['toad']);
     expect(s.unmourned).toEqual([]);
   });
 });

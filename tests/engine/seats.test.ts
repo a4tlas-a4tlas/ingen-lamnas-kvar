@@ -27,8 +27,8 @@ describe('dragging animals to their places by the fire', () => {
   it('only one who can fly may take the scout’s place', () => {
     const s = atTheFire();
     const seats = seatsFromPlan(s, defaultPlan(s));
-    expect(moveToSeat(s, seats, 'kvarn', 'scout').refusal).toBe('Bara den som kan flyga kan spana.');
-    expect(moveToSeat(s, seats, 'skymning', 'scout').seats.skymning).toBe('scout');
+    expect(moveToSeat(s, seats, 'toad', 'scout').refusal).toBe('Bara den som kan flyga kan spana.');
+    expect(moveToSeat(s, seats, 'owl', 'scout').seats.owl).toBe('scout');
   });
 
   it('those the crow placed stay where they are, and the ember the crow took holds no one', () => {
@@ -36,9 +36,9 @@ describe('dragging animals to their places by the fire', () => {
     s.meeting = { id: 'crow', frame: 'start', used: [], told: [] };
     s = run(s, { type: 'respond', option: 'lonely' }, { type: 'respond', option: 'story' }, { type: 'respond', option: 'thanks' });
     const seats = seatsFromPlan(s, defaultPlan(s));
-    expect(seats.ljung).toBe('apart');
-    expect(moveToSeat(s, seats, 'ljung', 'watch').refusal).toMatch(/redan sin plats/);
+    expect(seats.badger).toBe('apart');
+    expect(moveToSeat(s, seats, 'badger', 'watch').refusal).toMatch(/redan sin plats/);
     s.fireDebt.embers = 1;
-    expect(moveToSeat(s, seats, 'kvarn', 'ember1').refusal).toMatch(/Kråkan sitter där/);
+    expect(moveToSeat(s, seats, 'toad', 'ember1').refusal).toMatch(/Kråkan sitter där/);
   });
 });

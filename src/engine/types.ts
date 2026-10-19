@@ -72,7 +72,11 @@ export interface Animal {
   species: Species;
   predator: boolean;
   elder: boolean;
+  /** The one who remembers the way: whose memory the map is. */
+  guide: boolean;
   size: Size;
+  /** Swimmers: the current doesn't take them. */
+  swimmer: boolean;
   /** Fliers take to the air whenever they move, and can't be hit while airborne. */
   flier: boolean;
   /** Hungry predators forget the oath earlier: added to the belief level they hunt at. */
@@ -271,8 +275,10 @@ export interface FireDebt {
 }
 
 export interface Rescue {
-  /** The newcomer's id in NEWCOMERS. */
+  /** The id the trapped one will have among us, its kind and its name. */
   who: string;
+  species: Species;
+  name: string;
   zone: ZoneId;
   trust: number;
 }
@@ -285,7 +291,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 15;
+  version: 16;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;

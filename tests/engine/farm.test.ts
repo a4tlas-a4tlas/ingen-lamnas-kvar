@@ -40,7 +40,7 @@ describe('Gårdshundarna', () => {
 
   it('we leave scent where we end the hour, except in the tall grass', () => {
     let s = farmGame();
-    get(s, 'ljung').zone = 'hogtGras';
+    get(s, 'badger').zone = 'hogtGras';
     s = pass(s);
     expect(s.scent.snaret).toBe(2);
     expect(s.scent.hogtGras ?? 0).toBe(0);
@@ -57,7 +57,7 @@ describe('Gårdshundarna', () => {
     let s = farmGame();
     s = pass(s);
     s = pass(s);
-    expect(get(s, 'ljung').injuries).toContain('bleeding');
+    expect(get(s, 'badger').injuries).toContain('bleeding');
     expect(s.alarm).toBe(1);
   });
 
@@ -75,12 +75,12 @@ describe('Gårdshundarna', () => {
     let s = farmGame();
     s = pass(s);
     s.kraft = 99;
-    expect(lureZones(s, get(s, 'sotfot'))).toContain('hogtGras');
-    s = run(s, { type: 'lure', target: 'sotfot', zone: 'gardsplanen' });
+    expect(lureZones(s, get(s, 'fox'))).toContain('hogtGras');
+    s = run(s, { type: 'lure', target: 'fox', zone: 'gardsplanen' });
     expect(s.dogs.every((d) => d.target === 'gardsplanen')).toBe(true);
     // Everyone else slips into the tall grass; the fox runs on to the manure heap.
-    for (const a of s.animals.filter((x) => x.status === 'active' && x.id !== 'sotfot')) s = run(s, { type: 'lead', target: a.id, zone: 'hogtGras' });
-    s = run(s, { type: 'lead', target: 'sotfot', zone: 'godsel' });
+    for (const a of s.animals.filter((x) => x.status === 'active' && x.id !== 'fox')) s = run(s, { type: 'lead', target: a.id, zone: 'hogtGras' });
+    s = run(s, { type: 'lead', target: 'fox', zone: 'godsel' });
     s = pass(s);
     expect(s.animals.some((a) => a.injuries.includes('bleeding'))).toBe(false);
   });
@@ -89,7 +89,7 @@ describe('Gårdshundarna', () => {
     let s = farmGame();
     s.alarm = 5;
     s.farmerOut = true;
-    get(s, 'kvarn').zone = 'gardsplanen';
+    get(s, 'toad').zone = 'gardsplanen';
     s = pass(s);
     expect(s.farmerSweep).toBe('gardsplanen');
     s = run(s, { type: 'endTurn' });
@@ -107,13 +107,13 @@ describe('Gårdshundarna', () => {
 
   it('a hungry predator next to the hen house takes a hen instead of one of us', () => {
     let s = farmGame();
-    const fox = get(s, 'sotfot');
+    const fox = get(s, 'fox');
     fox.zone = 'gardsplanen';
     fox.belief = 4;
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'sotfot').intent.kind).toBe('raid');
+    expect(get(s, 'fox').intent.kind).toBe('raid');
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'sotfot').zone).toBe('honshuset');
+    expect(get(s, 'fox').zone).toBe('honshuset');
     expect(s.alarm).toBeGreaterThanOrEqual(3);
   });
 

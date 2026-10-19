@@ -138,15 +138,15 @@ for (const route of [
     if (await page.locator('.fire-screen').count()) {
       seen.add('fire');
       // On the farm run, send the owl ahead: drag it (or, on a phone, tap it and then the place).
-      const owl = page.locator('.fire-token[data-drag="skymning"]');
+      const owl = page.locator('.fire-token[data-drag="owl"]');
       const spot = page.locator('.fire-slot[data-seat="scout"]');
       if (route.scene === 'farm' && !seen.has('scout') && (await owl.count()) && (await spot.count())) {
         if (test.info().project.name === 'phone') {
           await owl.click();
           await spot.click();
         } else await owl.dragTo(spot);
-        await expect(page.locator('.fire-token.seat-scout[data-animal="skymning"]')).toHaveCount(1);
-        for (const id of ['ljung', 'kvarn', 'frona', 'sotfot', 'sicksack']) {
+        await expect(page.locator('.fire-token.seat-scout[data-animal="owl"]')).toHaveCount(1);
+        for (const id of ['badger', 'toad', 'mice', 'fox', 'adder']) {
           if (await page.getByRole('button', { name: 'Låt natten gå' }).isEnabled()) break;
           const a = page.locator(`.fire-token[data-drag="${id}"]`);
           if (await a.count()) {

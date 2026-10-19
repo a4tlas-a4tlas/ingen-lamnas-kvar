@@ -50,7 +50,7 @@ export function proposalAtFire(s: GameState): Proposal | null {
   const ahead = encountersAhead(s);
   for (const a of alive.filter((x) => hasInjury(x, 'shock') || x.belief <= 3)) {
     const rule: PromiseRule | null =
-      a.id === 'frona' && ahead.includes('river') ? 'water' : a.id === 'sotfot' && ahead.includes('farm') ? 'farm' : ahead.length ? 'night' : null;
+      a.species === 'mice' && ahead.includes('river') ? 'water' : a.species === 'fox' && ahead.includes('farm') ? 'farm' : ahead.length ? 'night' : null;
     if (rule && !sworn(s, rule)) return { by: a.id, rule };
   }
   return null;

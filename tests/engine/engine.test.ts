@@ -38,43 +38,43 @@ describe('determinism', () => {
 describe('belief', () => {
   it('an animal with no belief leaves when the oath does not hold it', () => {
     let s = calmGame(['viJagarInte', 'denStarke', 'manen']);
-    get(s, 'kvarn').belief = 0;
+    get(s, 'toad').belief = 0;
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'kvarn').intent.kind).toBe('leave');
+    expect(get(s, 'toad').intent.kind).toBe('leave');
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'kvarn').status).toBe('left');
-    expect(s.draw.concat(s.hand, s.discard).some((c) => c.owner === 'kvarn')).toBe(false);
+    expect(get(s, 'toad').status).toBe('left');
+    expect(s.draw.concat(s.hand, s.discard).some((c) => c.owner === 'toad')).toBe(false);
   });
 
   it('"Ingen lämnas kvar" keeps belief from reaching zero', () => {
     let s = calmGame([...ALL3]);
-    get(s, 'frona').belief = 1;
-    get(s, 'sotfot').intent = { kind: 'hunt', target: 'frona' };
+    get(s, 'mice').belief = 1;
+    get(s, 'fox').intent = { kind: 'hunt', target: 'mice' };
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'frona').belief).toBe(1);
+    expect(get(s, 'mice').belief).toBe(1);
   });
 });
 
 describe('the truce', () => {
   it('a predator with low belief turns its intent on prey', () => {
     let s = calmGame(['ingenLamnas', 'denStarke', 'manen']);
-    get(s, 'sotfot').belief = 2;
+    get(s, 'fox').belief = 2;
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'sotfot').intent).toEqual({ kind: 'hunt', target: 'frona' });
+    expect(get(s, 'fox').intent).toEqual({ kind: 'hunt', target: 'mice' });
   });
 
   it('the truce verse holds the same predator back', () => {
     let s = calmGame([...ALL3]);
-    get(s, 'sotfot').belief = 2;
+    get(s, 'fox').belief = 2;
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'sotfot').intent.kind).not.toBe('hunt');
+    expect(get(s, 'fox').intent.kind).not.toBe('hunt');
   });
 
   it('a hunt breaks the truce verse into its inverse', () => {
     let s = calmGame([...ALL3]);
-    get(s, 'sotfot').intent = { kind: 'hunt', target: 'frona' };
+    get(s, 'fox').intent = { kind: 'hunt', target: 'mice' };
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'frona').count).toBe(5);
+    expect(get(s, 'mice').count).toBe(5);
     const v = s.verses.find((x) => x.base === 'viJagarInte')!;
     expect(v.flipped).toBe(true);
     expect(v.flippedText).toBe('Vi jagade varandra.');
@@ -84,17 +84,17 @@ describe('the truce', () => {
 describe('the last moment', () => {
   function lethal(verses = [...ALL3]) {
     const s = calmGame(verses);
-    get(s, 'kvarn').zone = 'lane1';
+    get(s, 'toad').zone = 'lane1';
     s.trafficPlan[0] = [truck('lane1')];
     // Only Kvarn is in danger: Ljung waits in the median.
-    get(s, 'ljung').zone = 'median';
+    get(s, 'badger').zone = 'median';
     return run(s, { type: 'endTurn' });
   }
 
   it('pauses on a killing, telegraphed hit', () => {
     const s = lethal();
     expect(s.phase).toBe('lastMoment');
-    expect(s.pending?.victim).toBe('kvarn');
+    expect(s.pending?.victim).toBe('toad');
   });
 
   it('verses cannot be spent to save a life', () => {
@@ -108,43 +108,43 @@ describe('the last moment', () => {
   it('letting go kills, flips "Ingen lämnas kvar" and leaves a memory', () => {
     let s = lethal();
     s = run(s, { type: 'lastMoment', choice: 'letGo' });
-    expect(get(s, 'kvarn').status).toBe('dead');
+    expect(get(s, 'toad').status).toBe('dead');
     expect(verseStatus(s, 'ingenLamnas')).toBe('flipped');
     const all = s.draw.concat(s.hand, s.discard);
-    expect(all.filter((c) => c.owner === 'kvarn').map((c) => c.kind)).toEqual(['minne']);
-    expect(s.verses.find((v) => v.id === 'minne-kvarn')?.text).toBe('För Kvarn, som vi lät gå.');
+    expect(all.filter((c) => c.owner === 'toad').map((c) => c.kind)).toEqual(['minne']);
+    expect(s.verses.find((v) => v.id === 'minne-toad')?.text).toBe('För Kvarn, som vi lät gå.');
   });
 
   it('another animal can throw itself in the way', () => {
     let s = lethal();
-    s = run(s, { type: 'lastMoment', choice: 'shield', by: 'ljung' });
+    s = run(s, { type: 'lastMoment', choice: 'shield', by: 'badger' });
     // Ljung pushes Kvarn away and is hurt, not killed.
-    expect(get(s, 'kvarn').injuries).toEqual([]);
-    expect(get(s, 'ljung').status).toBe('active');
-    expect(get(s, 'ljung').injuries).toHaveLength(1);
+    expect(get(s, 'toad').injuries).toEqual([]);
+    expect(get(s, 'badger').status).toBe('active');
+    expect(get(s, 'badger').injuries).toHaveLength(1);
   });
 
   it('a dark car gives no last moment', () => {
     const s = calmGame([...ALL3]);
-    const k = get(s, 'kvarn');
+    const k = get(s, 'toad');
     k.zone = 'lane2';
     s.trafficPlan[0] = [{ lane: 'lane2', severity: 'kill', vehicle: 'mörk bil', dark: true }];
     const after = run(s, { type: 'endTurn' });
     expect(after.phase).toBe('play');
-    expect(get(after, 'kvarn').status).toBe('dead');
+    expect(get(after, 'toad').status).toBe('dead');
   });
 });
 
 describe('swarms', () => {
   it('shrinks instead of dying, and breaks "Den starke bär den svage"', () => {
     let s = calmGame([...ALL3]);
-    get(s, 'frona').zone = 'lane1';
-    get(s, 'ljung').zone = 'lane1';
+    get(s, 'mice').zone = 'lane1';
+    get(s, 'badger').zone = 'lane1';
     s.trafficPlan[0] = [car('lane1')];
-    get(s, 'ljung').braced = true;
+    get(s, 'badger').braced = true;
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'frona').count).toBe(5);
-    expect(get(s, 'frona').status).toBe('active');
+    expect(get(s, 'mice').count).toBe(5);
+    expect(get(s, 'mice').status).toBe('active');
     expect(verseStatus(s, 'denStarke')).toBe('flipped');
   });
 });
@@ -152,16 +152,16 @@ describe('swarms', () => {
 describe('the road', () => {
   it('the culvert is slow: one hour inside before crawling out', () => {
     let s = calmGame([...ALL3]);
-    s.hand.push({ uid: 900, kind: 'gamlaVagar', owner: 'kvarn' });
+    s.hand.push({ uid: 900, kind: 'gamlaVagar', owner: 'toad' });
     s = run(s, { type: 'play', uid: 900 });
     expect(s.revealed).toContain('culvert');
-    expect(get(s, 'kvarn').zone).toBe('culvert');
-    s.hand.push({ uid: 901, kind: 'smaSteg', owner: 'kvarn' });
+    expect(get(s, 'toad').zone).toBe('culvert');
+    s.hand.push({ uid: 901, kind: 'smaSteg', owner: 'toad' });
     expect(cardZones(s, s.hand.at(-1)!)).toEqual([]);
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'kvarn').slowTime).toBe(1);
-    s = run(s, { type: 'lead', target: 'kvarn', zone: 'farDike' });
-    expect(get(s, 'kvarn').status).toBe('safe');
+    expect(get(s, 'toad').slowTime).toBe(1);
+    s = run(s, { type: 'lead', target: 'toad', zone: 'farDike' });
+    expect(get(s, 'toad').status).toBe('safe');
   });
 
   it('dawn leaves the stragglers behind and breaks the first verse', () => {
@@ -188,7 +188,7 @@ describe('the road', () => {
   it('walking onto asphalt in moonlight breaks the moon verse', () => {
     let s = calmGame(['ingenLamnas', 'denStarke', 'manen']);
     s.moonPlan[0] = false;
-    s = run(s, { type: 'lead', target: 'ljung', zone: 'lane1' });
+    s = run(s, { type: 'lead', target: 'badger', zone: 'lane1' });
     expect(verseStatus(s, 'manen')).toBe('flipped');
   });
 });
@@ -197,35 +197,35 @@ describe('size and flight', () => {
   it('only small animals fit through the culvert', () => {
     const s = calmGame([...ALL3]);
     s.revealed = ['culvert'];
-    expect(leadZones(s, get(s, 'kvarn'))).toContain('culvert');
-    expect(leadZones(s, get(s, 'frona'))).toContain('culvert');
-    expect(leadZones(s, get(s, 'sotfot'))).not.toContain('culvert');
-    expect(leadZones(s, get(s, 'ljung'))).not.toContain('culvert');
+    expect(leadZones(s, get(s, 'toad'))).toContain('culvert');
+    expect(leadZones(s, get(s, 'mice'))).toContain('culvert');
+    expect(leadZones(s, get(s, 'fox'))).not.toContain('culvert');
+    expect(leadZones(s, get(s, 'badger'))).not.toContain('culvert');
   });
 
   it('the owl flies two steps and cannot be hit while airborne', () => {
     let s = calmGame([...ALL3]);
-    expect(leadZones(s, get(s, 'skymning'))).toEqual(expect.arrayContaining(['lane1', 'median']));
+    expect(leadZones(s, get(s, 'owl'))).toEqual(expect.arrayContaining(['lane1', 'median']));
     s.trafficPlan[0] = [truck('lane1')];
-    s = run(s, { type: 'lead', target: 'skymning', zone: 'lane1' });
-    expect(get(s, 'skymning').flying).toBe(true);
+    s = run(s, { type: 'lead', target: 'owl', zone: 'lane1' });
+    expect(get(s, 'owl').flying).toBe(true);
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'skymning').status).toBe('active');
-    expect(get(s, 'skymning').injuries).toEqual([]);
+    expect(get(s, 'owl').status).toBe('active');
+    expect(get(s, 'owl').injuries).toEqual([]);
   });
 
   it('an owl that sits still on the road has landed and can be hit', () => {
     let s = calmGame([...ALL3]);
-    get(s, 'skymning').zone = 'lane1';
+    get(s, 'owl').zone = 'lane1';
     s.trafficPlan[0] = [car('lane1')];
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'skymning').injuries).toHaveLength(1);
+    expect(get(s, 'owl').injuries).toHaveLength(1);
   });
 
   it('a flying owl does not break the moon verse', () => {
     let s = calmGame(['ingenLamnas', 'denStarke', 'manen']);
     s.moonPlan[0] = false;
-    s = run(s, { type: 'lead', target: 'skymning', zone: 'lane1' });
+    s = run(s, { type: 'lead', target: 'owl', zone: 'lane1' });
     expect(verseStatus(s, 'manen')).toBe('intact');
   });
 });
@@ -233,55 +233,55 @@ describe('size and flight', () => {
 describe('reasons shown to the player', () => {
   it('explains frozen animals and missing kraft', () => {
     const s = calmGame([...ALL3]);
-    get(s, 'sotfot').intent = { kind: 'freeze' };
-    expect(leadBlockReason(s, get(s, 'sotfot'))).toMatch(/fryser/);
-    expect(cardBlockReason(s, { uid: 1, kind: 'snabbaTassar', owner: 'sotfot' })).toBe('Sotfot fryser.');
+    get(s, 'fox').intent = { kind: 'freeze' };
+    expect(leadBlockReason(s, get(s, 'fox'))).toMatch(/fryser/);
+    expect(cardBlockReason(s, { uid: 1, kind: 'snabbaTassar', owner: 'fox' })).toBe('Sotfot fryser.');
     s.kraft = 0;
-    expect(cardBlockReason(s, { uid: 2, kind: 'bitaIhop', owner: 'ljung' })).toBe('Behöver ◆1.');
-    expect(leadBlockReason(s, get(s, 'kvarn'))).toMatch(/kostar/);
+    expect(cardBlockReason(s, { uid: 2, kind: 'bitaIhop', owner: 'badger' })).toBe('Behöver ◆1.');
+    expect(leadBlockReason(s, get(s, 'toad'))).toMatch(/kostar/);
   });
 });
 
 describe('Sicksack the adder', () => {
   it('is hungrier than the others: hunts even while the truce verse holds', () => {
     let s = calmGame([...ALL3]);
-    get(s, 'sicksack').belief = 3;
-    get(s, 'sotfot').belief = 3;
+    get(s, 'adder').belief = 3;
+    get(s, 'fox').belief = 3;
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'sicksack').intent.kind).toBe('hunt');
-    expect(get(s, 'sotfot').intent.kind).not.toBe('hunt');
+    expect(get(s, 'adder').intent.kind).toBe('hunt');
+    expect(get(s, 'fox').intent.kind).not.toBe('hunt');
   });
 
   it('only hunts prey its own size or smaller', () => {
     let s = calmGame(['ingenLamnas', 'denStarke', 'manen']);
-    for (const a of s.animals) if (a.id !== 'sicksack' && a.id !== 'ljung') a.zone = 'farDike';
+    for (const a of s.animals) if (a.id !== 'adder' && a.id !== 'badger') a.zone = 'farDike';
     for (const a of s.animals) if (a.zone === 'farDike') a.status = 'safe';
-    get(s, 'sicksack').belief = 1;
+    get(s, 'adder').belief = 1;
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'sicksack').intent.kind).not.toBe('hunt');
+    expect(get(s, 'adder').intent.kind).not.toBe('hunt');
   });
 
   it('fits through the culvert, and its promise scares the prey nearby', () => {
     let s = calmGame([...ALL3]);
     s.revealed = ['culvert'];
-    expect(leadZones(s, get(s, 'sicksack'))).toContain('culvert');
-    s.hand.push({ uid: 950, kind: 'giftIReserv', owner: 'sicksack' });
+    expect(leadZones(s, get(s, 'adder'))).toContain('culvert');
+    s.hand.push({ uid: 950, kind: 'giftIReserv', owner: 'adder' });
     s = run(s, { type: 'play', uid: 950 });
-    expect(get(s, 'sicksack').belief).toBe(10);
-    expect(get(s, 'frona').belief).toBe(7);
+    expect(get(s, 'adder').belief).toBe(10);
+    expect(get(s, 'mice').belief).toBe(7);
   });
 });
 
 describe('hope events', () => {
   it('say why hope sank, so an animal can speak about it', () => {
     const s = calmGame([...ALL3]);
-    get(s, 'kvarn').zone = 'lane1';
+    get(s, 'toad').zone = 'lane1';
     s.trafficPlan[0] = [truck('lane1')];
     const paused = run(s, { type: 'endTurn' });
     const r = step(paused, { type: 'lastMoment', choice: 'letGo' });
     const hope = r.events.filter((e) => e.kind === 'hope');
     expect(hope).toEqual(expect.arrayContaining([
-      { kind: 'hope', delta: -1, reason: 'death', who: 'kvarn' },
+      { kind: 'hope', delta: -1, reason: 'death', who: 'toad' },
       { kind: 'hope', delta: -2, reason: 'flip', who: undefined },
     ]));
   });
@@ -290,54 +290,54 @@ describe('hope events', () => {
 describe('injuries', () => {
   it('a car injures instead of killing, and the injury stays', () => {
     let s = calmGame([...ALL3]);
-    get(s, 'kvarn').zone = 'lane1';
+    get(s, 'toad').zone = 'lane1';
     s.trafficPlan[0] = [car('lane1')];
     s = run(s, { type: 'endTurn' });
     expect(s.phase).toBe('play');
-    expect(get(s, 'kvarn').status).toBe('active');
-    expect(['halt', 'broken']).toContain(get(s, 'kvarn').injuries[0]);
+    expect(get(s, 'toad').status).toBe('active');
+    expect(['halt', 'broken']).toContain(get(s, 'toad').injuries[0]);
   });
 
   it('a limp allows only one step and makes leading cost more', () => {
     const s = calmGame([...ALL3]);
-    const fox = get(s, 'sotfot');
+    const fox = get(s, 'fox');
     fox.injuries = ['halt'];
-    expect(cardZones(s, { uid: 1, kind: 'snabbaTassar', owner: 'sotfot' })).toEqual(['lane1']);
+    expect(cardZones(s, { uid: 1, kind: 'snabbaTassar', owner: 'fox' })).toEqual(['lane1']);
     expect(leadCost(fox)).toBe(2);
   });
 
   it('a broken wing grounds the owl and blocks its species card', () => {
     const s = calmGame([...ALL3]);
-    get(s, 'skymning').injuries = ['broken'];
-    expect(leadZones(s, get(s, 'skymning'))).toEqual(['lane1']);
-    expect(cardBlockReason(s, { uid: 2, kind: 'vingar', owner: 'skymning' })).toBe('Skymnings vinge är bruten.');
+    get(s, 'owl').injuries = ['broken'];
+    expect(leadZones(s, get(s, 'owl'))).toEqual(['lane1']);
+    expect(cardBlockReason(s, { uid: 2, kind: 'vingar', owner: 'owl' })).toBe('Skymnings vinge är bruten.');
   });
 
   it('bleeding drains belief every hour', () => {
     let s = calmGame([...ALL3]);
-    get(s, 'ljung').injuries = ['bleeding'];
+    get(s, 'badger').injuries = ['bleeding'];
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'ljung').belief).toBe(7);
+    expect(get(s, 'badger').belief).toBe(7);
   });
 
   it('a witness standing beside the dead goes into shock', () => {
     let s = calmGame([...ALL3]);
-    get(s, 'kvarn').zone = 'lane1';
-    get(s, 'ljung').zone = 'lane1';
-    get(s, 'ljung').braced = true;
+    get(s, 'toad').zone = 'lane1';
+    get(s, 'badger').zone = 'lane1';
+    get(s, 'badger').braced = true;
     s.trafficPlan[0] = [{ lane: 'lane1', severity: 'kill', vehicle: 'mörk bil', dark: true }];
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'kvarn').status).toBe('dead');
-    expect(get(s, 'ljung').injuries).toContain('shock');
+    expect(get(s, 'toad').status).toBe('dead');
+    expect(get(s, 'badger').injuries).toContain('shock');
   });
 
   it("a predator's first bite tears; the second kills", () => {
     let s = calmGame(['ingenLamnas', 'denStarke', 'manen']);
-    get(s, 'sotfot').intent = { kind: 'hunt', target: 'kvarn' };
+    get(s, 'fox').intent = { kind: 'hunt', target: 'toad' };
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'kvarn').injuries).toContain('bleeding');
-    get(s, 'sotfot').intent = { kind: 'hunt', target: 'kvarn' };
+    expect(get(s, 'toad').injuries).toContain('bleeding');
+    get(s, 'fox').intent = { kind: 'hunt', target: 'toad' };
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'kvarn').status).toBe('dead');
+    expect(get(s, 'toad').status).toBe('dead');
   });
 });

@@ -20,7 +20,7 @@ export function backer(s: GameState): string | undefined {
 export function objector(s: GameState): string | undefined {
   const p = asked(s);
   const o = PROMISES[p.rule].objector;
-  return o && o.id !== p.by && o.id !== p.with && s.animals.some((a) => a.id === o.id && isPresent(a)) && !spoken(s).includes(o.id) ? o.id : undefined;
+  return o ? s.animals.find((a) => a.species === o.species && isPresent(a) && a.id !== p.by && a.id !== p.with && !spoken(s).includes(a.id))?.id : undefined;
 }
 
 /** A hungry predator, who has little use for promises. */
