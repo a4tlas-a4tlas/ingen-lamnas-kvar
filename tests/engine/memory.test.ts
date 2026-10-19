@@ -80,22 +80,22 @@ describe('the owl scouts', () => {
   it('only one who can fly may scout, and not while keeping watch', () => {
     const s = atTheFire();
     const plan = defaultPlan(s);
-    expect(planProblem(s, { ...plan, scout: 'kvarn' })).toBe('Bara den som kan flyga kan spana.');
-    const apart = plan.pairs.filter((p) => !p.includes('skymning'));
-    expect(planProblem(s, { ...plan, pairs: apart, watch: 'skymning', scout: 'skymning' })).toMatch(/spanar/);
-    get(s, 'skymning').injuries = ['broken'];
-    expect(planProblem(s, { ...plan, pairs: plan.pairs.filter((p) => !p.includes('skymning')), scout: 'skymning' })).toBe('Bara den som kan flyga kan spana.');
+    expect(planProblem(s, { ...plan, scout: 'toad' })).toBe('Bara den som kan flyga kan spana.');
+    const apart = plan.pairs.filter((p) => !p.includes('owl'));
+    expect(planProblem(s, { ...plan, pairs: apart, watch: 'owl', scout: 'owl' })).toMatch(/spanar/);
+    get(s, 'owl').injuries = ['broken'];
+    expect(planProblem(s, { ...plan, pairs: plan.pairs.filter((p) => !p.includes('owl')), scout: 'owl' })).toBe('Bara den som kan flyga kan spana.');
   });
 
   it('flies ahead and reveals what lies there, but gets no rest', () => {
     const s = atTheFire();
     const plan = defaultPlan(s);
-    get(s, 'skymning').injuries = ['bleeding'];
-    const pairs = plan.pairs.filter((p) => !p.includes('skymning'));
-    const r = step(s, { type: 'restAtFire', ...plan, pairs, watch: plan.watch === 'skymning' ? 'ljung' : plan.watch, scout: 'skymning' });
+    get(s, 'owl').injuries = ['bleeding'];
+    const pairs = plan.pairs.filter((p) => !p.includes('owl'));
+    const r = step(s, { type: 'restAtFire', ...plan, pairs, watch: plan.watch === 'owl' ? 'badger' : plan.watch, scout: 'owl' });
     expect(r.events.find((e) => e.kind === 'error')).toBeUndefined();
     expect(r.state.journey.scouted.sort()).toEqual(['an', 'garden']);
-    expect(get(r.state, 'skymning').injuries).toContain('bleeding');
+    expect(get(r.state, 'owl').injuries).toContain('bleeding');
     // Flying ahead is not sitting alone in the dark.
     expect(r.state.log.some((e) => e.text.includes('Skymning satt ensam'))).toBe(false);
   });

@@ -1,4 +1,4 @@
-import { CAST, START_BONDS, type AnimalDef } from '../data/animals';
+import { SPECIES, START_BONDS, START_GROUP, nameFor, type Member } from '../data/animals';
 import { TRAITS, TRAIT_IDS } from '../data/traits';
 import { shuffle, type RngHolder } from './rng';
 import { DALEN, type RegionDef } from '../data/regions/dalen';
@@ -27,18 +27,21 @@ export function regionJourney(def: RegionDef, seed: number): Journey {
 
 export const firstRegion = (seed: number) => regionJourney(DALEN, seed);
 
-/** An animal from its definition: species card plus two traits (fixed ones first, the rest rolled), and their cards. */
-export function makeAnimal(def: AnimalDef, h: RngHolder, nextUid: () => number, zone: ZoneId): { animal: Animal; cards: Card[] } {
-  const fixed = def.traits ?? [];
+/** Someone of a kind: species card plus two traits (fixed ones first, the rest rolled), and their cards. */
+export function makeAnimal(member: Member, id: string, name: string, h: RngHolder, nextUid: () => number, zone: ZoneId): { animal: Animal; cards: Card[] } {
+  const def = SPECIES[member.species];
+  const fixed = member.traits ?? [];
   const traits = [...fixed, ...shuffle(h, TRAIT_IDS.filter((t) => !fixed.includes(t)))].slice(0, 2);
   const animal: Animal = {
-    id: def.id,
-    name: def.name,
+    id,
+    name,
     species: def.species,
     predator: def.predator,
-    elder: def.elder ?? false,
+    elder: member.elder ?? false,
+    guide: member.guide ?? false,
     size: def.size,
     flier: def.flier ?? false,
+    swimmer: def.swimmer ?? false,
     hunger: def.hunger ?? 0,
     traits,
     belief: def.belief,
@@ -52,9 +55,17 @@ export function makeAnimal(def: AnimalDef, h: RngHolder, nextUid: () => number, 
     braced: false,
     flying: false,
   };
-  const cards: Card[] = [{ uid: nextUid(), kind: def.speciesCard, owner: def.id }];
-  for (const t of traits) cards.push({ uid: nextUid(), kind: TRAITS[t].card, owner: def.id });
+  const cards: Card[] = [{ uid: nextUid(), kind: def.speciesCard, owner: id }];
+  for (const t of traits) cards.push({ uid: nextUid(), kind: TRAITS[t].card, owner: id });
   return { animal, cards };
+}
+
+/** An id for one more of a kind: the species itself, or numbered if we already have one. */
+export function idFor(species: string, taken: string[]): string {
+  if (!taken.includes(species)) return species;
+  let n = 2;
+  while (taken.includes(`${species}-${n}`)) n++;
+  return `${species}-${n}`;
 }
 
 export function createGame(seed: number): GameState {
@@ -63,17 +74,20 @@ export function createGame(seed: number): GameState {
   const animals: Animal[] = [];
   const draw: Card[] = [];
 
-  for (const def of CAST) {
-    const made = makeAnimal(def, h, () => uid++, ROAD.zones.find((z) => z.start)!.id);
+  for (const m of START_GROUP) {
+    const id = idFor(m.species, animals.map((a) => a.id));
+    const name = nameFor(m.species, seed, animals.map((a) => a.name), m.elder);
+    const made = makeAnimal(m, id, name, h, () => uid++, ROAD.zones.find((z) => z.start)!.id);
     animals.push(made.animal);
     draw.push(...made.cards);
   }
 
+  // Kinds that know each other: the first of each kind carries the old bonds.
   const bonds: Record<string, number> = {};
-  for (const [a, b, v] of START_BONDS) bonds[bondKey(a, b)] = v;
+  for (const [a, b, v] of START_BONDS) if (animals.some((x) => x.id === a) && animals.some((x) => x.id === b)) bonds[bondKey(a, b)] = v;
 
   return {
-    version: 15,
+    version: 16,
     journey: firstRegion(seed),
     variant: 'normal',
     time: 'night',

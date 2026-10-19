@@ -59,43 +59,43 @@ describe('Dalens sista morgon', () => {
   });
 
   it('the trees fall on whoever stands under them – with a last moment', () => {
-    let s = put(morning(), 'granOst', 'kvarn');
+    let s = put(morning(), 'granOst', 'toad');
     s = run(s, { type: 'endTurn' });
     expect(s.phase).toBe('lastMoment');
-    expect(s.pending).toMatchObject({ victim: 'kvarn', source: 'fällaren', severity: 'kill' });
+    expect(s.pending).toMatchObject({ victim: 'toad', source: 'fällaren', severity: 'kill' });
     s = run(s, { type: 'lastMoment', choice: 'letGo' });
-    expect(get(s, 'kvarn').status).toBe('dead');
+    expect(get(s, 'toad').status).toBe('dead');
   });
 
   it('the roar gives shock to those in the open beside the felling, not to those among the trees or in the air', () => {
     let s = morning();
-    put(s, 'hygget', 'ljung');
-    put(s, 'stenroset', 'sotfot');
-    put(s, 'granVast', 'kvarn');
-    put(s, 'stenroset', 'skymning');
-    get(s, 'skymning').flying = true;
+    put(s, 'hygget', 'badger');
+    put(s, 'stenroset', 'fox');
+    put(s, 'granVast', 'toad');
+    put(s, 'stenroset', 'owl');
+    get(s, 'owl').flying = true;
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'ljung').injuries).toContain('shock');
-    expect(get(s, 'sotfot').injuries).toContain('shock');
-    expect(get(s, 'kvarn').injuries).not.toContain('shock');
-    expect(get(s, 'skymning').injuries).not.toContain('shock');
+    expect(get(s, 'badger').injuries).toContain('shock');
+    expect(get(s, 'fox').injuries).toContain('shock');
+    expect(get(s, 'toad').injuries).not.toContain('shock');
+    expect(get(s, 'owl').injuries).not.toContain('shock');
   });
 
   it('the bulldozer takes the ground behind us: closed for good, and deadly to whoever is still on it', () => {
     let s = morning();
     for (const a of s.animals) a.zone = 'hygget';
     s = pass(s);
-    put(s, 'glantan', 'kvarn');
+    put(s, 'glantan', 'toad');
     s = run(s, { type: 'endTurn' });
     expect(s.closed).toEqual(['glantan']);
-    expect(s.pending).toMatchObject({ victim: 'kvarn', source: 'schaktaren' });
+    expect(s.pending).toMatchObject({ victim: 'toad', source: 'schaktaren' });
     // Gamla Ljung is no longer next to Kvarn, but whoever is beside it can throw themselves in.
-    put(s, 'glantan', 'ljung');
-    s = run(s, { type: 'lastMoment', choice: 'shield', by: 'ljung' });
-    expect(get(s, 'kvarn').status).toBe('active');
+    put(s, 'glantan', 'badger');
+    s = run(s, { type: 'lastMoment', choice: 'shield', by: 'badger' });
+    expect(get(s, 'toad').status).toBe('active');
     // The next hour, whoever survived is pushed up out of the mud – and no one can go back.
-    expect(get(s, 'kvarn').zone).not.toBe('glantan');
-    expect(step(s, { type: 'lead', target: 'sotfot', zone: 'glantan' }).events[0].kind).toBe('error');
+    expect(get(s, 'toad').zone).not.toBe('glantan');
+    expect(step(s, { type: 'lead', target: 'fox', zone: 'glantan' }).events[0].kind).toBe('error');
   });
 
   it('everyone over the ridge ends the glen, and we stop between two landscapes', () => {
@@ -112,12 +112,12 @@ describe('Dalens sista morgon', () => {
   it('when time runs out, whoever is still below is left to the machines', () => {
     let s = morning();
     for (const a of s.animals) a.zone = 'asen';
-    get(s, 'kvarn').zone = 'hygget';
-    for (const a of s.animals) if (a.id !== 'kvarn') a.status = 'safe';
+    get(s, 'toad').zone = 'hygget';
+    for (const a of s.animals) if (a.id !== 'toad') a.status = 'safe';
     s.turn = s.maxTurn;
     s.fellPlan[s.turn - 1] = 'bjorkdungen';
     s = run(s, { type: 'endTurn' });
-    expect(get(s, 'kvarn').status).toBe('left');
+    expect(get(s, 'toad').status).toBe('left');
     expect(s.meeting?.id).toBe('interlude');
   });
 

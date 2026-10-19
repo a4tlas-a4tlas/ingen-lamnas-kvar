@@ -20,7 +20,7 @@ function wish(s: GameState, a: Animal, options: { to: string; encounter: Encount
   if (hasInjury(a, 'halt')) all.push({ ...BODY_LEANINGS.halt, weight: 2 });
   if (hasInjury(a, 'bleeding')) all.push({ ...BODY_LEANINGS.bleeding, weight: 2 });
   if (a.predator && a.belief <= huntsAt(s, a) + 2) all.push({ ...BODY_LEANINGS.hungry, weight: 2 });
-  for (const [encounter, l] of Object.entries(LEANINGS[a.id] ?? {})) all.push({ encounter: encounter as EncounterId, ...l!, weight: 1 });
+  for (const [encounter, l] of Object.entries(LEANINGS[a.species] ?? {})) all.push({ encounter: encounter as EncounterId, ...l!, weight: 1 });
   for (const l of all) {
     const there = options.find((o) => o.encounter === l.encounter);
     if (!there) continue;

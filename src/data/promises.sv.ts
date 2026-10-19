@@ -1,6 +1,6 @@
 // The promises the animals ask of us: the words, the words if we break them,
 // what binds us, and who among us speaks against each one.
-import type { PromiseRule } from '../engine/types';
+import type { PromiseRule, Species } from '../engine/types';
 
 export interface PromiseDef {
   /** {a} is the one who asks; {b} the other one it is about. */
@@ -9,8 +9,8 @@ export interface PromiseDef {
   binds: string;
   /** Why the one asking wants it. */
   why: string;
-  /** Who speaks against it, and how – if they are with us. */
-  objector?: { id: string; line: string };
+  /** Which kind speaks against it, and how – if one of them is with us. */
+  objector?: { species: Species; line: string };
 }
 
 export const PROMISES: Record<PromiseRule, PromiseDef> = {
@@ -19,21 +19,21 @@ export const PROMISES: Record<PromiseRule, PromiseDef> = {
     flipped: 'Vi gick ut i ljuset igen.',
     binds: 'Bryts om någon av oss träffas av en bil eller av ficklampan.',
     why: '{a} såg ljuset komma. {a} vill aldrig se det igen.',
-    objector: { id: 'ljung', line: '”Ibland måste man gå ut i ljuset för att nå fram.”' },
+    objector: { species: 'badger', line: '”Ibland måste man gå ut i ljuset för att nå fram.”' },
   },
   current: {
     text: 'Vi går aldrig i strid ström.',
     flipped: 'Strömmen tog oss ändå.',
     binds: 'Bryts om strömmen drar någon av oss mot forsen.',
     why: '{a} hör fortfarande forsen.',
-    objector: { id: 'kvarn', line: '”Vattnet är inte alltid farligt. Man kan inte lova bort det.”' },
+    objector: { species: 'toad', line: '”Vattnet är inte alltid farligt. Man kan inte lova bort det.”' },
   },
   noneAlone: {
     text: 'Ingen sitter ensam i mörkret.',
     flipped: 'Någon satt ensam i mörkret.',
     binds: 'Bryts om någon sitter ensam vid lägerelden.',
     why: '{a} har förlorat någon och vill inte förlora fler i tystnaden.',
-    objector: { id: 'skymning', line: '”Jag vakar bäst ensam. Det vet ni.”' },
+    objector: { species: 'owl', line: '”Jag vakar bäst ensam. Det vet ni.”' },
   },
   together: {
     text: '{a} och {b} lämnar aldrig varandra.',
@@ -46,28 +46,28 @@ export const PROMISES: Record<PromiseRule, PromiseDef> = {
     flipped: 'Vi gick över vattnet.',
     binds: 'Bryts om vi väljer ån.',
     why: '{a} är rädd för vattnet. Rädd på riktigt.',
-    objector: { id: 'kvarn', line: '”Vattnet är mitt hem. Ni kan inte lova bort det.”' },
+    objector: { species: 'toad', line: '”Vattnet är mitt hem. Ni kan inte lova bort det.”' },
   },
   farm: {
     text: 'Vi går aldrig in på en gård.',
     flipped: 'Vi gick in på gården.',
     binds: 'Bryts om vi går till gården.',
     why: '{a} har sprungit från hundar förut och vill aldrig mer.',
-    objector: { id: 'sicksack', line: '”Där finns höns. Varmt och mjukt. Varför lova bort det?”' },
+    objector: { species: 'adder', line: '”Där finns höns. Varmt och mjukt. Varför lova bort det?”' },
   },
   night: {
     text: 'Vi går bara i mörkret.',
     flipped: 'Vi gick i dagsljus.',
     binds: 'Bryts om vi går ut i dagsljus. Att vänta på natten kostar hopp.',
     why: '{a} känner sig sedd i ljuset, och vågar inte längre.',
-    objector: { id: 'frona', line: '”Vi ser ingenting i mörkret. Ingenting.”' },
+    objector: { species: 'mice', line: '”Vi ser ingenting i mörkret. Ingenting.”' },
   },
   noCity: {
     text: 'Vi går aldrig dit där maskinerna bor.',
     flipped: 'Vi gick in bland maskinerna.',
     binds: 'Bryts om vi väljer vägen in mot staden.',
     why: '{a} såg dalen bli lera. {a} vill aldrig mer höra en motor.',
-    objector: { id: 'sotfot', line: '”I staden finns mat för alla. Man kan inte lova bort den.”' },
+    objector: { species: 'fox', line: '”I staden finns mat för alla. Man kan inte lova bort den.”' },
   },
   stay: {
     text: 'Jag lämnar dig aldrig, {b}.',

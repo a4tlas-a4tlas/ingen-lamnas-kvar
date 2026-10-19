@@ -1,5 +1,5 @@
 // Read-only rule helpers shared by the engine (validation) and the UI (targeting).
-import { animalDef } from '../data/animals';
+import { SPECIES } from '../data/animals';
 import { CARDS, type TargetSpec } from '../data/cards';
 import { encounterOf, zoneDef } from './encounters';
 import type { Animal, Card, GameState, Hit, InjuryKind, VerseId, ZoneId } from './types';
@@ -188,7 +188,7 @@ export function leadCost(a: Animal): number {
 /** A broken wing or paw takes away what makes the animal itself: its species card. */
 export function speciesCardBroken(s: GameState, card: Card): boolean {
   const o = s.animals.find((x) => x.id === card.owner);
-  return !!o && hasInjury(o, 'broken') && animalDef(o.id)?.speciesCard === card.kind;
+  return !!o && hasInjury(o, 'broken') && SPECIES[o.species].speciesCard === card.kind;
 }
 
 export const canMove = (a: Animal) => isActive(a) && !isFrozen(a);
@@ -290,7 +290,7 @@ export function rescueHelpers(s: GameState): string[] {
 export function rescueBlockReason(s: GameState, a: Animal): string | null {
   const r = s.rescue;
   if (!r) return null;
-  const name = r.who === 'tistel' ? 'Tistel' : 'Den';
+  const name = r.name;
   if (s.kraft < 1) return 'Vi har ingen kraft kvar den här timmen.';
   if (!canMove(a)) return `${a.name} kan inte röra sig nu.`;
   if (r.trust >= RESCUE_TRUST) return a.zone === r.zone ? null : `${a.name} måste stå bredvid ${name} för att befria.`;

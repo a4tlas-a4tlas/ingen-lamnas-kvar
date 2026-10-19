@@ -5,16 +5,16 @@ import { calmGame, get, truck } from './helpers';
 describe('status and forecast', () => {
   it('names every state an animal is in', () => {
     const s = calmGame(['ingenLamnas', 'viJagarInte', 'denStarke']);
-    get(s, 'sotfot').intent = { kind: 'freeze' };
-    get(s, 'kvarn').injuries = ['halt', 'bleeding'];
-    const fox = animalStatuses(s, get(s, 'sotfot')).map((x) => x.label);
+    get(s, 'fox').intent = { kind: 'freeze' };
+    get(s, 'toad').injuries = ['halt', 'bleeding'];
+    const fox = animalStatuses(s, get(s, 'fox')).map((x) => x.label);
     expect(fox).toContain('fryser');
-    expect(animalStatuses(s, get(s, 'kvarn')).map((x) => x.label)).toEqual(expect.arrayContaining(['haltar', 'blöder']));
+    expect(animalStatuses(s, get(s, 'toad')).map((x) => x.label)).toEqual(expect.arrayContaining(['haltar', 'blöder']));
   });
 
   it('warns that a bolting animal will run into a deadly car', () => {
     const s = calmGame(['ingenLamnas', 'viJagarInte', 'denStarke']);
-    get(s, 'kvarn').intent = { kind: 'bolt' };
+    get(s, 'toad').intent = { kind: 'bolt' };
     s.trafficPlan[0] = [truck('lane1')];
     const lines = forecast(s).map((f) => f.text);
     expect(lines).toContain('Kvarn rusar ut i första körfältet.');
@@ -23,7 +23,7 @@ describe('status and forecast', () => {
 
   it('keeps an unseen dark car vague', () => {
     const s = calmGame(['ingenLamnas', 'viJagarInte', 'denStarke']);
-    get(s, 'kvarn').zone = 'lane2';
+    get(s, 'toad').zone = 'lane2';
     s.trafficPlan[0] = [{ lane: 'lane2', severity: 'kill', vehicle: 'mörk bil', dark: true }];
     const lines = forecast(s).map((f) => f.text);
     expect(lines.some((l) => l.includes('Kvarn'))).toBe(false);

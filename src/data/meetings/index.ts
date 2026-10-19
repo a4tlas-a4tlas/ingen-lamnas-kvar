@@ -3,10 +3,11 @@ import { CROW, isHere, type MeetingFrame, type MeetingOption } from './crow.sv';
 import { BARSNAR, FRAMLINGEN, GAMMAL_STIG, GRAVSKOPAN, GRYT, HJORTEN, IHALIGT_TRAD, KOLTRASTEN, KVARNS_TVEKAN, MATEN } from './dalen.sv';
 import { INTERLUDE } from './interlude.sv';
 import { PROPOSAL } from './proposal.sv';
+import { guideName } from '../../engine/roles';
 import type { GameState, MeetingId } from '../../engine/types';
 
 export interface MeetingDef {
-  title: string;
+  title: string | ((s: GameState) => string);
   /** What stands in the picture: the crow, the one asking a promise, or a thing of the place. */
   art: 'crow' | 'proposer' | SceneArt;
   frames: Record<string, MeetingFrame>;
@@ -28,7 +29,7 @@ export const MEETINGS: Record<MeetingId, MeetingDef> = {
   maten: { title: 'Människorna med maten', art: 'basket', frames: MATEN },
   framlingen: { title: 'Den hungriga främlingen', art: 'fox', frames: FRAMLINGEN, taker: 'Räven' },
   gravskopan: { title: 'Grävskopans spår', art: 'tracks', frames: GRAVSKOPAN },
-  kvarnsTvekan: { title: 'Kvarns tvekan', art: 'toad', frames: KVARNS_TVEKAN },
+  kvarnsTvekan: { title: (s) => `${guideName(s)}s tvekan`, art: 'toad', frames: KVARNS_TVEKAN },
   interlude: { title: 'Mellan två landskap', art: 'ridge', frames: INTERLUDE },
 };
 

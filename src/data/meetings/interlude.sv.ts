@@ -1,21 +1,23 @@
 // Mellan två landskap: when a region's boss lies behind us. We look back, someone
-// may ask a promise of us, and then Kvarn shows the ways on.
+// may ask a promise of us, and then the guide shows the ways on.
 import { REGIONS } from '../regions';
-import type { GameState, RegionId } from '../../engine/types';
+import { isPresent } from '../../engine/rules';
+import { guideName } from '../../engine/roles';
+import type { GameState, RegionId, Species } from '../../engine/types';
 import type { MeetingFrame, MeetingOption } from './crow.sv';
 
 const region = (s: GameState) => REGIONS[s.journey.region];
 
-/** What each of us says, looking back on what we leave. {region} is its name. */
-const LOOK_BACK: Partial<Record<RegionId, Record<string, string>>> = {
+/** What each kind says, looking back on what we leave. {region} is its name, {name} the one speaking. */
+const LOOK_BACK: Partial<Record<RegionId, Partial<Record<Species, string>>>> = {
   dalen: {
-    ljung: '”Jag föddes under ekarna där nere. Nu finns de bara i mig.”',
-    kvarn: '”Bäcken där jag lade mina ägg. Jag hör den fortfarande.”',
-    sotfot: '”Jag trodde aldrig att jag skulle sakna något. Jag hade fel.”',
-    skymning: '”Från ovan ser det ut som ett sår. Jag tittar inte mer.”',
-    sicksack: '”Stenen där jag solade mig. Den är borta nu.”',
-    frona: '”Vi var fler när vi gick därifrån.” Fröna kryper tätare ihop.',
-    tistel: '”Jag kände den inte. Men jag ser att ni gör det.”',
+    badger: '”Jag föddes under ekarna där nere. Nu finns de bara i mig.”',
+    toad: '”Bäcken där jag lade mina ägg. Jag hör den fortfarande.”',
+    fox: '”Jag trodde aldrig att jag skulle sakna något. Jag hade fel.”',
+    owl: '”Från ovan ser det ut som ett sår. Jag tittar inte mer.”',
+    adder: '”Stenen där jag solade mig. Den är borta nu.”',
+    mice: '”Vi var fler när vi gick därifrån.” {name} kryper tätare ihop.',
+    hare: '”Jag kände den inte. Men jag ser att ni gör det.”',
   },
 };
 const GENERIC = '”Jag kommer att minnas {region}.”';
@@ -29,10 +31,13 @@ export const INTERLUDE: Record<string, MeetingFrame> = {
       return `Vi stannar och ser tillbaka. ${region(s).name} ligger bakom oss nu. Vi är ${alive === 1 ? 'en' : alive} som står här.`;
     },
     options: [
-      ...['ljung', 'kvarn', 'sotfot', 'skymning', 'sicksack', 'frona', 'tistel'].map((id): MeetingOption => ({
-        id: `look-${id}`, by: id, effect: 'lookBack', next: 'start',
-        label: (s) => (LOOK_BACK[s.journey.region]?.[id] ?? GENERIC).replace('{region}', region(s).name.toLowerCase()),
-      })),
+      ...Array.from({ length: 10 }, (_, i): MeetingOption => {
+        const one = (s: GameState) => s.animals.filter(isPresent)[i];
+        return {
+          id: `look-${i}`, by: (s) => one(s)?.id, effect: 'lookBack', next: 'start',
+          label: (s) => (LOOK_BACK[s.journey.region]?.[one(s)!.species] ?? GENERIC).replace('{region}', region(s).name.toLowerCase()).replace('{name}', one(s)!.name),
+        };
+      }),
       { id: 'onward', label: '”Vi vänder oss om, och går.”' },
     ],
   },
@@ -40,8 +45,8 @@ export const INTERLUDE: Record<string, MeetingFrame> = {
     id: 'way',
     speaker: 'story',
     text: (s) => s.run.offered.length > 1
-      ? 'Kvarn ser länge ut över landet. ”Jag minns två vägar härifrån. Men inte vart de leder, inte riktigt.”'
-      : 'Kvarn ser länge ut över landet. ”Jag minns bara en väg härifrån.”',
+      ? `${guideName(s)} ser länge ut över landet. ”Jag minns två vägar härifrån. Men inte vart de leder, inte riktigt.”`
+      : `${guideName(s)} ser länge ut över landet. ”Jag minns bara en väg härifrån.”`,
     options: (Object.keys(REGIONS) as RegionId[]).map((id): MeetingOption => ({
       id: `go-${id}`, label: () => `Mot ${REGIONS[id].fogName}`, effect: 'chooseRegion',
       when: (s) => s.run.offered.includes(id),

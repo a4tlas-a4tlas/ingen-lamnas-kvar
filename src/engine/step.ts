@@ -14,9 +14,11 @@ import { planMachines, roarZones } from './encounters/machines';
 import { exposedIn, prey, shadowOptions } from './encounters/raptor';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
-import { OATH_VERSES, makeAnimal, oathVerse, regionJourney } from './setup';
+import { OATH_VERSES, idFor, makeAnimal, oathVerse, regionJourney } from './setup';
 import { MIDDLE_REGIONS, OFFERED, REGIONS } from '../data/regions';
-import { newcomer } from '../data/animals';
+import { nameFor } from '../data/animals';
+import { guideHere, guideName, kin } from './roles';
+import { beliefFelt, ownWillBelow, willOf } from './will';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from './encounters';
 import {
   animal,
@@ -156,7 +158,7 @@ function swear(c: Ctx, verses: VerseId[]) {
   s.verses = unique.map(oathVerse);
   narrate(c, 'I dalens sista natt svor vi eden:');
   for (const v of s.verses) narrate(c, `”${v.text}”`);
-  narrate(c, 'Bakom oss tystnade maskinerna för natten. Kvarn mindes vägen, nästan.');
+  narrate(c, `Bakom oss tystnade maskinerna för natten. ${guideName(s)} mindes vägen, nästan.`);
   const swarm = s.animals.find((a) => a.count !== undefined);
   narrate(c, `Vi var ${num(s.animals.length)}${swarm ? `, och ${swarm.name} var ${num(swarm.count!)}` : ''}.`);
   s.phase = 'map';
@@ -200,9 +202,9 @@ function travel(c: Ctx, to: string, wait = false) {
     // Now we see it for ourselves: was Kvarn right?
     const truth = s.journey.truth[to] ?? 'normal';
     const seen = p.memory[truth];
-    if (s.journey.scouted.includes(to)) narrate(c, `Det var som Skymning hade sett: ${seen}.`);
-    else if (s.journey.guess[to] === truth) narrate(c, `Det var som Kvarn mindes: ${seen}.`);
-    else narrate(c, `Kvarn mindes fel: ${seen}.`);
+    if (s.journey.scouted.includes(to)) narrate(c, `Det var som vi hade sett från ovan: ${seen}.`);
+    else if (s.journey.guess[to] === truth) narrate(c, `Det var som ${guideName(s)} mindes: ${seen}.`);
+    else narrate(c, `${guideName(s)} mindes fel: ${seen}.`);
   }
   if (p.kind === 'encounter') startEncounter(c, p.encounter!);
   else if (p.kind === 'campfire') {
@@ -299,8 +301,13 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   // Over the fields one bird circles – or, where Kvarn's memory was too kind, a pair.
   s.raptors = id === 'raptor' ? Array.from({ length: hard ? 2 : 1 }, () => ({ zone: null, maybe: [] })) : [];
   // Someone is trapped here, the first time we come.
-  s.rescue = def.rescue && !s.met.includes(def.rescue.who) ? { who: def.rescue.who, zone: def.rescue.zone, trust: 0 } : null;
-  if (s.rescue) narrate(c, def.rescue!.found);
+  s.rescue = null;
+  if (def.rescue && !s.met.includes(def.rescue.species)) {
+    const sp = def.rescue.species;
+    const name = nameFor(sp, s.seed + 7919 * (s.met.length + 1), s.animals.map((a) => a.name));
+    s.rescue = { who: idFor(sp, s.animals.map((a) => a.id)), species: sp, name, zone: def.rescue.zone, trust: 0 };
+    narrate(c, def.rescue.found.replace(/\{name\}/g, name));
+  }
   const start = def.zones.find((z) => z.start)!.id;
   for (const a of s.animals.filter(isPresent)) {
     a.status = 'active';
@@ -435,7 +442,7 @@ function revealAhead(c: Ctx, opening: string, nothing: string): string[] {
     const p = place(s, id);
     const truth = s.journey.truth[id] ?? 'normal';
     const wrong = s.journey.guess[id] !== truth;
-    narrate(c, `${opening} ${p.name}: ${p.memory![truth]}${wrong ? ' – Kvarn mindes fel.' : ', som Kvarn mindes.'}`);
+    narrate(c, `${opening} ${p.name}: ${p.memory![truth]}${wrong ? ` – ${guideName(s)} mindes fel.` : `, som ${guideName(s)} mindes.`}`);
   }
   if (!ahead.length) narrate(c, nothing);
   return ahead;
@@ -462,10 +469,9 @@ function respond(c: Ctx, optionId: string, uid?: number) {
   if (speaker) line(c, speaker.id, `${speaker.name}: ${labelOf(s, option)}`);
   const asked = s.proposal;
   const present = s.animals.filter(isPresent);
-  const among = (id: string) => present.find((a) => a.id === id);
-  const frona = among('frona');
-  const ljung = among('ljung');
-  const sotfot = among('sotfot');
+  const mice = kin(s, 'mice');
+  const badger = kin(s, 'badger');
+  const fox = kin(s, 'fox');
   const told = () => { m.told = revealAhead(c, 'Kråkan berättade:', 'Kråkan hade inget att berätta.'); };
   switch (option.effect) {
     case 'listen':
@@ -473,7 +479,7 @@ function respond(c: Ctx, optionId: string, uid?: number) {
       for (const a of s.animals.filter(isPresent)) changeBelief(c, a, 1);
       break;
     case 'owlHunt':
-      changeBelief(c, animal(s, 'skymning'), 2);
+      changeBelief(c, speaker!, 2);
       changeHope(c, -1, 'song');
       break;
     case 'restHollow': {
@@ -523,23 +529,22 @@ function respond(c: Ctx, optionId: string, uid?: number) {
       told();
       break;
     case 'kvarnHint': {
-      const kvarn = animal(s, 'kvarn');
       const wrong = unseenAhead(s).some((id) => s.journey.guess[id] !== s.journey.truth[id]);
-      changeBelief(c, kvarn, wrong ? -1 : 1);
+      changeBelief(c, speaker!, wrong ? -1 : 1);
       break;
     }
     case 'trick': {
-      const fox = animal(s, 'sotfot');
+      const trickster = speaker!;
       if (random(s) < trickChance(s)) {
-        changeBelief(c, fox, 1);
-        narrate(c, 'Kråkan lyssnade på Sotfots hemlighet – och berättade, utan att få något.');
+        changeBelief(c, trickster, 1);
+        narrate(c, `Kråkan lyssnade på ${trickster.name}s hemlighet – och berättade, utan att få något.`);
         told();
       } else {
-        const own = crowCards(s).filter((x) => x.owner === fox.id);
+        const own = crowCards(s).filter((x) => x.owner === trickster.id);
         if (own.length) {
           const card = own[Math.floor(random(s) * own.length)];
           takeCard(s, card.uid);
-          narrate(c, `Kråkan genomskådade Sotfot och tog ${CARDS[card.kind].name}.`);
+          narrate(c, `Kråkan genomskådade ${trickster.name} och tog ${CARDS[card.kind].name}.`);
         }
         next = 'snatched';
       }
@@ -547,14 +552,14 @@ function respond(c: Ctx, optionId: string, uid?: number) {
     }
     case 'sotfotDark':
       s.fireDebt.embers++;
-      s.fireDebt.dark.push('sotfot');
+      s.fireDebt.dark.push(speaker!.id);
       told();
       break;
     case 'owlScare':
-      changeBelief(c, animal(s, 'skymning'), 1);
+      changeBelief(c, speaker!, 1);
       break;
     case 'story':
-      s.fireDebt.apart.push('ljung');
+      s.fireDebt.apart.push(speaker!.id);
       told();
       break;
     // ------------------------------------------------ Dalen's finds and meetings
@@ -562,8 +567,8 @@ function respond(c: Ctx, optionId: string, uid?: number) {
     case 'berriesCareful':
       changeHope(c, 1, 'food');
       for (const a of present) changeBelief(c, a, 1);
-      if (option.effect === 'berries') { if (frona) injure(c, frona, 'shock', '{name} har ätit sig sjuka. Magarna värker.'); }
-      else if (frona) addBond(c, animal(s, 'ljung'), frona, 1);
+      if (option.effect === 'berries') { if (mice) injure(c, mice, 'shock', '{name} har ätit sig sjuka. Magarna värker.'); }
+      else if (mice && speaker && mice !== speaker) addBond(c, speaker, mice, 1);
       break;
     case 'learnPath':
     case 'ljungDigs':
@@ -571,9 +576,9 @@ function respond(c: Ctx, optionId: string, uid?: number) {
       break;
     case 'restDen':
       for (const a of present) heal(c, a, `${a.name} sov djupt i grytet.`);
-      if (ljung && !ljung.grief.includes('dalen')) {
-        ljung.grief.push('dalen');
-        line(c, ljung.id, 'Gamla Ljung sörjer dalen. Grytet luktade som hemma.');
+      if (badger && !badger.grief.includes('dalen')) {
+        badger.grief.push('dalen');
+        line(c, badger.id, `${badger.name} sörjer dalen. Grytet luktade som hemma.`);
       }
       break;
     case 'stayDeer':
@@ -581,7 +586,7 @@ function respond(c: Ctx, optionId: string, uid?: number) {
       changeHope(c, -1, 'cold');
       break;
     case 'ljungDeer':
-      changeBelief(c, ljung!, 2);
+      changeBelief(c, speaker!, 2);
       break;
     case 'truceTest':
       if (won) changeBelief(c, speaker!, 2);
@@ -608,33 +613,33 @@ function respond(c: Ctx, optionId: string, uid?: number) {
       break;
     case 'fronaBasket':
       changeHope(c, 1, 'food');
-      if (frona) injure(c, frona, 'shock', 'Människorna skrek. {name} darrar fortfarande.');
+      if (speaker) injure(c, speaker, 'shock', 'Människorna skrek. {name} darrar fortfarande.');
       break;
     case 'shareCard': {
       const card = crowCards(s).find((x) => x.uid === uid);
       if (!card) fail('Välj vilket kort räven får.');
       takeCard(s, card.uid);
       narrate(c, `Vi gav räven ${CARDS[card.kind].name} från ${animal(s, card.owner).name}.`);
-      if (speaker?.id === 'sotfot') changeBelief(c, speaker, 1);
+      if (speaker?.species === 'fox') changeBelief(c, speaker, 1);
       m.told = revealAhead(c, 'Räven berättade:', 'Räven hade inget nytt att berätta.');
       break;
     }
     case 'chaseFox':
-      if (sotfot) changeBelief(c, sotfot, -1);
+      if (fox) changeBelief(c, fox, -1);
       break;
     case 'readTracks':
     case 'followTracks':
       if (!s.knowledge.includes('machines')) s.knowledge.push('machines');
       narrate(c, 'Nu vet vi hur maskinerna rör sig.');
       if (option.effect === 'readTracks') changeBelief(c, speaker!, 1);
-      else if (frona) injure(c, frona, 'shock', 'Dieseldoften. {name} känner igen den från dalen.');
+      else if (mice) injure(c, mice, 'shock', 'Dieseldoften. {name} känner igen den från dalen.');
       break;
     case 'comfortKvarn':
-      changeBelief(c, animal(s, 'kvarn'), 1);
+      changeBelief(c, guideHere(s)!, 1);
       break;
     case 'doubtKvarn':
-      changeBelief(c, animal(s, 'kvarn'), -2);
-      m.told = revealAhead(c, 'Skymning såg:', 'Skymning såg inget nytt.');
+      changeBelief(c, guideHere(s)!, -2);
+      m.told = revealAhead(c, `${speaker!.name} såg:`, `${speaker!.name} såg inget nytt.`);
       break;
     case 'guessWay':
       changeHope(c, -1, 'lost');
@@ -809,7 +814,6 @@ function drawCards(c: Ctx, n: number) {
   }
 }
 
-const DOUBT_BY_BELIEF = [1, 0.85, 0.85, 0.6, 0.4, 0.25, 0.1, 0, 0, 0, 0];
 
 function chooseIntent(c: Ctx, a: Animal): Intent {
   const s = c.s;
@@ -828,17 +832,17 @@ function chooseIntent(c: Ctx, a: Animal): Intent {
     if (prey.length) return { kind: 'hunt', target: prey[0].id };
   }
 
-  let chance = DOUBT_BY_BELIEF[a.belief] ?? 0;
-  if (a.traits.includes('modig')) chance -= 0.15;
-  if (hasInjury(a, 'shock')) chance += 0.3;
-  chance += 0.15 * a.grief.length;
-  if (random(s) >= chance) return { kind: 'follow' };
+  // At five and above we follow. Below, our own will: hesitating, mostly. Below three, worse.
+  const will = willOf(s, a);
+  if (will === 'follow') return { kind: 'follow' };
+  const dark = will === 'dark';
+  if (random(s) >= (dark ? 0.85 : beliefFelt(a) >= ownWillBelow(s, a) - 1 ? 0.35 : 0.55)) return { kind: 'follow' };
 
   const elderNear = elderVerse && s.animals.some((e) => e.elder && isActive(e) && e.zone === a.zone);
   const weights: [Intent, number][] = [
-    [{ kind: 'freeze' }, elderNear ? 0 : 1 + (a.traits.includes('skygg') ? 2 : 0) + (hasInjury(a, 'shock') ? 2 : 0)],
-    [{ kind: 'flee' }, backZone(s, a) ? 1 : 0],
-    [{ kind: 'bolt' }, 1 + (a.traits.includes('otalig') ? 2 : 0) + (isFast(a) ? 2 : 0)],
+    [{ kind: 'freeze' }, elderNear ? 0 : (dark ? 1 : 3) + (a.traits.includes('skygg') ? 2 : 0) + (hasInjury(a, 'shock') ? 2 : 0)],
+    [{ kind: 'flee' }, backZone(s, a) ? (dark ? 2 : 1) : 0],
+    [{ kind: 'bolt' }, (dark ? 2 : 0) + (a.traits.includes('otalig') ? 2 : 0) + (isFast(a) ? 2 : 0)],
   ];
   const total = weights.reduce((t, [, w]) => t + w, 0);
   let r = random(s) * total;
@@ -1191,7 +1195,7 @@ function rescue(c: Ctx, by: string) {
   const blocked = rescueBlockReason(s, a);
   if (blocked) fail(blocked);
   const r = s.rescue;
-  const def = newcomer(r.who);
+  const def = { name: r.name };
   s.kraft -= 1;
   if (r.trust < RESCUE_TRUST) {
     r.trust++;
@@ -1200,12 +1204,12 @@ function rescue(c: Ctx, by: string) {
       : `${def.name} låter ${a.name} komma ända fram.`);
     return;
   }
-  const made = makeAnimal(def, s, () => s.nextUid++, r.zone);
-  const hare = made.animal;
-  s.animals.push(hare);
+  const made = makeAnimal({ species: r.species }, r.who, r.name, s, () => s.nextUid++, r.zone);
+  const freed = made.animal;
+  s.animals.push(freed);
   s.discard.push(...made.cards);
-  addBond(c, hare, a, 1);
-  s.met.push(r.who);
+  addBond(c, freed, a, 1);
+  s.met.push(r.species);
   s.rescue = null;
   narrate(c, `${a.name} ${encounterOf(s).rescue!.freed}. ${def.name} är fri – och stannar hos oss.`);
 }
@@ -1644,8 +1648,8 @@ function endEncounter(c: Ctx) {
   if (s.rescue) {
     // Not one of us yet – no verse breaks for it. But we heard it, and we went on.
     const r = encounterOf(s).rescue!;
-    narrate(c, `Vi lämnade ${newcomer(s.rescue.who).name} ${r.trapped}.`);
-    s.met.push(s.rescue.who);
+    narrate(c, `Vi lämnade ${s.rescue.name} ${r.trapped}.`);
+    s.met.push(s.rescue.species);
     s.rescue = null;
     changeHope(c, -1, 'trapped');
   }

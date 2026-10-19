@@ -4,7 +4,6 @@
 import { roarZones } from '../engine/encounters/machines';
 import { sheltered } from '../engine/encounters/raptor';
 import { encounterOf, zoneDef } from '../engine/encounters';
-import { newcomer } from '../data/animals';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
 import { RESCUE_TRUST, animal, backZone, boltZone, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
@@ -132,7 +131,7 @@ function riverStatuses(s: GameState, a: Animal): Status[] {
     if (swims(a)) out.push({ key: 'current', icon: '∽', label: 'simmar', tone: 'good', explain: `${a.name} simmar. Strömmen tar inte ${a.name}.` });
     else if (a.size === 'large') out.push({ key: 'current', icon: '◉', label: 'står emot', tone: 'good', explain: `${a.name} är stor nog att stå i strömmen. Den som står bredvid kan hålla sig fast.` });
     else if (anchor) out.push({ key: 'current', icon: '◉', label: `håller sig i ${anchor.name}`, tone: 'good', explain: `${a.name} håller sig fast i ${anchor.name} och dras inte med av strömmen.` });
-    else if (strid) out.push({ key: 'current', icon: '↯', label: 'dras mot forsen', tone: 'bad', explain: `Strömmen är strid. ${a.name} dras mot forsen när timmen går. Led ${a.name} upp på en sten eller i land, eller ställ Gamla Ljung bredvid.` });
+    else if (strid) out.push({ key: 'current', icon: '↯', label: 'dras mot forsen', tone: 'bad', explain: `Strömmen är strid. ${a.name} dras mot forsen när timmen går. Led ${a.name} upp på en sten eller i land, eller ställ ett stort djur bredvid.` });
     else out.push({ key: 'current', icon: '∽', label: 'i strömmen', tone: 'info', explain: `Strömmen är lugn just nu. Blir den strid dras ${a.name} mot forsen.` });
   }
   if (s.heron === a.zone && a.size === 'small') {
@@ -228,7 +227,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'machines') out.push(...machinesForecast(s, zoneOf));
   if (s.encounterId === 'raptor') out.push(...raptorForecast(s, zoneOf));
   if (s.rescue) {
-    const name = newcomer(s.rescue.who).name;
+    const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${RESCUE_TRUST}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
   }
   if (s.turn >= s.maxTurn) {

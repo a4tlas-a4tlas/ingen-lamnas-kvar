@@ -26,8 +26,8 @@ describe('the crow at the fire', () => {
 
   it('each animal answers in its own way – and only those with us', () => {
     const s = atTheFire();
-    expect(offered(s)).toEqual(expect.arrayContaining(['ask', 'kvarn', 'fox', 'owl', 'lonely', 'no']));
-    get(s, 'sotfot').status = 'dead';
+    expect(offered(s)).toEqual(expect.arrayContaining(['ask', 'guide', 'fox', 'owl', 'lonely', 'no']));
+    get(s, 'fox').status = 'dead';
     expect(offered(s)).not.toContain('fox');
   });
 
@@ -47,22 +47,22 @@ describe('the crow at the fire', () => {
     expect(emberPairs(s)).toBe(1);
     const plan = defaultPlan(s);
     expect(plan.pairs).toHaveLength(1);
-    expect(planProblem(s, { ...plan, pairs: [...plan.pairs, ['frona', 'sicksack']] })).toMatch(/bara ett par/);
+    expect(planProblem(s, { ...plan, pairs: [...plan.pairs, ['mice', 'adder']] })).toMatch(/bara ett par/);
   });
 
   it('Kvarn’s pride: the crow tells how many places Kvarn remembers wrong, and Kvarn takes it to heart', () => {
     const s = atTheFire();
     s.journey.guess = { ...s.journey.truth, an: s.journey.truth.an === 'hard' ? 'normal' : 'hard' };
-    const before = get(s, 'kvarn').belief;
-    const r = say(s, 'kvarn');
-    expect(r.meeting?.frame).toBe('kvarn');
-    expect(get(r, 'kvarn').belief).toBe(before - 1);
-    expect(offered(say(r, 'back'))).not.toContain('kvarn');
+    const before = get(s, 'toad').belief;
+    const r = say(s, 'guide');
+    expect(r.meeting?.frame).toBe('guide');
+    expect(get(r, 'toad').belief).toBe(before - 1);
+    expect(offered(say(r, 'back'))).not.toContain('guide');
   });
 
   it('the fox’s trick: it works as often as Sotfot believes – or the crow takes one of Sotfot’s cards', () => {
     const s = say(atTheFire(), 'fox');
-    get(s, 'sotfot').belief = 10; // 90 %
+    get(s, 'fox').belief = 10; // 90 %
     let won = 0;
     for (let seed = 1; seed <= 40; seed++) {
       const t = structuredClone(s);
@@ -71,7 +71,7 @@ describe('the crow at the fire', () => {
       if (r.meeting?.frame === 'told') won++;
       else {
         expect(r.meeting?.frame).toBe('snatched');
-        expect(deck(r).filter((c) => c.owner === 'sotfot')).toHaveLength(deck(s).filter((c) => c.owner === 'sotfot').length - 1);
+        expect(deck(r).filter((c) => c.owner === 'fox')).toHaveLength(deck(s).filter((c) => c.owner === 'fox').length - 1);
       }
     }
     expect(won).toBeGreaterThan(28);
@@ -79,14 +79,14 @@ describe('the crow at the fire', () => {
 
   it('Sotfot gives up a place and sits in the dark; Gamla Ljung tells the crow of the glen and sits apart', () => {
     const dark = say(atTheFire(), 'fox', 'dark', 'thanks');
-    expect(dark.fireDebt).toMatchObject({ embers: 1, dark: ['sotfot'] });
-    expect(planProblem(dark, { ...defaultPlan(dark), watch: 'sotfot' })).toMatch(/redan sin plats/);
+    expect(dark.fireDebt).toMatchObject({ embers: 1, dark: ['fox'] });
+    expect(planProblem(dark, { ...defaultPlan(dark), watch: 'fox' })).toMatch(/redan sin plats/);
     const story = say(atTheFire(), 'lonely', 'story', 'thanks');
-    expect(story.fireDebt.apart).toEqual(['ljung']);
+    expect(story.fireDebt.apart).toEqual(['badger']);
     expect(story.journey.scouted.length).toBeGreaterThan(0);
-    get(story, 'ljung').injuries = ['bleeding'];
+    get(story, 'badger').injuries = ['bleeding'];
     const r = run(story, { type: 'restAtFire', ...defaultPlan(story) });
-    expect(get(r, 'ljung').injuries).toContain('bleeding'); // no rest while telling
+    expect(get(r, 'badger').injuries).toContain('bleeding'); // no rest while telling
     expect(r.fireDebt).toEqual({ embers: 0, apart: [], dark: [] });
   });
 

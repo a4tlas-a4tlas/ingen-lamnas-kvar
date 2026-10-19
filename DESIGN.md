@@ -605,3 +605,37 @@ Design from the milestone 6 interview:
   - *"ett vråkpar jagar"* (hard): two birds, two strikes, never over the same place
 - **On the map:** *Fälten* is one of Åkrarna's dangers. Skymning and Fröna speak against it at forks.
 - **Balance:** a lead-only bot, without cards or comforting, brings 4.5 of 6 across by day and 5.1 at night (4.6 and 4.8 with the pair). The bird kills about one animal in two runs.
+
+## Milestone 7 – the animals rethought (in progress)
+Your direction:
+- **Animals are species, not named characters.** No one has special cards for being who they are.
+- **Cards are each species' skills,** Darkest Dungeon-style: 6 per species, 3 equipped. Skills are unlocked by surviving dangers, from story parts, and by being taught.
+- **Traits are modifiers,** good and bad, and are gained along the way.
+- **The group is chosen from 3 combinations,** This War of Mine-style.
+- **Those we rescue are random animals.**
+
+### Step 1: individuals instead of characters (done)
+- **Every run, each of us is someone new of our kind** (`src/data/animals.ts`).
+  - **Species and names.** A species has its size, nature (predator, flier, swimmer, swarm), starting belief and its own names, with the old names among them. The name is drawn from the seed, on its own stream, so the rest of the run plays out the same.
+  - **Ids.** An animal's id is its kind (`badger`, `toad`, `fox` …), numbered if two share a kind.
+  - **The group.** The start group is a list of kinds, with two roles:
+    - **the eldest** (called "Gamla …"), the one *Vi lyssnar på den äldste* is about
+    - **the guide**, whose memory the map is
+  - **Starting bonds** are between kinds.
+- **The story speaks to roles, not names** (`src/engine/roles.ts`): one of a kind, the guide, the eldest, whoever can fly, the hungriest predator.
+  - **Replies:** the crow's and the glen's meetings, the promise objectors, the voices at forks and the looking back all answer by role. A reply is only offered when someone of that kind or role is with us.
+  - **Texts:** Kvarn's memory is now *the guide's* memory, and the map, the arrivals and the crow say the guide's name ("er padda" by the guide's kind).
+- **Own will** (`src/engine/will.ts`):
+
+  | Belief | Will |
+  |---|---|
+  | 5 and up | follows |
+  | below 5 | own will, mostly hesitating and freezing (35 % at 4, 55 % at 3) |
+  | below 3 | worse: fleeing back and bolting (85 %) |
+  | 0 | leaves |
+
+  - **Traits move the lines:** *Modig* holds out to 4; *Skygg* gives way already below 6 in daylight.
+  - **Shock and grief weigh like a point of belief less each.**
+  - Predators still hunt by the truce's own threshold.
+- **Rescues are someone new:** whoever is trapped has a kind and a name drawn when we arrive. For now always a hare; random kinds come in step 6.
+- **Balance:** a lead-only bot brings 3.8 of 6 over the ridge (was 3.6). Those at 5–6 belief now always follow.

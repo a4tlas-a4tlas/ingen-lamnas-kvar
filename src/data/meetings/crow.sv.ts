@@ -2,7 +2,8 @@
 // one of the animals in its own way. Effects are carried out by the engine.
 import { place } from '../journey';
 import { unseenAhead } from '../../engine/campfire';
-import { canFly, huntsAt, isPresent } from '../../engine/rules';
+import { isPresent } from '../../engine/rules';
+import { elderId, flierId, guideHere, guideKind, guideName, kin, kinId, hungryId, nameOf } from '../../engine/roles';
 import type { GameState } from '../../engine/types';
 
 export type MeetingEffect =
@@ -72,28 +73,23 @@ export interface MeetingFrame {
   options: MeetingOption[];
 }
 
-const here = (s: GameState, id: string) => s.animals.some((a) => a.id === id && isPresent(a));
-const sotfot = (s: GameState) => s.animals.find((a) => a.id === 'sotfot');
+const fox = (s: GameState) => kin(s, 'fox');
 /** The fox's trick works as often as the fox believes in us. */
-export const trickChance = (s: GameState) => Math.min(0.9, (sotfot(s)?.belief ?? 0) / 10);
+export const trickChance = (s: GameState) => Math.min(0.9, (fox(s)?.belief ?? 0) / 10);
 const wrongAhead = (s: GameState) => unseenAhead(s).filter((id) => s.journey.guess[id] !== s.journey.truth[id]).length;
 
 export const CROW: Record<string, MeetingFrame> = {
   start: {
     id: 'start',
     speaker: 'crow',
-    text: () => 'En kråka landar på en gren strax utanför glöden och lägger huvudet på sned. ”Ni går mot åkrarna. Jag har sett vägen från ovan – allt det er padda bara minns. Men inget är gratis.”',
+    text: (s) => 'En kråka landar på en gren strax utanför glöden och lägger huvudet på sned. ”Ni går mot åkrarna. Jag har sett vägen från ovan – allt det er ' + guideKind(s) + ' bara minns. Men inget är gratis.”',
     options: [
       { id: 'ask', label: '”Vad vill du ha?”', next: 'price' },
-      { id: 'kvarn', by: 'kvarn', label: '”Jag minns vägen själv, tack.”', effect: 'kvarnHint', next: 'kvarn' },
-      { id: 'fox', by: 'sotfot', label: '”Vi kanske kan hjälpa varandra…”', next: 'fox' },
-      { id: 'owl', by: 'skymning', label: 'Skymning lyfter vingarna.', when: (s) => s.animals.some((a) => a.id === 'skymning' && canFly(a)), next: 'owl' },
-      { id: 'lonely', by: 'ljung', label: '”Varför sitter du här ensam, kråka?”', next: 'lonely' },
-      {
-        id: 'snake', by: 'sicksack', label: '”Kom lite närmare, fågel.”',
-        when: (s) => { const a = s.animals.find((x) => x.id === 'sicksack'); return !!a && a.belief <= huntsAt(s, a) + 2; },
-        next: 'fled',
-      },
+      { id: 'guide', by: (s) => guideHere(s)?.id, label: '”Jag minns vägen själv, tack.”', effect: 'kvarnHint', next: 'guide' },
+      { id: 'fox', by: kinId('fox'), label: '”Vi kanske kan hjälpa varandra…”', next: 'fox' },
+      { id: 'owl', by: flierId, label: (s) => `${nameOf(s, flierId(s))} lyfter vingarna.`, next: 'owl' },
+      { id: 'lonely', by: elderId, label: '”Varför sitter du här ensam, kråka?”', next: 'lonely' },
+      { id: 'snake', by: hungryId, label: '”Kom lite närmare, fågel.”', next: 'fled' },
       { id: 'no', label: '”Nej tack. Flyg vidare.”', next: 'refused' },
     ],
   },
@@ -107,14 +103,14 @@ export const CROW: Record<string, MeetingFrame> = {
       { id: 'tooMuch', label: '”Det är för dyrt.”', next: 'refused' },
     ],
   },
-  kvarn: {
-    id: 'kvarn',
+  guide: {
+    id: 'guide',
     speaker: 'crow',
     text: (s) => {
       const n = wrongAhead(s);
       return n === 0
-        ? '”Minns du? Hm. Den här gången minns du faktiskt rätt, padda. Synd för mig.” Kvarn sträcker på sig.'
-        : `”Minns du? Du minns fel om ${n === 1 ? 'något' : 'mer än en sak'} där framme, padda. Men vad?” Kvarn tittar ner i marken.`;
+        ? `”Minns du? Hm. Den här gången minns du faktiskt rätt, ${guideKind(s)}. Synd för mig.” ${guideName(s)} sträcker på sig.`
+        : `”Minns du? Du minns fel om ${n === 1 ? 'något' : 'mer än en sak'} där framme, ${guideKind(s)}. Men vad?” ${guideName(s)} tittar ner i marken.`;
     },
     options: [{ id: 'back', label: 'Fortsätt', next: 'start' }],
   },
@@ -123,8 +119,8 @@ export const CROW: Record<string, MeetingFrame> = {
     speaker: 'crow',
     text: () => '”En räv som vill byta. Det brukar sluta illa för kråkor.”',
     options: [
-      { id: 'trick', by: 'sotfot', label: '”Jag ger dig något bättre än ett kort – en hemlighet.”', chance: trickChance, effect: 'trick', next: 'told' },
-      { id: 'dark', by: 'sotfot', label: '”Ta min plats vid glöden. Jag sitter i mörkret.”', effect: 'sotfotDark', next: 'told' },
+      { id: 'trick', by: kinId('fox'), label: '”Jag ger dig något bättre än ett kort – en hemlighet.”', chance: trickChance, effect: 'trick', next: 'told' },
+      { id: 'dark', by: kinId('fox'), label: '”Ta min plats vid glöden. Jag sitter i mörkret.”', effect: 'sotfotDark', next: 'told' },
       { id: 'eden', label: '”Låt oss tala om priset.”', next: 'price' },
     ],
   },
@@ -133,9 +129,9 @@ export const CROW: Record<string, MeetingFrame> = {
     speaker: 'crow',
     text: () => 'Kråkan studsar bakåt på grenen. ”En uggla! Håll den där borta från mig!”',
     options: [
-      { id: 'scare', by: 'skymning', label: 'Skymning slår ut med vingarna.', effect: 'owlScare', next: 'fled' },
-      { id: 'self', by: 'skymning', label: '”Jag kan flyga dit själv i natt.”', next: 'offended' },
-      { id: 'calm', by: 'skymning', label: 'Skymning drar sig tillbaka i mörkret.', next: 'start' },
+      { id: 'scare', by: flierId, label: (s) => `${nameOf(s, flierId(s))} slår ut med vingarna.`, effect: 'owlScare', next: 'fled' },
+      { id: 'self', by: flierId, label: '”Jag kan flyga dit själv i natt.”', next: 'offended' },
+      { id: 'calm', by: flierId, label: (s) => `${nameOf(s, flierId(s))} drar sig tillbaka i mörkret.`, next: 'start' },
     ],
   },
   lonely: {
@@ -143,8 +139,8 @@ export const CROW: Record<string, MeetingFrame> = {
     speaker: 'crow',
     text: () => 'Kråkan blir tyst en stund. ”Min flock fanns i dalen. Maskinerna tog träden först.”',
     options: [
-      { id: 'story', by: 'ljung', label: '”Sitt med oss en stund. Jag berättar om dalen.”', effect: 'story', next: 'told' },
-      { id: 'nod', by: 'ljung', label: 'Gamla Ljung nickar och säger inget mer.', next: 'start' },
+      { id: 'story', by: elderId, label: '”Sitt med oss en stund. Jag berättar om dalen.”', effect: 'story', next: 'told' },
+      { id: 'nod', by: elderId, label: (s) => `${nameOf(s, elderId(s))} nickar och säger inget mer.`, next: 'start' },
     ],
   },
   told: {
@@ -154,7 +150,7 @@ export const CROW: Record<string, MeetingFrame> = {
       const lines = (s.meeting?.told ?? []).map((id) => {
         const p = place(s, id);
         const truth = s.journey.truth[id] ?? 'normal';
-        return `${p.name}: ${p.memory![truth]}${s.journey.guess[id] !== truth ? ' – er padda minns fel' : ''}.`;
+        return `${p.name}: ${p.memory![truth]}${s.journey.guess[id] !== truth ? ` – er ${guideKind(s)} minns fel` : ''}.`;
       });
       return `Kråkan lutar sig fram. ”Lyssna noga, då.” ${lines.join(' ') || '”Men jag har inget att berätta som ni inte redan vet.”'}`;
     },
@@ -163,7 +159,7 @@ export const CROW: Record<string, MeetingFrame> = {
   snatched: {
     id: 'snatched',
     speaker: 'story',
-    text: () => 'Kråkan skrattar sitt hesa skratt, hugger ett av Sotfots kort i näbben och är borta i mörkret innan någon hinner röra sig.',
+    text: (s) => `Kråkan skrattar sitt hesa skratt, hugger ett av ${nameOf(s, kinId('fox')(s), 'rävens')}s kort i näbben och är borta i mörkret innan någon hinner röra sig.`,
     options: [{ id: 'close', label: 'Fortsätt' }],
   },
   fled: {
@@ -175,7 +171,7 @@ export const CROW: Record<string, MeetingFrame> = {
   offended: {
     id: 'offended',
     speaker: 'story',
-    text: () => '”Gör det, då.” Kråkan vänder ryggen till och flyger. Skymning kan spana själv i natt – på platsen ”Spanar” vid elden.',
+    text: (s) => `”Gör det, då.” Kråkan vänder ryggen till och flyger. ${nameOf(s, s.meeting?.by, 'Ugglan')} kan spana själv i natt – på platsen ”Spanar” vid elden.`,
     options: [{ id: 'close', label: 'Fortsätt' }],
   },
   refused: {
@@ -186,4 +182,5 @@ export const CROW: Record<string, MeetingFrame> = {
   },
 };
 
-export const isHere = here;
+/** Whether one of us is still with us, by id. */
+export const isHere = (s: GameState, id: string) => s.animals.some((a) => a.id === id && isPresent(a));
