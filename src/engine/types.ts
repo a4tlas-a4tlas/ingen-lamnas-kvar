@@ -19,13 +19,21 @@ export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice' | 'adder' | 'ha
 export type Size = 'small' | 'medium' | 'large';
 export type TraitId =
   | 'modig'
-  | 'skygg'
+  | 'lugn'
   | 'omtanksam'
-  | 'otalig'
+  | 'seglivad'
+  | 'snabbfotad'
   | 'klok'
-  | 'envis'
-  | 'lekfull'
-  | 'trogen';
+  | 'skygg'
+  | 'hetsig'
+  | 'hungrig'
+  | 'tvivlande'
+  | 'ensamvarg'
+  | 'klumpig'
+  | 'hardad'
+  | 'trogen'
+  | 'sorjande'
+  | 'arrad';
 export type VerseId =
   | 'ingenLamnas'
   | 'viJagarInte'
@@ -131,6 +139,11 @@ export interface Animal {
   xp: number;
   /** What it may learn now, from what it has lived through: one of these. */
   offer?: CardKind[];
+  /** In this danger: steps led so far, and whether its toughness has taken a blow. */
+  steps?: number;
+  toughUsed?: boolean;
+  /** Nights in a row by the embers: two, and a bad trait may fade. */
+  emberNights?: number;
   /** Fed for this danger: it will not hunt here. */
   sated?: boolean;
   // Per-turn flags.
@@ -344,7 +357,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 18;
+  version: 19;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;

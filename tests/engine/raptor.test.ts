@@ -5,11 +5,11 @@ import { generateRegion } from '../../src/engine/regions';
 import { createGame } from '../../src/engine/setup';
 import type { GameState, TimeOfDay, Variant, ZoneId } from '../../src/engine/types';
 import { forecast } from '../../src/ui/status';
-import { get, run } from './helpers';
+import { get, plain, run } from './helpers';
 
 /** Sworn, and walking straight out onto the fields. */
 function fields(time: TimeOfDay = 'day', variant: Variant = 'normal', seed = 5): GameState {
-  let s = run(createGame(seed), { type: 'swear', verses: ['manen'] });
+  let s = run(plain(createGame(seed)), { type: 'swear', verses: ['manen'] });
   const start = s.journey.nodes[0];
   const t = AKRARNA.dangers.find((d) => d.key === 'falten')!;
   const { key: _k, ...rest } = t;

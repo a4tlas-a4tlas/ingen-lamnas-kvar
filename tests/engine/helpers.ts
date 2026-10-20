@@ -1,3 +1,4 @@
+import { SPECIES } from '../../src/data/animals';
 import { createGame, oathVerse } from '../../src/engine/setup';
 import { DALEN, type Template } from '../../src/data/regions/dalen';
 import { step } from '../../src/engine/step';
@@ -36,6 +37,15 @@ export const CLASSIC: MapNode[] = [
 export const CLASSIC_NAMES: Record<string, string> = { badger: 'Gamla Ljung', toad: 'Kvarn', fox: 'Sotfot', owl: 'Skymning', adder: 'Sicksack', mice: 'Fröna' };
 export function named(s: GameState): GameState {
   for (const a of s.animals) a.name = CLASSIC_NAMES[a.id] ?? a.name;
+  return plain(s);
+}
+
+/** Without traits, so a test sees only the rule it is about: traits are tested on their own. */
+export function plain(s: GameState): GameState {
+  for (const a of s.animals) {
+    a.traits = [];
+    a.belief = SPECIES[a.species].belief;
+  }
   return s;
 }
 

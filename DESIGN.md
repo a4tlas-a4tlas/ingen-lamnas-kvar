@@ -682,3 +682,36 @@ Your direction:
   - **within a kind:** any skill
   - **across kinds:** only comfort and insight (Trösta, Läsa natten, Gamla vägar …)
   - **the cost:** neither of them rests, so the wounds wait. A skill from another kind shows up under *Förmågor* as "lärd av en annan".
+
+### Step 4: traits as modifiers (done)
+Traits are who an animal is, not cards. Each new individual rolls **one good and one bad**; the run can add more.
+
+| Good | Effect |
+|---|---|
+| **Modig** | own will only below 4 (instead of 5); a death hardens it (+1 belief instead of −1) |
+| **Lugn** | never bolts |
+| **Omtänksam** | Trösta and Tålamod give +1 more |
+| **Seglivad** | the first injury in each danger misses |
+| **Snabbfotad** | the first step in each danger is free |
+| **Klok** | its insight cards draw one more |
+
+| Bad | Effect |
+|---|---|
+| **Skygg** | own will already below 6 by day; freezes more readily |
+| **Hetsig** | bolts rather than freezes, and doesn't freeze near the eldest either *(fades)* |
+| **Hungrig** | predators only: hunts at one belief higher, from the second hour of a danger |
+| **Tvivlande** | starts with −1 belief; only rolled for animals that start at 5 or more, so no one begins the run hunting or bolting *(fades)* |
+| **Ensamvarg** | bonds never grow above 0 |
+| **Klumpig** | the first step in each danger costs ◆1 more |
+
+**Earned on the way:**
+- *Härdad* (good): saved in a last moment. Works like Modig.
+- *Trogen* (good): threw itself in the way. Never flees back.
+- *Sörjande* (bad): lost someone with bond ≥ 2. Own will below 6. *(fades)*
+- *Ärrad* (bad): broken or halt. Freezes more readily.
+
+**Fading:** a bad trait marked *fades* goes away after two nights in a row by the embers ("Glöden tog Rosts tvivel.").
+
+**The mourning:** the closest animal inherits the dead's first good trait that it lacks (no more inherited cards).
+
+**In the UI:** traits are shown as gold (good) and grey (bad) tags on the oath screen's cast, and with their effect in the inspect panel.

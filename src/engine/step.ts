@@ -72,6 +72,7 @@ import type {
   VerseId,
   ZoneId,
   CardKind,
+  TraitId,
   Meeting,
   Proposal,
   RegionId,
@@ -148,7 +149,17 @@ function changeHope(c: Ctx, d: number, reason: HopeReason, who?: string) {
 
 function addBond(c: Ctx, a: Animal, b: Animal, d: number) {
   const k = bondKey(a.id, b.id);
-  c.s.bonds[k] = Math.max(-3, Math.min(3, (c.s.bonds[k] ?? 0) + d));
+  const cap = d > 0 && (has(a, 'ensamvarg') || has(b, 'ensamvarg')) ? Math.max(0, c.s.bonds[k] ?? 0) : 3;
+  c.s.bonds[k] = Math.max(-3, Math.min(cap, (c.s.bonds[k] ?? 0) + d));
+}
+
+const has = (a: Animal, t: TraitId) => a.traits.includes(t);
+
+/** A trait earned by what happened: said once, kept. */
+function earn(c: Ctx, a: Animal, t: TraitId) {
+  if (has(a, t) || !isPresent(a)) return;
+  a.traits.push(t);
+  line(c, a.id, `${a.name} är ${TRAITS[t].name.toLowerCase()} nu. ${TRAITS[t].note}`);
 }
 
 // ---------------------------------------------------------------- oath
@@ -315,6 +326,8 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   for (const a of s.animals.filter(isPresent)) {
     a.status = 'active';
     a.sated = false;
+    a.steps = 0;
+    a.toughUsed = false;
     a.zone = start;
     a.slowTime = 0;
     a.intent = { kind: 'follow' };
@@ -403,6 +416,16 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
     line(c, t.id, `${t.name} visade ${l.name} hur man ${CARDS[teaching.skill].name.toLowerCase()} – hela natten, tills det satt.`);
   }
   const teachers = teaching ? [teaching.teacher, teaching.learner] : [];
+  const byEmbers = new Set(plan.pairs.flat());
+  for (const a of living(s)) {
+    a.emberNights = byEmbers.has(a.id) ? (a.emberNights ?? 0) + 1 : 0;
+    const fading = a.traits.find((t) => TRAITS[t].fades && !TRAITS[t].good);
+    if (fading && a.emberNights >= 2) {
+      a.traits = a.traits.filter((t) => t !== fading);
+      a.emberNights = 0;
+      line(c, a.id, `Två nätter vid glöden. Det ${TRAITS[fading].name.toLowerCase()} i ${a.name} har släppt.`);
+    }
+  }
   for (const [ai, bi] of plan.pairs) {
     const a = animal(s, ai);
     const b = animal(s, bi);
@@ -915,9 +938,9 @@ function chooseIntent(c: Ctx, a: Animal): Intent {
 
   const elderNear = elderVerse && s.animals.some((e) => e.elder && isActive(e) && e.zone === a.zone);
   const weights: [Intent, number][] = [
-    [{ kind: 'freeze' }, elderNear ? 0 : (dark ? 1 : 3) + (a.traits.includes('skygg') ? 2 : 0) + (hasInjury(a, 'shock') ? 2 : 0)],
-    [{ kind: 'flee' }, backZone(s, a) ? (dark ? 2 : 1) : 0],
-    [{ kind: 'bolt' }, (dark ? 2 : 0) + (a.traits.includes('otalig') ? 2 : 0) + (isFast(a) ? 2 : 0)],
+    [{ kind: 'freeze' }, elderNear || has(a, 'hetsig') ? 0 : (dark ? 1 : 3) + (has(a, 'skygg') || has(a, 'arrad') ? 2 : 0) + (hasInjury(a, 'shock') ? 2 : 0)],
+    [{ kind: 'flee' }, backZone(s, a) && !has(a, 'trogen') ? (dark ? 2 : 1) : 0],
+    [{ kind: 'bolt' }, has(a, 'lugn') ? 0 : (dark ? 2 : 0) + (has(a, 'hetsig') ? 3 : 0) + (isFast(a) ? 2 : 0)],
   ];
   const total = weights.reduce((t, [, w]) => t + w, 0);
   let r = random(s) * total;
@@ -980,6 +1003,7 @@ function lead(c: Ctx, target: string, zone: ZoneId) {
   const a = animal(s, target);
   if (!leadZones(s, a).includes(zone)) fail('Dit kan vi inte leda.');
   s.kraft -= leadCost(a);
+  a.steps = (a.steps ?? 0) + 1;
   moveAnimal(c, a, zone, true);
 }
 
@@ -1324,7 +1348,9 @@ function playCard(c: Ctx, uid: number, target?: string, zone?: ZoneId) {
   s.kraft -= cardCost(s, card);
   s.hand.splice(idx, 1);
   if (card.kind !== 'minne') s.discard.push(card);
-  applyCard(c, card, animal(s, card.owner), tgt, zone);
+  const o = animal(s, card.owner);
+  applyCard(c, card, o, tgt, zone);
+  if (CARDS[card.kind].tag === 'insight' && has(o, 'klok')) drawCards(c, 1);
 }
 
 function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone: ZoneId | undefined) {
@@ -1381,7 +1407,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       line(c, o.id, `${o.name} håller sig nära ${tgt!.name}.`);
       break;
     case 'trosta':
-      changeBelief(c, tgt!, 2);
+      changeBelief(c, tgt!, has(o, 'omtanksam') ? 3 : 2);
       tgt!.intent = { kind: 'follow' };
       line(c, o.id, `${o.name} tröstar ${tgt!.name}.`);
       break;
@@ -1433,7 +1459,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       addBond(c, o, tgt!, 1);
       break;
     case 'talamod':
-      changeBelief(c, tgt!, 2);
+      changeBelief(c, tgt!, has(o, 'omtanksam') ? 3 : 2);
       tgt!.intent = { kind: 'follow' };
       line(c, o.id, `${o.name} sitter stilla hos ${tgt!.name} tills rädslan går över.`);
       break;
@@ -1705,8 +1731,14 @@ function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
 
 function injure(c: Ctx, v: Animal, k: InjuryKind, text = INJURY_LINES[k]) {
   if (hasInjury(v, k)) return;
+  if (has(v, 'seglivad') && !v.toughUsed && c.s.phase !== 'map' && c.s.phase !== 'campfire') {
+    v.toughUsed = true;
+    line(c, v.id, `${v.name} är seg. Det gör ont, men det biter inte.`);
+    return;
+  }
   v.injuries.push(k);
   line(c, v.id, text.replace(/\{name\}/g, v.name));
+  if (k === 'halt' || k === 'broken') earn(c, v, 'arrad');
 }
 
 /** A hit that doesn't kill: a swarm loses members, anyone else takes an injury. */
@@ -1741,6 +1773,8 @@ function resolveLastMoment(c: Ctx, action: Extract<Action, { type: 'lastMoment' 
       : `${by.name} kastade sig emellan och knuffade undan ${v.name}.`);
     addBond(c, by, v, 2);
     changeBelief(c, v, 2);
+    earn(c, v, 'hardad');
+    earn(c, by, 'trogen');
     // The one who throws themselves in the way is hurt, not killed.
     const pushed: Hit = { ...h, victim: by.id, severity: 'injure' };
     if (isLethal(by, pushed)) die(c, by, 'sacrifice', h.source);
@@ -1797,14 +1831,17 @@ function removeCards(s: GameState, owner: string) {
 
 function grieve(c: Ctx, lost: Animal) {
   for (const o of c.s.animals.filter(isPresent)) {
-    if (o.traits.includes('envis') || o.traits.includes('modig')) {
+    if (has(o, 'modig') || has(o, 'hardad')) {
       changeBelief(c, o, 1);
       log(c, { kind: 'grief', who: o.id, text: `${o.name} hårdnar. Något i blicken blir till sten.` });
       continue;
     }
     const close = bond(c.s, o.id, lost.id) >= 2;
     changeBelief(c, o, close ? -2 : -1);
-    if (close) log(c, { kind: 'grief', who: o.id, text: `${o.name} slutar inte titta bakåt.` });
+    if (close) {
+      log(c, { kind: 'grief', who: o.id, text: `${o.name} slutar inte titta bakåt.` });
+      earn(c, o, 'sorjande');
+    }
   }
 }
 
