@@ -40,7 +40,8 @@ export function huntThreshold(s: GameState): number {
 
 /** The belief at or below which this predator forgets the oath and hunts. */
 export function huntsAt(s: GameState, a: Animal): number {
-  return huntThreshold(s) + a.hunger;
+  // The hungry give way to hunger sooner – but never in the first hour of a danger, before anyone can see it coming.
+  return huntThreshold(s) + a.hunger + (a.traits.includes('hungrig') && s.turn > 1 ? 1 : 0);
 }
 
 const SIZE_RANK: Record<Animal['size'], number> = { small: 0, medium: 1, large: 2 };
@@ -181,7 +182,13 @@ export function cardCost(s: GameState, card: Card): number {
 
 /** Leading a limping animal is slow, heavy work. */
 export function leadCost(a: Animal): number {
-  return hasInjury(a, 'halt') ? 2 : 1;
+  const base = hasInjury(a, 'halt') ? 2 : 1;
+  // The first step in a danger: free for the quick, dear for the clumsy.
+  if (!a.steps) {
+    if (a.traits.includes('snabbfotad')) return 0;
+    if (a.traits.includes('klumpig')) return base + 1;
+  }
+  return base;
 }
 
 /** A broken wing or paw takes away how the animal moves: its moving skills can't be played. */

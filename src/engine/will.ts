@@ -7,8 +7,9 @@ import type { Animal, GameState } from './types';
 /** Below this belief, an animal follows its own will. Brave ones hold out longer; shy ones less long in the light. */
 export function ownWillBelow(s: GameState, a: Animal): number {
   let line = 5;
-  if (a.traits.includes('modig')) line -= 1;
+  if (a.traits.includes('modig') || a.traits.includes('hardad')) line -= 1;
   if (a.traits.includes('skygg') && s.time === 'day') line += 1;
+  if (a.traits.includes('sorjande')) line += 1;
   return line;
 }
 

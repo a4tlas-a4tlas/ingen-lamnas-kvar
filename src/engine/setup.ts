@@ -1,6 +1,6 @@
 import { SPECIES, START_BONDS, START_GROUP, nameFor, type Member } from '../data/animals';
 import { LOADOUT, SKILLS } from '../data/skills';
-import { TRAIT_IDS } from '../data/traits';
+import { BAD_TRAITS, GOOD_TRAITS } from '../data/traits';
 import { shuffle, type RngHolder } from './rng';
 import { DALEN, type RegionDef } from '../data/regions/dalen';
 import { generateRegion } from './regions';
@@ -31,8 +31,12 @@ export const firstRegion = (seed: number) => regionJourney(DALEN, seed);
 /** Someone of a kind: species card plus two traits (fixed ones first, the rest rolled), and their cards. */
 export function makeAnimal(member: Member, id: string, name: string, h: RngHolder, nextUid: () => number, zone: ZoneId): { animal: Animal; cards: Card[] } {
   const def = SPECIES[member.species];
+  // One good and one bad, unless the place in the group already says.
   const fixed = member.traits ?? [];
-  const traits = [...fixed, ...shuffle(h, TRAIT_IDS.filter((t) => !fixed.includes(t)))].slice(0, 2);
+  // Only a predator can be hungry for the others, and only a believer can start to doubt –
+  // one who already stands below the line would begin the run hunting or bolting.
+  const bad = BAD_TRAITS.filter((t) => (t !== 'hungrig' || def.predator) && (t !== 'tvivlande' || def.belief >= 5));
+  const traits = fixed.length ? [...fixed] : [shuffle(h, [...GOOD_TRAITS])[0], shuffle(h, bad)[0]];
   const animal: Animal = {
     id,
     name,
@@ -45,7 +49,7 @@ export function makeAnimal(member: Member, id: string, name: string, h: RngHolde
     swimmer: def.swimmer ?? false,
     hunger: def.hunger ?? 0,
     traits,
-    belief: def.belief,
+    belief: def.belief - (traits.includes('tvivlande') ? 1 : 0),
     injuries: [],
     grief: [],
     count: def.swarm,
@@ -93,7 +97,7 @@ export function createGame(seed: number): GameState {
   for (const [a, b, v] of START_BONDS) if (animals.some((x) => x.id === a) && animals.some((x) => x.id === b)) bonds[bondKey(a, b)] = v;
 
   return {
-    version: 18,
+    version: 19,
     journey: firstRegion(seed),
     variant: 'normal',
     time: 'night',

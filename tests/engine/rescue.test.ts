@@ -47,7 +47,8 @@ describe('the rescue', () => {
     get(s, 'toad').zone = 'honshuset';
     s = run(s, { type: 'rescue', by: 'toad' });
     const t = get(s, 'hare');
-    expect(t).toMatchObject({ status: 'active', zone: 'honshuset', belief: 4, species: 'hare' });
+    expect(t).toMatchObject({ status: 'active', zone: 'honshuset', species: 'hare' });
+    expect(t.belief).toBe(4 - (t.traits.includes('tvivlande') ? 1 : 0));
     expect(t.skills).toHaveLength(3);
     expect(t.loadout).toEqual(t.skills);
     expect(s.discard.filter((c) => c.owner === 'hare')).toHaveLength(3);

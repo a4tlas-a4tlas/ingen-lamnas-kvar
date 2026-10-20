@@ -143,7 +143,8 @@ describe('the campfire', () => {
     k.status = 'dead';
     s.unmourned = ['toad'];
     s.discard.push({ uid: 999, kind: 'minne', owner: 'toad', memoryOf: 'toad' });
-    const trait = k.traits.find((t) => !get(s, 'badger').traits.includes(t))!;
+    k.traits = ['klok', 'skygg'];
+    const trait = 'klok'; // the good one is carried on, the bad one is buried with the dead
     s = run(s, { type: 'restAtFire', watch: 'mice', pairs: [], mourning: { toad: 'bury' } });
     expect(get(s, 'badger').traits).toContain(trait);
     expect(s.discard.find((c) => c.uid === 999)?.buried).toBe(true);

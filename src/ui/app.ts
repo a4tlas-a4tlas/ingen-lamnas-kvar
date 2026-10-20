@@ -109,7 +109,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 18 && s.phase !== 'over' ? s : null;
+    return s.version === 19 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -638,7 +638,7 @@ export class App {
             <div class="cast-card">
               ${silhouette(a.species)}
               <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(s, a.id)}${a.predator ? ' · rovdjur' : ''}${a.count ? ` · ${a.count} st` : ''}</span></div>
-              <div class="muted">${a.traits.map((t) => TRAITS[t].name).join(', ')} · tro ${a.belief}</div>
+              <div class="muted">${a.traits.map((t) => `<span class="trait ${TRAITS[t].good ? 'good' : 'bad'}" title="${esc(TRAITS[t].note)}">${TRAITS[t].name}</span>`).join(' ')} · tro ${a.belief}</div>
             </div>`).join('')}
         </div>
         <button class="btn primary swear" data-act="swear" ${n === OATH_VERSES ? '' : 'disabled'}>${n ? `Svär eden: ”${esc(VERSES[this.oathPick[0]].text)}”` : 'Välj ett löfte'}</button>
@@ -1004,7 +1004,7 @@ export class App {
     return `
       <div class="inspect">
         <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(s, a.id)}${a.predator ? ' · rovdjur' : ''}${a.elder ? ' · den äldste' : ''}</span></div>
-        <div class="muted">${a.traits.map((t) => `${TRAITS[t].name} – ${TRAITS[t].note}`).join(' · ')}</div>
+        <div class="muted trait-list">${a.traits.map((t) => `<span class="trait ${TRAITS[t].good ? 'good' : 'bad'}"><b>${TRAITS[t].name}</b> – ${esc(TRAITS[t].note)}</span>`).join('')}</div>
         <div>Tro ${a.belief}${a.count !== undefined ? ` · ${a.count} kvar` : ''}${a.injuries.length ? '' : ' · oskadd'}</div>
         <ul class="status-list">${animalStatuses(s, a).map((st) => `<li>${chipHtml(st, true)}<span>${esc(st.explain)}</span></li>`).join('') || `<li class="muted">${a.status === 'active' ? `${esc(a.name)} följer oss. Inga särskilda tillstånd.` : ''}</li>`}</ul>
         ${a.status === 'active' ? `<div class="reason">${esc(leadBlockReason(s, a) ?? (a.flier ? `${a.name} kan ledas – flyger upp till 2 steg och kan inte träffas i luften.` : `${a.name} kan ledas ett steg.`))}</div>` : ''}

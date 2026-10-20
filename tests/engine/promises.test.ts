@@ -33,7 +33,7 @@ describe('promises asked at the fire', () => {
     s.trafficPlan[0] = [truck('lane1')];
     s = run(s, { type: 'endTurn' }, { type: 'lastMoment', choice: 'letGo' });
     expect(get(s, 'toad').diedOf).toBe('lastbil');
-    for (const a of s.animals) if (a.status === 'active') a.zone = 'lane2';
+    for (const a of s.animals) if (a.status === 'active') { a.zone = 'lane2'; a.intent = { kind: 'follow' }; }
     s.kraft = 99;
     for (const a of s.animals.filter((x) => x.status === 'active')) s = run(s, { type: 'lead', target: a.id, zone: 'farDike' });
     expect(proposalAtFire(run(s, { type: 'travel', to: 'granbacken' }))).toMatchObject({ rule: 'light' });
