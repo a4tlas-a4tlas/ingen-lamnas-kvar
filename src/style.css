@@ -97,6 +97,21 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .cast-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
 .cast-card { background: rgba(239,227,200,0.06); padding: 10px; border-radius: 3px; text-align: center; font-size: 0.9em; }
 .cast-card .sil { width: 70px; display: block; margin: 0 auto 4px; }
+.screen.cast-screen { max-width: 1400px; }
+.cast-screen > .lead-text { max-width: 760px; margin-left: auto; margin-right: auto; text-align: center; }
+.cast-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.cast-option { display: flex; flex-direction: column; gap: 6px; background: rgba(239,227,200,0.06); border: 1px solid rgba(239,227,200,0.14); border-radius: 4px; padding: 12px; cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s; }
+.cast-option:hover { border-color: rgba(232,190,100,0.6); background: rgba(239,227,200,0.1); }
+.cast-option h3 { margin: 0; text-align: left; }
+.cast-option .cast-line { margin: 0; font-style: italic; }
+.cast-option .btn { margin-top: auto; }
+.cast-list { list-style: none; padding: 0; margin: 4px 0 8px; display: flex; flex-direction: column; gap: 8px; }
+.cast-member { display: grid; grid-template-columns: 44px 1fr; column-gap: 8px; align-items: center; font-size: 0.86em; }
+.cast-member .sil { width: 44px; grid-row: span 3; }
+.cast-skills { font-size: 0.92em; }
+button.link { background: none; border: 0; padding: 0 0 0 8px; color: var(--gold, #e8be64); font: inherit; font-size: 0.7em; text-decoration: underline; cursor: pointer; }
+@media (max-width: 1100px) { .cast-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .cast-options { grid-template-columns: 1fr; } }
 .swear { display: block; margin: 2em auto 0; font-size: 1.15em; }
 
 /* ---------------------------------------------------------------- game layout */

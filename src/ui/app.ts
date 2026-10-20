@@ -1,4 +1,4 @@
-import { SPECIES, START_GROUP } from '../data/animals';
+import { SPECIES, START_GROUP, castDef } from '../data/animals';
 import { LOADOUT, SKILLS, allSkills } from '../data/skills';
 import { guideName } from '../engine/roles';
 import { CARDS, TAG_NAMES } from '../data/cards';
@@ -33,9 +33,9 @@ import {
   moonHidden,
   verseStatus,
 } from '../engine/rules';
-import { OATH_VERSES, createGame } from '../engine/setup';
+import { OATH_VERSES, castOffers, createGame, type CastGroup } from '../engine/setup';
 import { XP_TO_LEARN, step } from '../engine/step';
-import type { Action, Animal, Card, CardKind, GameEvent, Teaching, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
+import type { Action, Animal, Card, CardKind, CastId, GameEvent, Teaching, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
 import { fireSceneSvg, firePanelHtml, guideHtml, mapSvg, meetingHtml, memoryLine, memorialHtml, moveToSeat, occupants, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
 import { MEETINGS, currentFrame } from '../data/meetings';
@@ -109,7 +109,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 19 && s.phase !== 'over' ? s : null;
+    return s.version === 20 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -129,6 +129,8 @@ export class App {
   private sel: Sel = { mode: 'idle' };
   private inspect: string | null = null;
   private oathPick: VerseId[] = [];
+  /** Before the oath we choose who goes; until then the oath screen shows the groups. */
+  private castPicked = false;
   private deckView: DeckView | null = null;
   /** The skills each of us knows, and which three we carry: on the map and by the fire. */
   private skillsOpen = false;
@@ -193,6 +195,7 @@ export class App {
       case 'new':
         this.state = createGame(randomSeed());
         this.oathPick = [];
+        this.castPicked = false;
         this.fireSeats = null;
         this.mapOpen = false;
         this.mounted = false;
@@ -220,6 +223,14 @@ export class App {
         this.render();
         break;
       }
+      case 'cast-pick':
+        this.castPicked = true;
+        this.dispatch({ type: 'chooseCast', cast: el.dataset.cast as CastId });
+        break;
+      case 'cast-back':
+        this.castPicked = false;
+        this.render();
+        break;
       case 'swear':
         this.dispatch({ type: 'swear', verses: this.oathPick });
         break;
@@ -613,7 +624,37 @@ export class App {
     this.renderGame(s, hurt);
   }
 
+  /** Vilka går? The groups side by side: each is who they would be this run. */
+  private renderCasts(s: GameState) {
+    this.mounted = false;
+    const member = (a: Animal) => `
+      <li class="cast-member">
+        ${silhouette(a.species)}
+        <div><b>${esc(a.name)}</b> <span class="muted">· ${SPECIES[a.species].kindName}${a.count ? ` · ${a.count} st` : ''}${a.elder ? ' · den äldste' : ''}${a.guide ? ' · minns vägen' : ''}</span></div>
+        <div>${a.traits.map((t) => `<span class="trait ${TRAITS[t].good ? 'good' : 'bad'}" title="${esc(TRAITS[t].note)}">${TRAITS[t].name}</span>`).join(' ')} <span class="muted">· tro ${a.belief}</span></div>
+        <div class="cast-skills muted">${a.loadout.map((k) => esc(CARDS[k].name)).join(' · ')}</div>
+      </li>`;
+    const column = (g: CastGroup) => {
+      const def = castDef(g.cast);
+      const predators = g.animals.filter((a) => a.predator).length;
+      return `<div class="cast-option" data-act="cast-pick" data-cast="${g.cast}">
+        <h3>${esc(def.name)}</h3>
+        <p class="cast-line">${esc(def.line)}</p>
+        <p class="muted small">${g.animals.length} djur · ${predators ? `${predators} rovdjur` : 'inga rovdjur'}</p>
+        <ul class="cast-list">${g.animals.map(member).join('')}</ul>
+        <button class="btn primary" data-act="cast-pick" data-cast="${g.cast}">Låt ${esc(def.name.toLowerCase())} gå</button>
+      </div>`;
+    };
+    this.root.innerHTML = `
+      <div class="screen oath-screen cast-screen">
+        <h2>Vilka går?</h2>
+        <p class="lead-text">Maskinerna står vid dalens kant. Inte alla kan gå tillsammans – välj vilka som lämnar dalen i natt.</p>
+        <div class="cast-options">${castOffers(s.seed).map(column).join('')}</div>
+      </div>`;
+  }
+
   private renderOath(s: GameState) {
+    if (!this.castPicked) return this.renderCasts(s);
     this.mounted = false;
     const n = this.oathPick.length;
     this.root.innerHTML = `
@@ -632,7 +673,7 @@ export class App {
             </button>`;
           }).join('')}
         </div>
-        <h3>Vi som går</h3>
+        <h3>Vi som går: ${esc(castDef(s.cast).name)} <button class="link" data-act="cast-back">Välj en annan grupp</button></h3>
         <div class="cast-grid">
           ${s.animals.map((a) => `
             <div class="cast-card">
@@ -1418,6 +1459,7 @@ export class App {
     this.root.innerHTML = `
       <div class="screen end-screen">
         <h2>${o.fallen ? 'Eden föll' : esc(place(s, s.journey.at).name)}</h2>
+        <p class="muted">${esc(castDef(s.cast).name)}</p>
         ${last.map((e) => `<p class="lead-text">${esc(e.text)}</p>`).join('')}
         ${survivors.length ? `<h3>Vi som gick vidare</h3><ul class="roster">${rosterHtml(s)}</ul>` : ''}
         ${memorialHtml(s)}

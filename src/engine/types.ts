@@ -14,6 +14,8 @@ export type InjuryKind = 'halt' | 'broken' | 'bleeding' | 'shock';
 
 /** Every danger is telegraphed as one or the other. */
 export type Severity = 'injure' | 'kill';
+/** The groups that may leave the glen (see `CASTS` in data/animals). */
+export type CastId = 'dalensSista' | 'rovdjurensPakt' | 'deSma' | 'slumpad';
 export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice' | 'adder' | 'hare';
 /** Only small animals fit through the culvert. */
 export type Size = 'small' | 'medium' | 'large';
@@ -354,7 +356,9 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 19;
+  version: 20;
+  /** Which group left the glen. */
+  cast: CastId;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;
@@ -435,6 +439,7 @@ export interface GameState {
 }
 
 export type Action =
+  | { type: 'chooseCast'; cast: CastId }
   | { type: 'swear'; verses: VerseId[] }
   | { type: 'play'; uid: number; target?: string; zone?: ZoneId }
   | { type: 'lead'; target: string; zone: ZoneId }
