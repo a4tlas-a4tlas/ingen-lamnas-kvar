@@ -674,3 +674,11 @@ Your direction:
   - A story part teaches a skill of the kind. If the animal already carries three, it learns now and chooses on the map.
   - A card the crow or the starving fox takes is a skill its owner forgets.
 - **Mourning:** the closest carries on a trait of the dead, without a card.
+
+### Step 3: learning on the way (done)
+- **From what we live through.** Every danger survived counts. At 3, two skills of the kind the animal doesn't know are offered; we choose one under *Förmågor* (map or fire). It's carried at once if there is room, otherwise it waits to be chosen. *Förmågor* is marked ● while someone has something to learn, and shows how many dangers are left until the next.
+- **From story parts.** *En gammal stig*, *Grytet* and others teach a skill of the kind directly.
+- **From each other, by the fire.** Two who share the embers, with bond ≥ 2, can spend the night teaching:
+  - **within a kind:** any skill
+  - **across kinds:** only comfort and insight (Trösta, Läsa natten, Gamla vägar …)
+  - **the cost:** neither of them rests, so the wounds wait. A skill from another kind shows up under *Förmågor* as "lärd av en annan".

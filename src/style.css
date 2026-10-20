@@ -897,3 +897,8 @@ h2 .skills-btn { margin: 0 0 0 8px; vertical-align: middle; }
 .card.skill-unknown { display: grid; place-content: center; text-align: center; background: repeating-linear-gradient(135deg, rgba(42,36,32,0.07) 0 8px, transparent 8px 16px); border: 2px dashed var(--owner); color: var(--ink); min-height: 120px; box-shadow: none; }
 .card.skill-unknown .cname { font-size: 2em; opacity: 0.55; }
 .card.skill-unknown .ctext { opacity: 0.75; }
+.skills-btn.pending { background: var(--gold); }
+.skill-offer { margin: 6px 0 10px; padding: 8px 10px; border: 2px dashed var(--gold); border-radius: 4px; background: rgba(228,192,112,0.12); }
+.skill-grid .card.offered { box-shadow: 0 0 0 2px var(--gold), 0 4px 10px rgba(0,0,0,0.35); }
+.teach-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.teach-row .seg { font-size: 0.8em; }

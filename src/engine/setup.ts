@@ -57,6 +57,7 @@ export function makeAnimal(member: Member, id: string, name: string, h: RngHolde
     flying: false,
     skills: [],
     loadout: [],
+    xp: 0,
   };
   // Three of the kind's four first skills, carried from the start.
   animal.skills = shuffle(h, [...SKILLS[member.species].basic]).slice(0, LOADOUT);
@@ -92,7 +93,7 @@ export function createGame(seed: number): GameState {
   for (const [a, b, v] of START_BONDS) if (animals.some((x) => x.id === a) && animals.some((x) => x.id === b)) bonds[bondKey(a, b)] = v;
 
   return {
-    version: 17,
+    version: 18,
     journey: firstRegion(seed),
     variant: 'normal',
     time: 'night',

@@ -1,14 +1,15 @@
 // HTML for the screens between encounters: the guide's map, the campfire and
 // the memorial stone. Pure functions of state (plus the campfire plan).
+import { CARDS } from '../data/cards';
 import { guideName } from '../engine/roles';
 import { FOREST, pathsFrom, type Place } from '../data/journey';
-import { type FirePlan, emberPairs, hungryWatcher, inheritanceLine, living, lockedAtFire, planProblem, sitsAlone } from '../engine/campfire';
+import { type FirePlan, TEACH_BOND, emberPairs, hungryWatcher, inheritanceLine, living, lockedAtFire, planProblem, sitsAlone, teachable } from '../engine/campfire';
 import { MEETINGS, currentFrame, labelOf, meetingOptions, speakerOf } from '../data/meetings';
 import { keptPromises } from '../engine/promises';
 import { encounterOf, type EncounterDef, type ZoneDef } from '../engine/encounters';
 import { animal, bond, canFly } from '../engine/rules';
 import { GUIDES, HIT_ROWS, HOUR_STEPS, RESCUE_ROWS, TIME_NAMES, TIME_NOTES, type GuideRow } from '../data/guides.sv';
-import type { Animal, GameState } from '../engine/types';
+import type { Animal, CardKind, GameState, Teaching } from '../engine/types';
 import { crowSilhouette, sceneArt, silhouette, speciesColor } from './silhouettes';
 import { animalStatuses } from './status';
 
@@ -196,10 +197,12 @@ export function seatsFromPlan(s: GameState, plan: FirePlan): Seats {
 }
 
 /** Only full pairs sit by the embers; a lone animal at an ember is as alone as in the dark. */
-export function planFromSeats(seats: Seats, mourning: FirePlan['mourning']): FirePlan {
+export function planFromSeats(seats: Seats, mourning: FirePlan['mourning'], teach?: Teaching): FirePlan {
   const ids = (seat: Seat) => Object.keys(seats).filter((id) => seats[id] === seat);
   const pairs = (['ember0', 'ember1'] as Seat[]).map(ids).filter((p) => p.length === 2) as [string, string][];
-  return { watch: ids('watch')[0], scout: ids('scout')[0], pairs, mourning };
+  // A teaching only holds while the two still sit together by the embers.
+  const together = teach && pairs.some((p) => p.includes(teach.teacher) && p.includes(teach.learner));
+  return { watch: ids('watch')[0], scout: ids('scout')[0], pairs, mourning, teach: together ? teach : undefined };
 }
 
 /** Who sits in a place, in the order they are drawn. */
@@ -283,8 +286,8 @@ export function fireSceneSvg(s: GameState, seats: Seats, o: { crow?: boolean; pi
     </div>`;
 }
 
-export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mourning'], hint = ''): string {
-  const plan = planFromSeats(seats, mourning);
+export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mourning'], hint = '', teach?: Teaching): string {
+  const plan = planFromSeats(seats, mourning, teach);
   const problem = planProblem(s, plan);
   const w = plan.watch ? animal(s, plan.watch) : undefined;
   const sc = plan.scout ? animal(s, plan.scout) : undefined;
@@ -305,9 +308,16 @@ export function firePanelHtml(s: GameState, seats: Seats, mourning: FirePlan['mo
     .map((p) => {
       const n = seats[p[0]] === 'ember0' ? 1 : 2;
       const b = bond(s, p[0], p[1]);
-      return `<li><b>Glöd ${n}:</b> ${esc(animal(s, p[0]).name)} och ${esc(animal(s, p[1]).name)} <span class="muted">(band ${b} → ${Math.min(3, b + 1)}, båda +1 tro)</span></li>`;
+      // Either of them may teach the other, if they are close enough.
+      const lessons = [[p[0], p[1]], [p[1], p[0]]].flatMap(([t, l]) => teachable(s, t, l).map((k) => ({ t, l, k })));
+      const on = (x: { t: string; l: string; k: string }) => plan.teach?.teacher === x.t && plan.teach.learner === x.l && plan.teach.skill === x.k;
+      const teachRow = lessons.length
+        ? `<div class="teach-row">${lessons.map((x) => `<button class="seg ${on(x) ? 'on' : ''}" data-act="fire-teach" data-teacher="${x.t}" data-learner="${x.l}" data-skill="${x.k}">${esc(animal(s, x.t).name)} lär ${esc(animal(s, x.l).name)}: ${esc(CARDS[x.k as CardKind].name)}</button>`).join('')}</div>`
+        : b < TEACH_BOND ? ` <span class="muted small">Vid band ${TEACH_BOND} kan de lära varandra.</span>` : '';
+      return `<li><b>Glöd ${n}:</b> ${esc(animal(s, p[0]).name)} och ${esc(animal(s, p[1]).name)} <span class="muted">(band ${b} → ${Math.min(3, b + 1)}, båda +1 tro)</span>${teachRow}</li>`;
     })
     .join('');
+  if (plan.teach) notes.push(`${esc(animal(s, plan.teach.teacher).name)} lär ${esc(animal(s, plan.teach.learner).name)} ${esc(CARDS[plan.teach.skill].name)} i natt – ingen av dem vilar, och det som kunde läka får vänta.`);
 
   return `
     ${s.unmourned.length ? `<section class="fire-step">

@@ -127,6 +127,10 @@ export interface Animal {
   /** What this one of its kind knows how to do, and the ones it carries: its cards. */
   skills: CardKind[];
   loadout: CardKind[];
+  /** Dangers survived since it last learned something: at three, it may learn. */
+  xp: number;
+  /** What it may learn now, from what it has lived through: one of these. */
+  offer?: CardKind[];
   /** Fed for this danger: it will not hunt here. */
   sated?: boolean;
   // Per-turn flags.
@@ -316,6 +320,13 @@ export interface FireDebt {
   dark: string[];
 }
 
+/** By the embers, one of a pair teaches the other a skill instead of resting. */
+export interface Teaching {
+  teacher: string;
+  learner: string;
+  skill: CardKind;
+}
+
 export interface Rescue {
   /** The id the trapped one will have among us, its kind and its name. */
   who: string;
@@ -333,7 +344,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 17;
+  version: 18;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;
@@ -421,7 +432,9 @@ export type Action =
   | { type: 'endTurn' }
   | { type: 'travel'; to: string; wait?: boolean }
   | { type: 'rescue'; by: string }
-  | { type: 'restAtFire'; watch?: string; scout?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice> }
+  | { type: 'restAtFire'; watch?: string; scout?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice>; teach?: Teaching }
+  /** Learn one of the skills a danger lived through has offered. */
+  | { type: 'learn'; animal: string; skill: CardKind }
   | { type: 'respond'; option: string; uid?: number }
   /** Choose which of its skills an animal carries: on the map or by the fire, never in danger. */
   | { type: 'equip'; animal: string; skills: CardKind[] }

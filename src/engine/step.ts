@@ -105,6 +105,7 @@ export function step(prev: GameState, action: Action): { state: GameState; event
       case 'rescue': rescue(c, action.by); break;
       case 'respond': respond(c, action.option, action.uid); break;
       case 'equip': equip(c, action.animal, action.skills); break;
+      case 'learn': learn(c, action.animal, action.skill); break;
       case 'endTurn': endTurn(c); break;
       case 'lastMoment': resolveLastMoment(c, action); break;
       case 'travel': travel(c, action.to, action.wait); break;
@@ -393,7 +394,15 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
   // Those the meeting placed tonight.
   for (const id of s.fireDebt.apart) line(c, id, `${animal(s, id).name} satt hos kråkan och berättade om dalen, långt in på natten.`);
 
-  // 3. By the embers.
+  // 3. By the embers. One pair may spend the night teaching instead of resting.
+  const teaching = plan.teach;
+  if (teaching) {
+    const t = animal(s, teaching.teacher);
+    const l = animal(s, teaching.learner);
+    addSkill(s, l, teaching.skill);
+    line(c, t.id, `${t.name} visade ${l.name} hur man ${CARDS[teaching.skill].name.toLowerCase()} – hela natten, tills det satt.`);
+  }
+  const teachers = teaching ? [teaching.teacher, teaching.learner] : [];
   for (const [ai, bi] of plan.pairs) {
     const a = animal(s, ai);
     const b = animal(s, bi);
@@ -415,8 +424,8 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
   for (const a of living(s)) {
     const heal: InjuryKind[] = a.injuries.filter((k) => k === 'bleeding' || k === 'shock');
     if (!heal.length) continue;
-    if (a === w || a === scout || s.fireDebt.apart.includes(a.id)) {
-      line(c, a.id, `${a.name} ${a === w ? 'vakade' : a === scout ? 'flög före' : 'berättade hela natten'} och fick ingen vila. Såren får vänta.`);
+    if (a === w || a === scout || s.fireDebt.apart.includes(a.id) || teachers.includes(a.id)) {
+      line(c, a.id, `${a.name} ${a === w ? 'vakade' : a === scout ? 'flög före' : teachers.includes(a.id) ? 'lärde och lärde ut' : 'berättade hela natten'} och fick ingen vila. Såren får vänta.`);
       continue;
     }
     a.injuries = a.injuries.filter((k) => !heal.includes(k));
@@ -706,12 +715,7 @@ function learnCard(c: Ctx, a: Animal): string | undefined {
   const options = allSkills(a.species).filter((k) => !a.skills.includes(k));
   if (!options.length) return undefined;
   const k = options[Math.floor(random(s) * options.length)];
-  a.skills.push(k);
-  // With a free hand it carries the new skill at once; otherwise it waits to be chosen.
-  if (a.loadout.length < LOADOUT) {
-    a.loadout.push(k);
-    s.discard.push({ uid: s.nextUid++, kind: k, owner: a.id });
-  }
+  addSkill(s, a, k);
   const name = CARDS[k].name;
   line(c, a.id, `${a.name} lärde sig något nytt: ${name}.`);
   return name;
@@ -725,6 +729,41 @@ function forgetCard(s: GameState, uid: number) {
   if (!o || card!.kind === 'minne') return;
   o.skills = o.skills.filter((k) => k !== card!.kind);
   o.loadout = o.loadout.filter((k) => k !== card!.kind);
+}
+
+/** Dangers lived through before one of us may learn something new. */
+export const XP_TO_LEARN = 3;
+
+/** One more danger lived through. At three, two skills of its kind it doesn't know are offered. */
+function gainXp(c: Ctx, a: Animal) {
+  const s = c.s;
+  const left = allSkills(a.species).filter((k) => !a.skills.includes(k));
+  if (!left.length || a.offer) return;
+  a.xp++;
+  if (a.xp < XP_TO_LEARN) return;
+  a.xp = 0;
+  a.offer = shuffle(s, left).slice(0, 2);
+  line(c, a.id, `${a.name} har lärt sig något av det vi gått igenom. Välj vad, under Förmågor.`);
+}
+
+/** A skill learned: carried at once if there is room, otherwise it waits among those it knows. */
+function addSkill(s: GameState, a: Animal, k: CardKind) {
+  if (a.skills.includes(k)) return;
+  a.skills.push(k);
+  if (a.loadout.length < LOADOUT) {
+    a.loadout.push(k);
+    s.draw.push({ uid: s.nextUid++, kind: k, owner: a.id });
+  }
+}
+
+function learn(c: Ctx, id: string, k: CardKind) {
+  const s = c.s;
+  if (s.phase !== 'map' && s.phase !== 'campfire') fail('Det går bara att lära sig något på kartan eller vid elden.');
+  const a = animal(s, id);
+  if (!a.offer?.includes(k)) fail(`${a.name} kan inte lära sig det nu.`);
+  a.offer = undefined;
+  addSkill(s, a, k);
+  line(c, a.id, `${a.name} kan nu ${CARDS[k].name}.`);
 }
 
 /** Which skills an animal carries: chosen on the map or by the fire, never in danger. */
@@ -1833,6 +1872,7 @@ function endEncounter(c: Ctx) {
     changeHope(c, -1, 'trapped');
   }
   const safe = s.animals.filter((a) => a.status === 'safe');
+  for (const a of safe) gainXp(c, a);
   const crossed = encounterOf(s).crossed;
   if (safe.length === 0) {
     narrate(c, 'Ingen av oss nådde andra sidan. Eden föll.');
