@@ -1,5 +1,6 @@
 import { SPECIES, START_BONDS, START_GROUP, nameFor, type Member } from '../data/animals';
-import { TRAITS, TRAIT_IDS } from '../data/traits';
+import { LOADOUT, SKILLS } from '../data/skills';
+import { TRAIT_IDS } from '../data/traits';
 import { shuffle, type RngHolder } from './rng';
 import { DALEN, type RegionDef } from '../data/regions/dalen';
 import { generateRegion } from './regions';
@@ -54,9 +55,13 @@ export function makeAnimal(member: Member, id: string, name: string, h: RngHolde
     slowTime: 0,
     braced: false,
     flying: false,
+    skills: [],
+    loadout: [],
   };
-  const cards: Card[] = [{ uid: nextUid(), kind: def.speciesCard, owner: id }];
-  for (const t of traits) cards.push({ uid: nextUid(), kind: TRAITS[t].card, owner: id });
+  // Three of the kind's four first skills, carried from the start.
+  animal.skills = shuffle(h, [...SKILLS[member.species].basic]).slice(0, LOADOUT);
+  animal.loadout = [...animal.skills];
+  const cards: Card[] = animal.loadout.map((kind) => ({ uid: nextUid(), kind, owner: id }));
   return { animal, cards };
 }
 
@@ -87,7 +92,7 @@ export function createGame(seed: number): GameState {
   for (const [a, b, v] of START_BONDS) if (animals.some((x) => x.id === a) && animals.some((x) => x.id === b)) bonds[bondKey(a, b)] = v;
 
   return {
-    version: 16,
+    version: 17,
     journey: firstRegion(seed),
     variant: 'normal',
     time: 'night',
@@ -126,6 +131,7 @@ export function createGame(seed: number): GameState {
     fellPlan: [],
     dozePlan: [],
     raptors: [],
+    warded: [],
     rescue: null,
     met: [],
     knowledge: [],

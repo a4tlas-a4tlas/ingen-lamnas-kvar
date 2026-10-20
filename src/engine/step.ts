@@ -7,6 +7,7 @@ import { trickChance } from '../data/meetings/crow.sv';
 import { labelOf, meetingOptions, speakerOf } from '../data/meetings';
 import { brokenByTravel, keptPromises, promiseFloor, promiseText, proposalAtFire, promises } from './promises';
 import { CARDS } from '../data/cards';
+import { LOADOUT, allSkills } from '../data/skills';
 import { planRoad } from './encounters/road';
 import { forkVoices, voiceStake } from './voices';
 import { CURRENT, DAM, DAM_MAX, FLOOD_DAM_CREAK, FLOOD_HOURS, FLOOD_HOURS_TOTAL, STONES, aboveTheWater, carriedAway, holdsOnTo, planRiver, swims } from './encounters/river';
@@ -70,7 +71,7 @@ import type {
   LogEntry,
   VerseId,
   ZoneId,
-  TraitId,
+  CardKind,
   Meeting,
   Proposal,
   RegionId,
@@ -103,6 +104,7 @@ export function step(prev: GameState, action: Action): { state: GameState; event
       case 'lure': lure(c, action.target, action.zone); endIfAllAcross(c); break;
       case 'rescue': rescue(c, action.by); break;
       case 'respond': respond(c, action.option, action.uid); break;
+      case 'equip': equip(c, action.animal, action.skills); break;
       case 'endTurn': endTurn(c); break;
       case 'lastMoment': resolveLastMoment(c, action); break;
       case 'travel': travel(c, action.to, action.wait); break;
@@ -311,6 +313,7 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   const start = def.zones.find((z) => z.start)!.id;
   for (const a of s.animals.filter(isPresent)) {
     a.status = 'active';
+    a.sated = false;
     a.zone = start;
     a.slowTime = 0;
     a.intent = { kind: 'follow' };
@@ -355,7 +358,6 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
       const t = inheritedTrait(s, deadId, teller);
       if (t) {
         teller.traits.push(t);
-        s.discard.push({ uid: s.nextUid++, kind: TRAITS[t].card, owner: teller.id, inheritedFrom: deadId });
         line(c, teller.id, `${teller.name} berättade om ${dead.name} länge. Sedan dess bär ${teller.name} ${dead.name}s ${TRAITS[t].noun}.`);
       } else line(c, teller.id, `${teller.name} berättade om ${dead.name} länge.`);
     }
@@ -518,7 +520,7 @@ function respond(c: Ctx, optionId: string, uid?: number) {
     case 'payCard': {
       const card = crowCards(s).find((x) => x.uid === uid);
       if (!card) fail('Välj vilket kort kråkan får.');
-      takeCard(s, card.uid);
+      forgetCard(s, card.uid);
       narrate(c, `Kråkan tog ${CARDS[card.kind].name} från ${animal(s, card.owner).name} i näbben.`);
       told();
       break;
@@ -543,7 +545,7 @@ function respond(c: Ctx, optionId: string, uid?: number) {
         const own = crowCards(s).filter((x) => x.owner === trickster.id);
         if (own.length) {
           const card = own[Math.floor(random(s) * own.length)];
-          takeCard(s, card.uid);
+          forgetCard(s, card.uid);
           narrate(c, `Kråkan genomskådade ${trickster.name} och tog ${CARDS[card.kind].name}.`);
         }
         next = 'snatched';
@@ -618,7 +620,7 @@ function respond(c: Ctx, optionId: string, uid?: number) {
     case 'shareCard': {
       const card = crowCards(s).find((x) => x.uid === uid);
       if (!card) fail('Välj vilket kort räven får.');
-      takeCard(s, card.uid);
+      forgetCard(s, card.uid);
       narrate(c, `Vi gav räven ${CARDS[card.kind].name} från ${animal(s, card.owner).name}.`);
       if (speaker?.species === 'fox') changeBelief(c, speaker, 1);
       m.told = revealAhead(c, 'Räven berättade:', 'Räven hade inget nytt att berätta.');
@@ -701,14 +703,44 @@ function breakForLoss(c: Ctx, gone: Animal) {
 /** Learn a card of a trait the animal doesn't already carry: it goes to the discard pile. Its name, or undefined. */
 function learnCard(c: Ctx, a: Animal): string | undefined {
   const s = c.s;
-  const owned = new Set([...s.draw, ...s.hand, ...s.discard].filter((x) => x.owner === a.id).map((x) => x.kind));
-  const options = (Object.keys(TRAITS) as TraitId[]).filter((t) => !a.traits.includes(t) && !owned.has(TRAITS[t].card));
+  const options = allSkills(a.species).filter((k) => !a.skills.includes(k));
   if (!options.length) return undefined;
-  const t = options[Math.floor(random(s) * options.length)];
-  s.discard.push({ uid: s.nextUid++, kind: TRAITS[t].card, owner: a.id });
-  const name = CARDS[TRAITS[t].card].name;
+  const k = options[Math.floor(random(s) * options.length)];
+  a.skills.push(k);
+  // With a free hand it carries the new skill at once; otherwise it waits to be chosen.
+  if (a.loadout.length < LOADOUT) {
+    a.loadout.push(k);
+    s.discard.push({ uid: s.nextUid++, kind: k, owner: a.id });
+  }
+  const name = CARDS[k].name;
   line(c, a.id, `${a.name} lärde sig något nytt: ${name}.`);
   return name;
+}
+
+/** A card taken from us for good: its owner forgets that skill. */
+function forgetCard(s: GameState, uid: number) {
+  const card = [...s.draw, ...s.hand, ...s.discard].find((x) => x.uid === uid);
+  takeCard(s, uid);
+  const o = card && s.animals.find((a) => a.id === card.owner);
+  if (!o || card!.kind === 'minne') return;
+  o.skills = o.skills.filter((k) => k !== card!.kind);
+  o.loadout = o.loadout.filter((k) => k !== card!.kind);
+}
+
+/** Which skills an animal carries: chosen on the map or by the fire, never in danger. */
+function equip(c: Ctx, id: string, skills: CardKind[]) {
+  const s = c.s;
+  if (s.phase !== 'map' && s.phase !== 'campfire') fail('Förmågor väljs på kartan eller vid elden.');
+  const a = animal(s, id);
+  if (!isPresent(a)) fail(`${a.name} är inte med oss.`);
+  const chosen = [...new Set(skills)];
+  if (chosen.length < 1 || chosen.length > LOADOUT) fail(`Välj en till ${LOADOUT} förmågor.`);
+  if (chosen.some((k) => !a.skills.includes(k))) fail(`${a.name} kan inte det än.`);
+  for (const pile of [s.draw, s.hand, s.discard]) {
+    for (let i = pile.length - 1; i >= 0; i--) if (pile[i].owner === a.id && pile[i].kind !== 'minne') pile.splice(i, 1);
+  }
+  a.loadout = chosen;
+  for (const k of chosen) s.draw.push({ uid: s.nextUid++, kind: k, owner: a.id });
 }
 
 /** Bleeding and shock heal. */
@@ -767,9 +799,13 @@ function startTurn(c: Ctx) {
     a.braced = false;
     a.flying = false;
     a.protectedBy = undefined;
+    a.hidden = false;
+    a.rooted = false;
+    a.scattered = false;
   }
   s.peekNext = false;
   s.darkRevealed = false;
+  s.warded = [];
 
   const hidden = moonHidden(s);
   const moon = verseStatus(s, 'manen');
@@ -822,10 +858,10 @@ function chooseIntent(c: Ctx, a: Animal): Intent {
   if (a.belief <= 0) return { kind: 'leave' };
 
   // By the farm, a hungry predator goes for the hens: the lesser evil.
-  if (a.predator && s.encounterId === 'farm' && a.belief <= huntsAt(s, a) + 2 && zoneDistance(s, a.zone, HEN_HOUSE) <= 1) {
+  if (a.predator && !a.sated && s.encounterId === 'farm' && a.belief <= huntsAt(s, a) + 2 && zoneDistance(s, a.zone, HEN_HOUSE) <= 1) {
     return { kind: 'raid' };
   }
-  if (a.predator && a.belief <= huntsAt(s, a)) {
+  if (a.predator && !a.sated && a.belief <= huntsAt(s, a)) {
     const prey = s.animals
       .filter((p) => isActive(p) && canPrey(a, p) && zoneDistance(s, a.zone, p.zone) <= 1)
       .sort((x, y) => bond(s, a.id, x.id) - bond(s, a.id, y.id));
@@ -983,7 +1019,7 @@ function farmHazards(c: Ctx) {
 function leaveScent(s: GameState) {
   const fades = s.time === 'day' || s.turn % 2 === 0;
   if (fades) for (const z of Object.keys(s.scent)) s.scent[z] = Math.max(0, s.scent[z] - 1);
-  const occupied = new Set(s.animals.filter((a) => isActive(a) && !a.flying).map((a) => a.zone));
+  const occupied = new Set(s.animals.filter((a) => isActive(a) && !a.flying && !a.hidden).map((a) => a.zone));
   for (const id of occupied) {
     const z = zoneDef(s, id);
     if (z.breaksScent || z.goal) continue;
@@ -1004,6 +1040,20 @@ function lure(c: Ctx, target: string, zone: ZoneId) {
   for (const d of s.dogs) d.target = zone;
   narrate(c, `${a.name} visar sig i ${zoneDef(s, zone).name}. Hundarna vänder sig mot ${a.name} och skäller.`);
   raiseAlarm(c, 1);
+}
+
+/** Someone shows itself on purpose: the dogs turn to it, the birds' shadow glides over it. */
+function showAsBait(c: Ctx, a: Animal) {
+  const s = c.s;
+  if (!isActive(a)) return;
+  if (s.encounterId === 'farm' && s.dogsAwake && s.time === 'day') {
+    for (const d of s.dogs) d.target = a.zone;
+    narrate(c, `${a.name} visar sig i ${zoneDef(s, a.zone).name}. Hundarna vänder sig mot ${a.name} och skäller.`);
+    raiseAlarm(c, 1);
+  } else if (s.encounterId === 'raptor' && s.turn > 1) {
+    for (const b of s.raptors) if (b.zone) b.zone = a.zone; else if (b.maybe.length) b.maybe = [a.zone, a.zone];
+    narrate(c, `${a.name} springer ut i det öppna. Skuggan vänder och glider efter.`);
+  } else line(c, a.id, `${a.name} visar sig – men här finns inget som bryr sig.`);
 }
 
 // ---------------------------------------------------------------- the river
@@ -1318,6 +1368,124 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       s.animals.filter((x) => isPresent(x) && !x.predator && x.zone === o.zone).forEach((x) => changeBelief(c, x, -1));
       line(c, o.id, `${o.name} lovar att inte bita. De små i närheten tror inte riktigt på det.`);
       break;
+    // ------------------------------------------------ the species' own skills
+    case 'simma':
+    case 'ringla':
+    case 'flyga':
+      moveAnimal(c, o, zone!, true);
+      break;
+    case 'smyga':
+    case 'krypaIn':
+      moveAnimal(c, o, zone!, true);
+      if (isActive(o)) o.hidden = true;
+      line(c, o.id, `${o.name} ${card.kind === 'smyga' ? 'smyger' : 'kryper'} undan, osedd.`);
+      break;
+    case 'lockbete':
+    case 'lockaBort':
+      moveAnimal(c, o, zone!, true);
+      showAsBait(c, o);
+      break;
+    case 'baraLiten':
+    case 'baraIhop':
+      line(c, o.id, `${o.name} ${card.kind === 'baraLiten' ? 'lyfter' : 'bär'} ${tgt!.name}.`);
+      moveAnimal(c, o, zone!, true);
+      moveAnimal(c, tgt!, zone!, true);
+      if (isActive(tgt!)) tgt!.protectedBy = o.id;
+      addBond(c, o, tgt!, 1);
+      break;
+    case 'talamod':
+      changeBelief(c, tgt!, 2);
+      tgt!.intent = { kind: 'follow' };
+      line(c, o.id, `${o.name} sitter stilla hos ${tgt!.name} tills rädslan går över.`);
+      break;
+    case 'gravaNer':
+    case 'gommaSig':
+    case 'frysaStilla':
+      o.hidden = true;
+      o.braced = true;
+      o.rooted = true;
+      line(c, o.id, card.kind === 'gravaNer' ? `${o.name} gräver ner sig.` : card.kind === 'gommaSig' ? `${o.name} ringlar in under en sten.` : `${o.name} blir alldeles stilla.`);
+      break;
+    case 'tystVinge':
+      tgt!.hidden = true;
+      line(c, o.id, `${o.name} breder ut vingen över ${tgt!.name}.`);
+      break;
+    case 'hacka':
+      o.braced = true;
+      line(c, o.id, `${o.name} är beredd att kasta sig åt sidan.`);
+      break;
+    case 'spridaSig':
+      o.scattered = true;
+      line(c, o.id, `${o.name} sprider ut sig.`);
+      break;
+    case 'staSomSten':
+    case 'stampa':
+      for (const x of s.animals.filter((a) => isActive(a) && a.zone === o.zone)) x.braced = true;
+      line(c, o.id, card.kind === 'stampa' ? `${o.name} stampar en varning. Alla omkring håller i sig.` : `${o.name} står som en sten. Ingen omkring rubbas.`);
+      break;
+    case 'gamlesRost':
+      for (const x of s.animals.filter((a) => isPresent(a) && zoneDistance(s, o.zone, a.zone) <= 1)) {
+        changeBelief(c, x, 1);
+        if (isActive(x)) x.intent = { kind: 'follow' };
+      }
+      line(c, o.id, `${o.name} talar lågt, och de närmaste lyssnar.`);
+      break;
+    case 'ropINatten':
+      for (const x of s.animals.filter((a) => isActive(a) && zoneDistance(s, o.zone, a.zone) <= 2 && ['freeze', 'flee', 'bolt'].includes(a.intent.kind))) {
+        x.intent = { kind: 'follow' };
+        line(c, x.id, `${x.name} hör ropet och följer igen.`);
+      }
+      break;
+    case 'lyssnaIMarken':
+      s.peekNext = true;
+      s.darkRevealed = true;
+      drawCards(c, 2);
+      line(c, o.id, `${o.name} lägger örat mot marken.`);
+      break;
+    case 'vaka':
+      s.peekNext = true;
+      changeBelief(c, o, 1);
+      line(c, o.id, `${o.name} vakar.`);
+      break;
+    case 'mangaOgon':
+    case 'vidoga':
+      s.peekNext = true;
+      drawCards(c, 1);
+      line(c, o.id, `${o.name} spanar åt alla håll.`);
+      break;
+    case 'list':
+      drawCards(c, 2);
+      line(c, o.id, `${o.name} har en plan.`);
+      break;
+    case 'giftIHuden':
+      changeBelief(c, o, 1);
+      for (const p of s.animals.filter((a) => isActive(a) && a.intent.kind === 'hunt')) {
+        const i = p.intent as Extract<Intent, { kind: 'hunt' }>;
+        const t = animal(s, i.target);
+        if (t.zone !== o.zone) continue;
+        p.intent = { kind: 'follow' };
+        changeBelief(c, p, -2);
+        line(c, p.id, `${p.name} känner lukten av giftet och ger upp.`);
+      }
+      break;
+    case 'hota':
+      if (!s.warded.includes(o.zone)) s.warded.push(o.zone);
+      line(c, o.id, `${o.name} reser sig och väser. Inget som jagar vill komma nära.`);
+      break;
+    case 'mattForStunden':
+      changeBelief(c, o, 2);
+      o.sated = true;
+      if (o.intent.kind === 'hunt') o.intent = { kind: 'follow' };
+      line(c, o.id, `${o.name} är mätt, för stunden.`);
+      break;
+    case 'varmaSig':
+      changeBelief(c, o, 2);
+      o.hunger = Math.max(0, o.hunger - 1);
+      line(c, o.id, `${o.name} värmer sig i en solfläck. Hungern lägger sig.`);
+      break;
+    case 'omsaSkinn':
+      heal(c, o, `${o.name} ömsar skinn. Det som gjorde ont blir kvar i det gamla.`);
+      break;
     case 'minne':
       // A buried memory is gentler; one we carry hurts more, and holds more.
       if (card.buried) {
@@ -1420,6 +1588,15 @@ function processHits(c: Ctx) {
     const h = s.hitQueue.shift()!;
     let v = animal(s, h.victim);
     if (!isActive(v)) continue;
+    // What hunts by sight or scent doesn't find the hidden – and backs off where someone threatens.
+    if (HUNTERS.includes(h.source) && (v.hidden || s.warded.includes(v.zone))) {
+      line(c, v.id, v.hidden ? `${HIT_BY[h.source] ?? capitalize(h.source)} hittar inte ${v.name}.` : `${HIT_BY[h.source] ?? capitalize(h.source)} backar undan.`);
+      continue;
+    }
+    if (v.scattered && v.count !== undefined) {
+      v.scattered = false;
+      h.severity = 'injure';
+    }
     // Over the fields the air is the bird's: lifting off is no escape.
     if (v.flying && !BIRDS.includes(h.source)) {
       line(c, v.id, `${v.name} lyfter i sista stund.`);
@@ -1471,6 +1648,8 @@ const LAST_MOMENT: Record<string, string> = {
 
 /** The birds of prey over the fields: in the air there is no escaping them. */
 const BIRDS = ['vråk', 'berguv'];
+/** What hunts by sight or scent: the hidden are not found, and a threat makes it back off. */
+const HUNTERS = ['hund', 'bonde', 'häger', ...BIRDS];
 
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'bonde'];

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MEETINGS, meetingOptions } from '../../src/data/meetings';
+import { allSkills } from '../../src/data/skills';
 import { DALEN } from '../../src/data/regions/dalen';
 import { crowCards } from '../../src/engine/campfire';
 import { generateRegion } from '../../src/engine/regions';
@@ -94,14 +95,16 @@ describe('Ett bärsnår', () => {
 });
 
 describe('En gammal stig', () => {
-  it('teaches whoever goes first a card they did not have', () => {
+  it('teaches whoever goes first a skill of its kind it did not know', () => {
     const s = meet('gammalStig');
-    const before = deck(s).filter((c) => c.owner === 'toad').map((c) => c.kind);
+    const before = [...get(s, 'toad').skills];
     const after = answer(s, 'first-1'); // the toad, second of us
-    const now = deck(after).filter((c) => c.owner === 'toad').map((c) => c.kind);
+    const now = get(after, 'toad').skills;
     expect(now.length).toBe(before.length + 1);
     const learned = now.find((k) => !before.includes(k));
-    expect(learned).toBeDefined();
+    expect(allSkills('toad')).toContain(learned);
+    // Its hands are full: it learns now, and chooses what to carry on the map.
+    expect(deck(after).filter((c) => c.owner === 'toad')).toHaveLength(3);
     expect(after.meeting?.card).toBeTruthy();
     expect(MEETINGS.gammalStig.frames.learned.text(after)).toContain(after.meeting!.card!);
   });
@@ -122,7 +125,7 @@ describe('Ett övergivet gryt', () => {
   it('or Ljung finds the old passages, and learns from them', () => {
     const s = meet('gryt');
     const after = answer(s, 'dig');
-    expect(deck(after).length).toBe(deck(s).length + 1);
+    expect(get(after, 'badger').skills.length).toBe(get(s, 'badger').skills.length + 1);
     expect(get(after, 'badger').grief).toEqual([]);
   });
 });

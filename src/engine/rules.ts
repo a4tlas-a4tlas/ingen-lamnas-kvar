@@ -1,5 +1,4 @@
 // Read-only rule helpers shared by the engine (validation) and the UI (targeting).
-import { SPECIES } from '../data/animals';
 import { CARDS, type TargetSpec } from '../data/cards';
 import { encounterOf, zoneDef } from './encounters';
 import type { Animal, Card, GameState, Hit, InjuryKind, VerseId, ZoneId } from './types';
@@ -185,13 +184,13 @@ export function leadCost(a: Animal): number {
   return hasInjury(a, 'halt') ? 2 : 1;
 }
 
-/** A broken wing or paw takes away what makes the animal itself: its species card. */
+/** A broken wing or paw takes away how the animal moves: its moving skills can't be played. */
 export function speciesCardBroken(s: GameState, card: Card): boolean {
   const o = s.animals.find((x) => x.id === card.owner);
-  return !!o && hasInjury(o, 'broken') && SPECIES[o.species].speciesCard === card.kind;
+  return !!o && hasInjury(o, 'broken') && (CARDS[card.kind].tag === 'move' || card.kind === 'vingar');
 }
 
-export const canMove = (a: Animal) => isActive(a) && !isFrozen(a);
+export const canMove = (a: Animal) => isActive(a) && !isFrozen(a) && !a.rooted;
 
 /** Animals a card may target (for animal / animalZone cards). */
 export function cardAnimals(s: GameState, card: Card): string[] {
@@ -209,12 +208,23 @@ export function cardAnimals(s: GameState, card: Card): string[] {
       if (!isPresent(o)) return [];
       return others.filter((x) => zoneDistance(s, o.zone, x.zone) <= 1).map((x) => x.id);
     case 'taEmot':
+    case 'tystVinge':
       if (!isActive(o)) return [];
       return others.filter((x) => x.zone === o.zone).map((x) => x.id);
+    case 'talamod':
+      if (!isPresent(o)) return [];
+      return others.filter((x) => zoneDistance(s, o.zone, x.zone) <= 1).map((x) => x.id);
+    case 'baraLiten':
+    case 'baraIhop':
+      if (!canMove(o)) return [];
+      return others.filter((x) => x.zone === o.zone && !isFrozen(x) && x.size === 'small' && x.count === undefined).map((x) => x.id);
     default:
       return [];
   }
 }
+
+/** Water underfoot: a swimmer goes further here. */
+const inWater = (s: GameState, z: ZoneId) => !!zoneDef(s, z).water;
 
 /** Zones a card may move to (for zone / animalZone cards). */
 export function cardZones(s: GameState, card: Card): ZoneId[] {
@@ -223,12 +233,22 @@ export function cardZones(s: GameState, card: Card): ZoneId[] {
   switch (card.kind) {
     case 'snabbaTassar':
     case 'rusa':
+    case 'flyga':
+    case 'lockbete':
+    case 'lockaBort':
+    case 'baraLiten':
       return forwardReach(s, o, 2);
     case 'sprang':
       return forwardReach(s, o, 3);
+    case 'simma':
+      return forwardReach(s, o, inWater(s, o.zone) ? 2 : 1);
     case 'smaSteg':
     case 'gaForst':
     case 'bara':
+    case 'smyga':
+    case 'ringla':
+    case 'krypaIn':
+    case 'baraIhop':
       return forwardReach(s, o, 1);
     default:
       return [];
@@ -245,7 +265,10 @@ export function canPlay(s: GameState, card: Card): boolean {
     case 'none':
       if (card.kind === 'minne') return true;
       if (!o) return false;
-      if (card.kind === 'lasaNatten' || card.kind === 'gamlaVagar') return isPresent(o);
+      // Insight and comfort can be given from the far side too.
+      if (CARDS[card.kind].tag === 'insight' || card.kind === 'gamlaVagar' || card.kind === 'ropINatten' || card.kind === 'gamlesRost') return isPresent(o);
+      // Holding still is no use to one who already stands safe.
+      if (card.kind === 'gravaNer' || card.kind === 'gommaSig' || card.kind === 'frysaStilla') return isActive(o) && !o.rooted;
       return isActive(o);
   }
 }

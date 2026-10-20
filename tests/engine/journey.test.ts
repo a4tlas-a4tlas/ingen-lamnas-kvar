@@ -136,7 +136,7 @@ describe('the campfire', () => {
     expect(hunted !== trusted).toBe(true);
   });
 
-  it('mourning: the closest inherits a trait card; burying makes the memory gentler', () => {
+  it('mourning: the closest carries on a trait of the dead; burying makes the memory gentler', () => {
     let s = atFire();
     // Kvarn has died on the road; Gamla Ljung was closest.
     const k = get(s, 'toad');
@@ -146,7 +146,6 @@ describe('the campfire', () => {
     const trait = k.traits.find((t) => !get(s, 'badger').traits.includes(t))!;
     s = run(s, { type: 'restAtFire', watch: 'mice', pairs: [], mourning: { toad: 'bury' } });
     expect(get(s, 'badger').traits).toContain(trait);
-    expect(s.discard.some((c) => c.owner === 'badger' && c.inheritedFrom === 'toad')).toBe(true);
     expect(s.discard.find((c) => c.uid === 999)?.buried).toBe(true);
     expect(get(s, 'badger').grief).toEqual([]);
   });

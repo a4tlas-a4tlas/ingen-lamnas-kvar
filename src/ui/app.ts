@@ -1,4 +1,5 @@
 import { SPECIES, START_GROUP } from '../data/animals';
+import { LOADOUT, SKILLS, allSkills } from '../data/skills';
 import { guideName } from '../engine/roles';
 import { CARDS, TAG_NAMES } from '../data/cards';
 import { HOPE_LINES, KRAFT_OUT_LINES } from '../data/text.sv';
@@ -34,7 +35,7 @@ import {
 } from '../engine/rules';
 import { OATH_VERSES, createGame } from '../engine/setup';
 import { step } from '../engine/step';
-import type { Action, Animal, Card, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
+import type { Action, Animal, Card, CardKind, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
 import { fireSceneSvg, firePanelHtml, guideHtml, mapSvg, meetingHtml, memoryLine, memorialHtml, moveToSeat, occupants, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
 import { MEETINGS, currentFrame } from '../data/meetings';
@@ -108,7 +109,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 16 && s.phase !== 'over' ? s : null;
+    return s.version === 17 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -129,6 +130,9 @@ export class App {
   private inspect: string | null = null;
   private oathPick: VerseId[] = [];
   private deckView: DeckView | null = null;
+  /** The skills each of us knows, and which three we carry: on the map and by the fire. */
+  private skillsOpen = false;
+  private skillsHint = '';
   private mapOpen = false;
   private guideOpen = false;
   private fireSeats: Seats | null = null;
@@ -165,10 +169,11 @@ export class App {
     document.body.appendChild(this.tip);
     window.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      if (this.deckView || this.guideOpen || this.mapOpen) {
+      if (this.deckView || this.guideOpen || this.mapOpen || this.skillsOpen) {
         this.deckView = null;
         this.guideOpen = false;
         this.mapOpen = false;
+        this.skillsOpen = false;
         if (this.state) this.render();
       } else this.cancel();
     });
@@ -259,6 +264,28 @@ export class App {
       case 'map-open':
         this.mapOpen = true;
         return this.render();
+      case 'skills-open':
+        this.skillsOpen = true;
+        this.skillsHint = '';
+        return this.render();
+      case 'skills-close':
+        this.skillsOpen = false;
+        return this.render();
+      case 'skill': {
+        const a = animal(s, el.dataset.animal!);
+        const kind = el.dataset.kind as CardKind;
+        const carried = a.loadout.includes(kind);
+        if (carried && a.loadout.length === 1) {
+          this.skillsHint = `${a.name} måste bära minst en förmåga.`;
+          return this.render();
+        }
+        if (!carried && a.loadout.length >= LOADOUT) {
+          this.skillsHint = `${a.name} bär redan ${LOADOUT}. Lägg undan en först.`;
+          return this.render();
+        }
+        this.skillsHint = '';
+        return this.dispatch({ type: 'equip', animal: a.id, skills: carried ? a.loadout.filter((k) => k !== kind) : [...a.loadout, kind] });
+      }
       case 'map-close':
         this.mapOpen = false;
         return this.render();
@@ -1150,6 +1177,7 @@ export class App {
         <aside class="between-side">
           <p class="muted small">${esc(guideName(s))}s minne av vägen · ${esc(REGIONS[s.journey.region].name)}</p>
           <h2>${esc(here.name)}</h2>
+          <button class="btn small skills-btn" data-act="skills-open">Förmågor</button>
           ${this.voicesHtml(s)}
           <div class="onward">
             ${onward.map(({ path, to }) => {
@@ -1186,10 +1214,42 @@ export class App {
           <section class="log between-log">${this.logHtml(s.log.slice(-14))}</section>
           <button class="btn small mute-btn" data-act="mute">${this.sound.muted ? 'Ljud av' : 'Ljud på'}</button>
         </aside>
-        ${meetingHtml(s, this.meetingPickerHtml(s))}
+        ${meetingHtml(s, this.meetingPickerHtml(s)) || (this.skillsOpen ? this.skillsHtml(s) : '')}
       </div>`;
     const log = this.root.querySelector<HTMLElement>('.between-log');
     if (log) log.scrollTop = log.scrollHeight;
+  }
+
+  /** Each of us and the six things its kind can do: what it carries, what it knows, what it has yet to learn. */
+  private skillsHtml(s: GameState): string {
+    const sections = s.animals.filter(isPresent).map((a) => {
+      const cards = allSkills(a.species).map((kind, i) => {
+        if (!a.skills.includes(kind)) {
+          const advanced = i >= SKILLS[a.species].basic.length;
+          return `<div class="card mini skill-unknown" style="--owner:${speciesColor(a.species)}"><span class="cname">?</span><span class="ctext">${advanced ? 'Lärs på vägen.' : 'Okänd ännu.'}</span></div>`;
+        }
+        const carried = a.loadout.includes(kind);
+        return cardFaceHtml(s, { uid: -1, kind, owner: a.id }, {
+          tag: 'button',
+          attrs: `data-act="skill" data-animal="${a.id}" data-kind="${kind}" aria-pressed="${carried}"`,
+          classes: ['mini', carried ? 'carried' : 'resting'],
+          footer: `<span class="cwhere">${carried ? 'bärs' : 'vilar'}</span>`,
+        });
+      }).join('');
+      return `<section class="deck-animal" style="--owner:${speciesColor(a.species)}">
+        <h4>${silhouette(a.species)} ${esc(a.name)} <span class="muted">· ${esc(SPECIES[a.species].kindName)} · bär ${a.loadout.length} av ${LOADOUT}</span></h4>
+        <div class="deck-grid skill-grid">${cards}</div>
+      </section>`;
+    }).join('');
+    return `
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="skills-title">
+        <div class="modal-card deck skills-modal">
+          <div class="deck-head"><h2 id="skills-title">Förmågor</h2><button class="btn small" data-act="skills-close">Stäng</button></div>
+          <p class="muted small">Varje art kan sex saker. Var och en av oss bär ${LOADOUT} av dem – det är dess kort i leken. Tryck för att bära eller lägga undan. Det går bara här, inte mitt i en fara.</p>
+          ${this.skillsHint ? `<p class="hint">${esc(this.skillsHint)}</p>` : ''}
+          ${sections}
+        </div>
+      </div>`;
   }
 
   private mapModalHtml(s: GameState): string {
@@ -1314,12 +1374,12 @@ export class App {
     this.root.innerHTML = `
       <div class="screen between fire-screen">
         <div class="fire-wrap">
-          <h2>${esc(place(s, s.journey.at).name)} <span class="muted">· lägerelden</span></h2>
+          <h2>${esc(place(s, s.journey.at).name)} <span class="muted">· lägerelden</span> <button class="btn small skills-btn" data-act="skills-open">Förmågor</button></h2>
           ${fireSceneSvg(s, this.fireSeats, { crow: !!s.meeting || s.fireDebt.apart.length > 0 || s.fireDebt.embers > 0, picked: this.firePicked ?? undefined })}
           ${memorialHtml(s)}
         </div>
         <aside class="between-side">${firePanelHtml(s, this.fireSeats, this.fireMourning, this.fireHint)}</aside>
-        ${meetingHtml(s, this.meetingPickerHtml(s))}
+        ${meetingHtml(s, this.meetingPickerHtml(s)) || (this.skillsOpen ? this.skillsHtml(s) : '')}
       </div>`;
   }
 
