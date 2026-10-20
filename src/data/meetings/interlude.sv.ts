@@ -18,6 +18,11 @@ const LOOK_BACK: Partial<Record<RegionId, Partial<Record<Species, string>>>> = {
     adder: '”Stenen där jag solade mig. Den är borta nu.”',
     mice: '”Vi var fler när vi gick därifrån.” {name} kryper tätare ihop.',
     hare: '”Jag kände den inte. Men jag ser att ni gör det.”',
+    hedgehog: '”Lövhögen där jag sov om vintrarna. Någon annan får sova där nu. Eller ingen.”',
+    squirrel: '”Jag hade gömt nötter överallt. Nu får träden dem – om det finns några träd.”',
+    mole: '”Mina gångar. Jag grävde dem i hela mitt liv. Maskinerna fyllde dem på en morgon.”',
+    beaver: '”Min damm höll i tre vintrar. Den håller inte en till.”',
+    fawn: '”Mamma sa att vi skulle mötas vid bäcken. Hon kom aldrig.”',
   },
 };
 const GENERIC = '”Jag kommer att minnas {region}.”';

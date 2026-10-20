@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { defaultPlan } from '../../src/engine/campfire';
+import { SPECIES } from '../../src/data/animals';
 import { RESCUE_TRUST, bond, cardZones, leadZones, verseStatus } from '../../src/engine/rules';
 import { step } from '../../src/engine/step';
-import type { GameState } from '../../src/engine/types';
+import type { GameState, Species } from '../../src/engine/types';
 import { CROW_AWAY, calmGame, get, run } from './helpers';
 
 function arrive(to: 'garden' | 'an'): GameState {
@@ -19,12 +20,20 @@ function arrive(to: 'garden' | 'an'): GameState {
   return s;
 }
 
+/** Who waits is drawn at random; a test about one kind says which. */
+function trapped(s: GameState, species: Species): GameState {
+  s.rescue = { ...s.rescue!, who: species, species, need: RESCUE_TRUST + (SPECIES[species].predator ? 1 : 0) };
+  return s;
+}
+
 const err = (s: GameState, by: string) => step(s, { type: 'rescue', by }).events.find((e) => e.kind === 'error');
 
 describe('the rescue', () => {
   it('someone is trapped the first time we come: by the hen house, or out on the third stone', () => {
-    expect(arrive('garden').rescue).toMatchObject({ who: 'hare', species: 'hare', zone: 'honshuset', trust: 0 });
-    expect(arrive('an').rescue).toMatchObject({ who: 'hare', species: 'hare', zone: 'sten3', trust: 0 });
+    const farm = arrive('garden').rescue!;
+    expect(farm).toMatchObject({ zone: 'honshuset', trust: 0 });
+    expect(farm.who).toBe(farm.species);
+    expect(arrive('an').rescue).toMatchObject({ zone: 'sten3', trust: 0 });
   });
 
   it('reaching out from a step away builds trust; a predator only frightens', () => {
@@ -39,7 +48,7 @@ describe('the rescue', () => {
   });
 
   it('once trusted, one standing beside sets it free – and it is one of us, with its own cards', () => {
-    let s = arrive('garden');
+    let s = trapped(arrive('garden'), 'hare');
     get(s, 'toad').zone = 'gardsplanen';
     s = run(s, { type: 'rescue', by: 'toad' }, { type: 'rescue', by: 'toad' });
     expect(s.rescue?.trust).toBe(RESCUE_TRUST);
@@ -52,13 +61,13 @@ describe('the rescue', () => {
     expect(t.skills).toHaveLength(3);
     expect(t.loadout).toEqual(t.skills);
     expect(s.discard.filter((c) => c.owner === 'hare')).toHaveLength(3);
-    expect(bond(s, 'hare', 'toad')).toBe(1);
+    expect(bond(s, 'hare', 'toad')).toBe(t.traits.includes('ensamvarg') ? 0 : 1);
     expect(s.rescue).toBeNull();
     expect(s.met).toEqual(['hare']);
   });
 
   it('left behind, it costs hope – but no promise breaks, it was not one of us yet', () => {
-    let s = arrive('garden');
+    let s = trapped(arrive('garden'), 'hare');
     const name = s.rescue!.name;
     for (const a of s.animals) if (a.status === 'active') a.zone = 'godsel';
     const hope = s.hope;
@@ -71,7 +80,7 @@ describe('the rescue', () => {
   });
 
   it('the hare runs two steps when led, and leaps three with its own card', () => {
-    let s = arrive('garden');
+    let s = trapped(arrive('garden'), 'hare');
     get(s, 'toad').zone = 'honshuset';
     s = run(s, { type: 'rescue', by: 'toad' }, { type: 'rescue', by: 'toad' }, { type: 'rescue', by: 'toad' });
     const t = get(s, 'hare');

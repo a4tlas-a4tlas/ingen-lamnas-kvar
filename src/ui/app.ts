@@ -27,7 +27,6 @@ import {
   leadTargets,
   leadZones,
   lureZones,
-  RESCUE_TRUST,
   rescueBlockReason,
   rescueHelpers,
   moonHidden,
@@ -109,7 +108,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 20 && s.phase !== 'over' ? s : null;
+    return s.version === 21 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -1008,7 +1007,7 @@ export class App {
           this.sel.mode === 'card' && this.sel.animal ? `Välj vart ${o} ska bära ${animal(s, this.sel.animal).name}.` : `Välj vem ${o} ska bära.`;
       } else if (this.sel.mode === 'rescue' && s.rescue) {
         const who = s.rescue.name;
-        hint = s.rescue.trust >= RESCUE_TRUST
+        hint = s.rescue.trust >= s.rescue.need
           ? `Välj ett upplyst djur bredvid ${who} som befriar (◆1).`
           : `Välj ett upplyst djur inom ett steg från ${who} som når fram (◆1). Rovdjur skrämmer bara.`;
       } else if (this.sel.mode === 'lure' && this.sel.animal) {
@@ -1076,13 +1075,13 @@ export class App {
     const r = s.rescue;
     if (!r || s.phase !== 'play') return '';
     const who = r.name;
-    const free = r.trust >= RESCUE_TRUST;
+    const free = r.trust >= r.need;
     const helpers = rescueHelpers(s);
     const selected = this.sel.mode === 'rescue';
     return `<button class="card special ${helpers.length ? '' : 'unplayable'} ${selected ? 'selected' : ''}" data-act="rescue-card" style="--owner:#e9dfc6">
       <span class="cband">${silhouette(r.species, 'var(--ink)')}<span class="cowner">${esc(who)}</span><span class="ccost" title="Kraft">1</span></span>
       <span class="cname">${free ? 'Befria' : 'Nå fram'}</span>
-      <span class="ctag">Räddning · tillit ${r.trust}/${RESCUE_TRUST}</span>
+      <span class="ctag">Räddning · tillit ${r.trust}/${r.need}</span>
       <span class="ctext">${esc(free
         ? `Ett djur bredvid ${who} befriar ${who}. Sedan är ${who} en av oss.`
         : `Ett djur inom ett steg från ${who} kryper närmare: +1 tillit. Rovdjur skrämmer bara.`)}</span>
@@ -1096,10 +1095,10 @@ export class App {
     if (!r || s.phase === 'over') return '';
     const def = { name: r.name, species: r.species };
     const [x, y, w, h] = zoneDef(s, r.zone).rect;
-    const tip = `${def.name} sitter ${encounterOf(s).rescue!.trapped} och är rädd för oss. Använd kortet ”Nå fram” från ett djur inom ett steg (+1 tillit per gång, rovdjur skrämmer bara). Vid ${RESCUE_TRUST}/${RESCUE_TRUST} blir kortet ”Befria”: ett djur bredvid befriar ${def.name}, som då blir en av oss.`;
+    const tip = `${def.name} sitter ${encounterOf(s).rescue!.trapped} och är rädd för oss. Använd kortet ”Nå fram” från ett djur inom ett steg (+1 tillit per gång, rovdjur skrämmer bara). Vid ${r.need}/${r.need} blir kortet ”Befria”: ett djur bredvid befriar ${def.name}, som då blir en av oss.`;
     return `<div class="newcomer" data-act="zone" data-zone="${r.zone}" style="left:${x + w * 0.2}%;top:${y + h * 0.55}%"
-      data-tip-icon="?" data-tip-title="${esc(def.name)} · tillit ${r.trust}/${RESCUE_TRUST}" data-tip="${esc(tip)}">
-      ${silhouette(def.species)}<span class="tname">${esc(def.name)} · ${r.trust}/${RESCUE_TRUST}</span></div>`;
+      data-tip-icon="?" data-tip-title="${esc(def.name)} · tillit ${r.trust}/${r.need}" data-tip="${esc(tip)}">
+      ${silhouette(def.species)}<span class="tname">${esc(def.name)} · ${r.trust}/${r.need}</span></div>`;
   }
 
   private pilesHtml(s: GameState): string {

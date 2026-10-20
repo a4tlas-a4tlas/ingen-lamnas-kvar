@@ -85,13 +85,16 @@ describe('who goes: the groups before the oath', () => {
     expect(r.state.log.some((e) => 'text' in e && /Vi var sex/.test(e.text))).toBe(true);
   });
 
-  it('a group that already has a hare meets a second one in the snare', () => {
-    let s = run(createGame(8), { type: 'chooseCast', cast: 'deSma' }, { type: 'swear', verses: ['ingenLamnas'] });
-    // Straight to the first farm or river, where someone waits to be freed.
-    const n = s.journey.nodes.find((x) => x.encounter === 'farm' || x.encounter === 'river')!;
-    s.journey.nodes[0].next = [n.id];
-    s = run(s, { type: 'travel', to: n.id });
-    expect(s.rescue).toMatchObject({ species: 'hare', who: 'hare-2' });
+  it('whoever waits in the snare is of a kind not already with us', () => {
+    for (let seed = 1; seed <= 30; seed++) {
+      let s = run(createGame(seed), { type: 'chooseCast', cast: 'deSma' }, { type: 'swear', verses: ['ingenLamnas'] });
+      // Straight to the first farm or river, where someone waits to be freed.
+      const n = s.journey.nodes.find((x) => x.encounter === 'farm' || x.encounter === 'river')!;
+      s.journey.nodes[0].next = [n.id];
+      s = run(s, { type: 'travel', to: n.id });
+      expect(kinds(s)).not.toContain(s.rescue!.species);
+      expect(s.rescue!.who).toBe(s.rescue!.species);
+    }
   });
 });
 

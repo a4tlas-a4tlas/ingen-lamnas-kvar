@@ -19,11 +19,11 @@ export const RIVER: EncounterDef = {
   },
   maxTurn: 8,
   rescue: {
-    species: 'hare',
     zone: 'sten3',
-    found: 'På tredje stenen sitter en hare, avskuren av vattnet. Den darrar och vågar inte hoppa.',
+    found: 'På tredje stenen sitter {en}, avskuren av vattnet. {Den} darrar och vågar inte hoppa.',
     trapped: 'på tredje stenen',
     freed: 'visar vägen över vattnet',
+    not: ['swimmer', 'flier'],
   },
   zones: [
     { id: 'strand', label: 'Strandbrinken', name: 'strandbrinken', rect: [0, 78, 100, 22], start: true, cover: true },

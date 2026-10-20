@@ -6,7 +6,7 @@ import { sheltered } from '../engine/encounters/raptor';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
-import { RESCUE_TRUST, animal, backZone, boltZone, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
+import { animal, backZone, boltZone, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
 import type { InjuryKind } from '../engine/types';
 import type { Animal, GameState, ZoneId } from '../engine/types';
 
@@ -63,7 +63,9 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
       break;
   }
 
-  if (a.flying) out.push({ key: 'flying', icon: '⇡', label: 'flyger', tone: 'good', explain: `${a.name} är i luften och kan inte träffas av bilar den här timmen.` });
+  if (a.climbing) out.push({ key: 'climbing', icon: '⇞', label: 'uppe i ett träd', tone: 'good', explain: `${a.name} sitter uppe i ett träd: inget på marken når dit den här timmen. Men fåglar gör det – och ett träd som fälls.` });
+  else if (a.flying) out.push({ key: 'flying', icon: '⇡', label: 'flyger', tone: 'good', explain: `${a.name} är i luften och kan inte träffas av bilar den här timmen.` });
+  if (a.curled) out.push({ key: 'curled', icon: '✳︎', label: 'rullar ihop sig', tone: 'good', explain: `${a.name} är en boll av taggar: bett och klor missar den här timmen. Bilar och maskiner gör det inte.` });
   if (a.protectedBy) {
     const p = animal(s, a.protectedBy).name;
     out.push({ key: 'protected', icon: '⛨︎', label: `skyddas av ${p}`, tone: 'good', explain: `${p} tar träffen i stället för ${a.name}, om de står i samma zon.` });
@@ -228,7 +230,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'raptor') out.push(...raptorForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
-    out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${RESCUE_TRUST}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
+    out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
   }
   if (s.turn >= s.maxTurn) {
     out.push({ text: 'Sista timmen: alla som inte är över när den går blir kvar.', tone: 'bad' });
@@ -253,7 +255,8 @@ function farmForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[]
         continue;
       }
       const z = dogDestination(d);
-      const here = at(z).filter((a) => !bitten.has(a.id));
+      // The spines turn a bite away.
+      const here = at(z).filter((a) => !bitten.has(a.id) && !a.curled);
       const place = zoneDef(s, z).name;
       if (!here.length) {
         out.push({ text: `${d.name} springer till ${place} – ingen av oss där.`, tone: 'good' });
@@ -303,7 +306,7 @@ function riverForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[
   }
   if (s.peekNext && s.turn < s.maxTurn) out.push({ text: `Nästa timme är strömmen ${s.currentPlan[s.turn]}.`, tone: 'info' });
   if (s.heron) {
-    const pecked = active.filter((a) => zoneOf.get(a.id) === s.heron && a.size === 'small' && !a.flying);
+    const pecked = active.filter((a) => zoneOf.get(a.id) === s.heron && a.size === 'small' && !a.flying && !a.curled);
     out.push(pecked.length
       ? { text: `Hägern hugger på ${zoneDef(s, s.heron).name}: ${pecked.map((a) => a.name).join(' och ')} – skadar (blöder).`, tone: 'warn' }
       : { text: `Hägern väntar vid ${zoneDef(s, s.heron).name} – ingen av de små där.`, tone: 'good' });
@@ -323,7 +326,8 @@ function riverForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[
 /** The machines: who the trees fall on, whom the roar frightens, what the bulldozer takes. */
 function machinesForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
   const out: ForecastLine[] = [];
-  const at = (z: ZoneId) => s.animals.filter((a) => isActive(a) && zoneOf.get(a.id) === z && !a.flying);
+  // Up a tree is no shelter here: the trees are what falls.
+  const at = (z: ZoneId) => s.animals.filter((a) => isActive(a) && zoneOf.get(a.id) === z && (!a.flying || a.climbing));
   const names = (xs: Animal[]) => xs.map((a) => a.name).join(' och ');
   const fell = s.fellPlan[s.turn - 1];
   if (fell) {
@@ -358,7 +362,7 @@ function raptorForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine
   const after = (a: Animal) => ({ ...a, zone: zoneOf.get(a.id) ?? a.zone });
   const moved = s.animals.filter((a) => isActive(a) && zoneOf.has(a.id)).map(after);
   const victim = (z: ZoneId) => moved.filter((a) => a.zone === z && a.size !== 'large' && !sheltered(a)).sort((a, b) => (a.size === 'small' ? 0 : 1) - (b.size === 'small' ? 0 : 1))[0];
-  const harm = (a: Animal) => (a.size === 'small' ? `bär bort ${a.name}: dödar!` : `klöser ${a.name}: skadar (blöder).`);
+  const harm = (a: Animal) => (a.curled ? `griper efter ${a.name} – men sticker sig på taggarna.` : a.size === 'small' ? `bär bort ${a.name}: dödar!` : `klöser ${a.name}: skadar (blöder).`);
   const flier = night ? moved.find((a) => a.flying) : undefined;
   if (flier) out.push({ text: `Berguven hör ${flier.name}s vingar: skadar.`, tone: 'warn' });
   for (const b of s.raptors) {
@@ -366,7 +370,7 @@ function raptorForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine
     if (b.zone) {
       const v = victim(b.zone);
       const place = zoneDef(s, b.zone).name;
-      out.push(v ? { text: `${bird} slår ner i ${place} och ${harm(v)}`, tone: v.size === 'small' ? 'bad' : 'warn' } : { text: `${bird} slår ner i ${place} – ingen av oss syns där.`, tone: 'good' });
+      out.push(v ? { text: `${bird} slår ner i ${place} och ${harm(v)}`, tone: v.curled ? 'good' : v.size === 'small' ? 'bad' : 'warn' } : { text: `${bird} slår ner i ${place} – ingen av oss syns där.`, tone: 'good' });
     } else if (b.maybe.length) {
       const vs = b.maybe.map((z) => victim(z)).filter(Boolean) as Animal[];
       const places = b.maybe.map((z) => zoneDef(s, z).name).join(' eller ');

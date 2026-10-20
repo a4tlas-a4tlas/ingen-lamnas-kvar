@@ -15,6 +15,11 @@ export const SKILLS: Record<Species, SkillSet> = {
   adder: { basic: ['ringla', 'giftIReserv', 'gommaSig', 'hota'], advanced: ['varmaSig', 'omsaSkinn'] },
   mice: { basic: ['smaSteg', 'spridaSig', 'krypaIn', 'skratt'], advanced: ['baraIhop', 'mangaOgon'] },
   hare: { basic: ['sprang', 'hacka', 'frysaStilla', 'stampa'], advanced: ['lockaBort', 'vidoga'] },
+  hedgehog: { basic: ['rullaIhop', 'taggar', 'snoka', 'tystGang'], advanced: ['vintersomn', 'tryggRygg'] },
+  squirrel: { basic: ['klattra', 'hoppa', 'gommaForrad', 'varna'], advanced: ['kastaKottar', 'pigg'] },
+  mole: { basic: ['gravaGang', 'underJord', 'kannaSkakningar', 'mjukJord'], advanced: ['gamlaGangar', 'fastMark'] },
+  beaver: { basic: ['bara', 'simma', 'lagaDammen', 'svansslag'], advanced: ['fallaTrad', 'taEmot'] },
+  fawn: { basic: ['sprang', 'frysaStilla', 'smaSteg', 'pipa'], advanced: ['vittring', 'ledaFlocken'] },
 };
 
 /** How many skills an animal carries at once: its cards in the deck. */

@@ -16,7 +16,7 @@ export type InjuryKind = 'halt' | 'broken' | 'bleeding' | 'shock';
 export type Severity = 'injure' | 'kill';
 /** The groups that may leave the glen (see `CASTS` in data/animals). */
 export type CastId = 'dalensSista' | 'rovdjurensPakt' | 'deSma' | 'slumpad';
-export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice' | 'adder' | 'hare';
+export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice' | 'adder' | 'hare' | 'hedgehog' | 'squirrel' | 'mole' | 'beaver' | 'fawn';
 /** Only small animals fit through the culvert. */
 export type Size = 'small' | 'medium' | 'large';
 export type TraitId =
@@ -87,7 +87,31 @@ export type CardKind =
   | 'frysaStilla'
   | 'stampa'
   | 'lockaBort'
-  | 'vidoga';
+  | 'vidoga'
+  | 'rullaIhop'
+  | 'taggar'
+  | 'snoka'
+  | 'tystGang'
+  | 'vintersomn'
+  | 'tryggRygg'
+  | 'klattra'
+  | 'hoppa'
+  | 'gommaForrad'
+  | 'varna'
+  | 'kastaKottar'
+  | 'pigg'
+  | 'gravaGang'
+  | 'underJord'
+  | 'kannaSkakningar'
+  | 'mjukJord'
+  | 'gamlaGangar'
+  | 'fastMark'
+  | 'lagaDammen'
+  | 'svansslag'
+  | 'fallaTrad'
+  | 'pipa'
+  | 'vittring'
+  | 'ledaFlocken';
 
 /** active = still on the road side, safe = reached the far ditch. */
 export type Status = 'active' | 'safe' | 'dead' | 'left';
@@ -155,6 +179,10 @@ export interface Animal {
   rooted?: boolean;
   /** A swarm spread out: the next hit takes only one. */
   scattered?: boolean;
+  /** Rolled into a ball of spines: bites, claws and talons miss this hour. Cars do not. */
+  curled?: boolean;
+  /** Up a tree: what runs on the ground can't reach it, but birds can – and a felled tree takes it down. */
+  climbing?: boolean;
 }
 
 /** The farm's dogs can never be beaten, only misled. */
@@ -346,6 +374,8 @@ export interface Rescue {
   name: string;
   zone: ZoneId;
   trust: number;
+  /** How much trust it needs: a trapped predator trusts more slowly. */
+  need: number;
 }
 
 export interface Outcome {
@@ -356,7 +386,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 20;
+  version: 21;
   /** Which group left the glen. */
   cast: CastId;
   /** The variant of the encounter we're in. */
@@ -422,6 +452,8 @@ export interface GameState {
   rescue: Rescue | null;
   /** Newcomers we have met this run – rescued or left behind. Each is met only once. */
   met: string[];
+  /** Regions where someone has already waited to be rescued: one in each. */
+  rescues: string[];
   /** What we have learned along the way that helps later: 'machines' – how the machines move. */
   knowledge: string[];
   /** The regions we have walked through, the ones offered next, and whether we stand between two. */
@@ -431,6 +463,8 @@ export interface GameState {
   proposal: Proposal | null;
   fireDebt: FireDebt;
   peekNext: boolean;
+  /** Cards hidden away for the next hour, drawn on top of the hand. */
+  stash: number;
   darkRevealed: boolean;
   hitQueue: Hit[];
   pending?: Hit;

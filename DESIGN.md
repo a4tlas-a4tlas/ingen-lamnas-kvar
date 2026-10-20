@@ -606,7 +606,7 @@ Design from the milestone 6 interview:
 - **On the map:** *Fälten* is one of Åkrarna's dangers. Skymning and Fröna speak against it at forks.
 - **Balance:** a lead-only bot, without cards or comforting, brings 4.5 of 6 across by day and 5.1 at night (4.6 and 4.8 with the pair). The bird kills about one animal in two runs.
 
-## Milestone 7 – the animals rethought (in progress)
+## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.
 - **Cards are each species' skills,** Darkest Dungeon-style: 6 per species, 3 equipped. Skills are unlocked by surviving dangers, from story parts, and by being taught.
@@ -732,3 +732,26 @@ Before the oath comes **Vilka går?**: four groups side by side, each shown as t
 - **A group that already has a hare** meets a second one in the snare.
 - **No reroll.** *Slumpad* is the random alternative.
 - **Save version 20** (`cast`). The end screen names the group.
+
+### Step 6: new kinds, and whoever waits to be rescued (done)
+Five new kinds join the seven. None is a predator; each plays differently.
+
+| Kind | Body | Skills (basic · *advanced*) | Its own rule |
+|---|---|---|---|
+| **Igelkott** (tro 6) | small | Rulla ihop · Taggar · Snoka · Tyst gång · *Vintersömn* · *Trygg rygg* | **Curled:** bites, claws and talons miss. A predator that hunts it pricks itself (−1 belief). Cars and machines still hit. |
+| **Ekorre** (tro 5) | small | Klättra · Hoppa · Gömma förråd · Varna · *Kasta kottar* · *Pigg* | **Up a tree:** nothing on the ground reaches it, but birds do, and a felled or bulldozed tree takes it down. No climbing in water. |
+| **Mullvad** (tro 6) | small | Gräva gång · Under jord · Känna skakningar · Mjuk jord · *Gamla gångar* · *Fast mark* | **Nearly blind:** it feels the dark cars and the hidden ways, but never sees the next hour. Gräva gång takes the small ones in its zone along, unseen. |
+| **Bäver** (tro 7) | large, swims | Bära · Simma · Laga dammen · Svansslag · *Fälla träd* · *Ta emot* | **Fälla träd:** everyone in its zone crosses one step together, protected. **Laga dammen:** −2 creak at the river. |
+| **Rådjurskid** (tro 4) | medium, fast | Språng · Frysa stilla · Små steg · Pipa · *Vittring* · *Leda flocken* | **Led two steps,** like the hare. **Its fear spreads:** when it freezes or bolts, everyone in its zone loses 1 belief. |
+
+- **The fixed groups stay as they were.** *Slumpad* can draw the new kinds.
+- **Voices and looking back:** each new kind has its own leaning at the fork (the beaver wants the river, the mole fears it, the squirrel fears the open fields, the fawn the farm, the hedgehog likes it) and its own line looking back on the glen.
+
+**Who waits to be rescued** (at the farm's snare, on the river's third stone):
+- someone of a **kind not with us and not met before**, drawn from the seed
+- at the river, never a swimmer or a flier
+- **predators too:** a trapped predator needs trust 3 instead of 2, and our own predators still give it no trust
+- the rescued start at **belief 4 at most**
+- **once in each region,** at its first farm or river (before: once per run)
+
+Save version 21.
