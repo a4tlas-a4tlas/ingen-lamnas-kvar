@@ -15,9 +15,9 @@ import { planMachines, roarZones } from './encounters/machines';
 import { exposedIn, prey, shadowOptions } from './encounters/raptor';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
-import { OATH_VERSES, idFor, makeAnimal, oathVerse, regionJourney } from './setup';
+import { OATH_VERSES, buildCast, idFor, makeAnimal, oathVerse, regionJourney } from './setup';
 import { MIDDLE_REGIONS, OFFERED, REGIONS } from '../data/regions';
-import { nameFor } from '../data/animals';
+import { CAST_IDS, nameFor } from '../data/animals';
 import { guideHere, guideName, kin } from './roles';
 import { beliefFelt, ownWillBelow, willOf } from './will';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from './encounters';
@@ -62,6 +62,7 @@ import type {
   Action,
   Animal,
   Card,
+  CastId,
   GameEvent,
   GameState,
   Hit,
@@ -99,6 +100,7 @@ export function step(prev: GameState, action: Action): { state: GameState; event
     // A meeting waits for its answer before anything else happens.
     if (s.meeting && action.type !== 'respond' && action.type !== 'lastMoment') fail('Svara först.');
     switch (action.type) {
+      case 'chooseCast': chooseCast(c, action.cast); break;
       case 'swear': swear(c, action.verses); break;
       case 'play': playCard(c, action.uid, action.target, action.zone); endIfAllAcross(c); break;
       case 'lead': lead(c, action.target, action.zone); endIfAllAcross(c); break;
@@ -164,6 +166,20 @@ function earn(c: Ctx, a: Animal, t: TraitId) {
 
 // ---------------------------------------------------------------- oath
 
+/** Before the oath: which group leaves the glen. Each is the same as when it was offered. */
+function chooseCast(c: Ctx, cast: CastId) {
+  const s = c.s;
+  if (s.phase !== 'oath') fail('Vi har redan gått.');
+  if (!CAST_IDS.includes(cast)) fail('Ingen sådan grupp.');
+  const g = buildCast(s.seed, cast);
+  s.cast = g.cast;
+  s.animals = g.animals;
+  s.draw = g.draw;
+  s.bonds = g.bonds;
+  s.nextUid = g.nextUid;
+  s.rng = g.rng;
+}
+
 function swear(c: Ctx, verses: VerseId[]) {
   const s = c.s;
   if (s.phase !== 'oath') fail('Eden är redan svuren.');
@@ -173,8 +189,8 @@ function swear(c: Ctx, verses: VerseId[]) {
   narrate(c, 'I dalens sista natt svor vi eden:');
   for (const v of s.verses) narrate(c, `”${v.text}”`);
   narrate(c, `Bakom oss tystnade maskinerna för natten. ${guideName(s)} mindes vägen, nästan.`);
-  const swarm = s.animals.find((a) => a.count !== undefined);
-  narrate(c, `Vi var ${num(s.animals.length)}${swarm ? `, och ${swarm.name} var ${num(swarm.count!)}` : ''}.`);
+  const swarms = s.animals.filter((a) => a.count !== undefined).map((a) => `${a.name} var ${num(a.count!)}`);
+  narrate(c, `Vi var ${num(s.animals.length)}${swarms.length ? `, och ${swarms.join(' och ')}` : ''}.`);
   s.phase = 'map';
 }
 

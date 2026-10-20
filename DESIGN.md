@@ -715,3 +715,20 @@ Traits are who an animal is, not cards. Each new individual rolls **one good and
 **The mourning:** the closest animal inherits the dead's first good trait that it lacks (no more inherited cards).
 
 **In the UI:** traits are shown as gold (good) and grey (bad) tags on the oath screen's cast, and with their effect in the inspect panel.
+
+### Step 5: who goes – choosing the group (done)
+Before the oath comes **Vilka går?**: four groups side by side, each shown as they would be this run (names, traits, belief, the three skills carried, who is eldest and who remembers the way). You tap one, then swear the oath. Until you swear, *Välj en annan grupp* takes you back.
+
+| Group | Who | The feel |
+|---|---|---|
+| **Dalens sista** | grävling (eldest), padda (guide), räv, uggla, huggorm, möss | the glen's own six, balanced |
+| **Rovdjurens pakt** | räv (eldest), padda (guide), räv, uggla, huggorm, möss | four predators, two prey: the truce is everything |
+| **De små** | grävling (eldest, the only large one), padda (guide), möss, möss, hare | many to carry, no hunters among us |
+| **Slumpad** | 5–6 drawn from the seed | at most 3 predators, at least 2 prey, at most two of a kind; the eldest is the one with the highest starting belief, the guide a prey animal that isn't the eldest |
+
+- **The kinds are fixed per group;** who they are is rolled from the run's seed. The same kind gets the same individual in every group that has one: they are the glen's animals, and you choose which of them go.
+- **Two of a kind** are numbered (`räv`, `räv-2`), get different names, and start with bond +1.
+- **Starting bonds** come from the kinds of each pair.
+- **A group that already has a hare** meets a second one in the snare.
+- **No reroll.** *Slumpad* is the random alternative.
+- **Save version 20** (`cast`). The end screen names the group.

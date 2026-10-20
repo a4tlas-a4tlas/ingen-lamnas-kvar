@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 7.4)
+## Status (after step 7.5)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Städning efter 7.4 (branch `stadning`, open). Latest merged: #26 – Milestone 7.4: Egenskaper som modifierare. #24 (an older take on 7.4) is closed. |
-| **Save version** | 19 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 206 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 7.5: Vilka går? (branch `vilka-gar`, open, awaiting review). Latest merged: #27, the cleanup after 7.4. |
+| **Save version** | 20 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 217 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -18,11 +18,12 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 - **The group shares hope (0–10).** Below 4 you draw fewer cards.
 
 **The run:**
-1. The oath.
-2. The region map (Kvarn's sketch: 6 rows of dangers, meetings, finds and fires, then a boss).
-3. The interlude (looking back, a promise, choosing the way).
-4. The next region.
-5. When the built regions run out: "fortsättning följer".
+1. Vilka går? – choose one of four groups.
+2. The oath.
+3. The region map (the guide's sketch: 6 rows of dangers, meetings, finds and fires, then a boss).
+4. The interlude (looking back, a promise, choosing the way).
+5. The next region.
+6. When the built regions run out: "fortsättning följer".
 
 **Built so far:**
 
@@ -32,6 +33,8 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 | **Åkrarna** | the birds of prey (Rovfåglarna) + old dangers in new places | none yet (ends at "Bortom åkrarna") |
 
 **Animals** are species, not characters (badger, toad, fox, owl, adder, mice, hare). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
+
+**The groups** (`CASTS` in `src/data/animals.ts`): *Dalens sista*, *Rovdjurens pakt*, *De små*, and *Slumpad* (random, `rollCast` in `src/engine/setup.ts`). `buildCast(seed, cast)` makes a group; `castOffers(seed)` all four. The action `chooseCast` is only valid before the oath. `createGame` starts with *Dalens sista*, so tests that never choose see the old six.
 
 **Skills:**
 - 6 per species (4 basic + 2 learned on the way), 3 carried at a time: those are the animal's cards.
@@ -75,22 +78,22 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: 7.5 – choosing the group
-Approved design (Milestone 7 in `DESIGN.md` and the plan file): before the oath, **3 rolled groups** are shown side by side, *This War of Mine*-style. You pick one.
-- **Each group** has species, names, traits and skills rolled with the run seed. Each has a theme:
-  - *Dalens sista*: balanced, like today's start group
-  - *Rovdjurens pakt*: many predators, a brittle truce
-  - *De små*: many small ones and a single large one
-- **Every group still needs an eldest and a guide.** The roles come from `START_GROUP` in `src/data/animals.ts`. The guide's memory is the map, so a group without a toad needs another guide kind (*my proposal: the eldest non-predator remembers the way*).
-- **Where the code is:**
-  - `createGame` / `makeAnimal` in `src/engine/setup.ts`
-  - the oath screen's cast in `src/ui/app.ts`, which already shows trait tags
-  - a new action, e.g. `{ type: 'chooseGroup', index }`, before `swear`
-- **Tests:** `classicGame` / `named` / `plain` in `tests/engine/helpers.ts` pin the group, so most tests shouldn't move.
-- Ask the user first: how different the three should be, whether a reroll exists, and whether the hare can be in a start group.
+## Next step: 7.6 – new species and random rescues
+From the approved design (Milestone 7 in `DESIGN.md` and the plan file):
+- **New species:** the hedgehog and the squirrel join `SPECIES` (`src/data/animals.ts`).
+  - Their 6 skills each are already proposed in the plan file:
+    - **Igelkott:** Rulla ihop, Taggar, Snoka, Tyst gång, *Vintersömn*, *Trygg rygg*
+    - **Ekorre:** Klättra, Hoppa, Gömma förråd, Varna, *Kasta kottar*, *Pigg*
+  - Each needs a silhouette (`src/ui/silhouettes.ts`), names, and belief/size.
+- **Random rescues:** whoever waits in the snare or on the stone is a random individual of a species **not already in the group**. Today it's always a hare: `rescue.species` in the farm and river encounters, read by `startEncounter` in `src/engine/step.ts`.
+  - The rescue lines in `src/engine/encounters/farm.ts` and `river.ts` (`found`, `trapped`) say "en hare". They need to take the species's word.
+- **Slumpad** can draw the new species too, and De små might take a hedgehog. Ask the user.
+- **Ask the user first:**
+  - whether the hedgehog's Åkrarna story (Milestone 6, Skördetröskan) should use this species
+  - whether the squirrel belongs to a later region instead
+  - whether rescues may also be predators
 
 **After that:**
-- **7.6:** new species (hedgehog, squirrel), and random rescues of a species not already in the group.
 - **Then Milestone 6 resumes:**
   - Åkrarna: Sprutan, Diket och grinden, story parts, and the boss Skördetröskan (with the hedgehog; an earlier meeting decides whether it trusts us)
   - Stadens utkant: four dangers, and the boss Fyrverkerinatten (the danger is fear itself)
@@ -101,6 +104,10 @@ Approved design (Milestone 7 in `DESIGN.md` and the plan file): before the oath,
 - **The fields** are easier for the bot at night than by day: the eagle owl strikes only one of two marked zones.
 - **Gamla vägar can be taught across kinds** (it's "insight"). A badger can then find the culvert but doesn't fit through it.
 - **The adder starts hungry** (belief 4, hunger 2) and often hunts from hour 1. That's older behaviour, kept on purpose so far.
+- **Bot balance per group (7.5):** a crude walker (leads only, always lets go, takes the first reply) through all of Dalen, 300 seeds. The share of the group still with us after Dalen: Dalens sista 8 %, Rovdjurens pakt 6 %, De små 20 %, Slumpad 21 %. Through the machines boss alone: 43 / 44 / 71 / 57 %.
+  - **De små is the easiest** for a player who never comforts, because it has no predators who can turn.
+  - **Rovdjurens pakt is the hardest,** as intended.
+  - De små's hardness (much to carry, only one large) doesn't bite a bot that just leads. It may need a lever, e.g. one less hope at the start. That's the user's call.
 - **Bot balance after 7.4:** the machines boss is 3.53 of 6 safe (was 3.88). Random bad traits hurt a lead-only bot that never comforts or plays insight. It was measured just before Tvivlande was limited to animals starting at 5+, so the real number is the same or a little higher.
-- **Old branches:** 25 merged branches (and `drag`) are still on GitHub. Deleting them was blocked by the session's permission check; they can be removed in GitHub's branch list, or in a session that allows it.
+- **Old branches:** 25 merged branches (and `drag`) are still on GitHub. This session's GitHub proxy refuses branch deletion (both the API and `git push --delete`), so they have to be removed in GitHub's branch list.
 - **Tests and random traits:** `createGame` rolls traits. A test that builds its own game and checks belief, injuries or hunting should call `plain(s)` from `tests/engine/helpers.ts`, as `raptor.test.ts` does.

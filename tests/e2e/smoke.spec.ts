@@ -39,9 +39,10 @@ async function leadForward(page: Page, seen: Set<string>) {
 }
 
 for (const route of [
-  { kind: 'farm', scene: 'farm' },
-  { kind: 'river', scene: 'river' },
-]) test(`a whole run through Dalen, choosing the ${route.scene} where we can`, async ({ page }) => {
+  // The farm run sends the owl ahead, so it goes with the glen's own six; the river run with the small ones.
+  { kind: 'farm', scene: 'farm', cast: 'dalensSista', size: 6 },
+  { kind: 'river', scene: 'river', cast: 'deSma', size: 5 },
+]) test(`a whole run through Dalen with ${route.cast}, choosing the ${route.scene} where we can`, async ({ page }) => {
   test.setTimeout(480_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -52,6 +53,11 @@ for (const route of [
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Ingen lämnas kvar' })).toBeVisible();
   await page.getByRole('button', { name: 'Börja vandringen' }).click();
+
+  // Who goes: four groups side by side, each as they would be this run.
+  await expect(page.getByRole('heading', { name: 'Vilka går?' })).toBeVisible();
+  await expect(page.locator('.cast-option')).toHaveCount(4);
+  await page.locator(`.cast-option[data-cast="${route.cast}"] .btn`).click();
 
   const verses = page.locator('.verse-card');
   await expect(verses).toHaveCount(6);
@@ -66,7 +72,7 @@ for (const route of [
   await expect(page.locator('.onward .btn').first()).toHaveText(/i natt/);
   await expect(page.getByRole('button', { name: /Vänta till dagen/ })).toBeEnabled();
   await page.locator('.onward .btn').first().click();
-  await expect(page.locator('.token')).toHaveCount(6);
+  await expect(page.locator('.token')).toHaveCount(route.size);
 
   // The first time on the road, the guide opens by itself; the Guide button brings it back.
   await expect(page.locator('.guide-modal')).toBeVisible();
@@ -80,8 +86,8 @@ for (const route of [
 
   // The deck checker shows every card, grouped by animal.
   await page.getByRole('button', { name: 'Hela leken' }).click();
-  await expect(page.locator('.deck-animal')).toHaveCount(6);
-  await expect(page.locator('.deck .card.mini')).toHaveCount(18);
+  await expect(page.locator('.deck-animal')).toHaveCount(route.size);
+  await expect(page.locator('.deck .card.mini')).toHaveCount(route.size * 3);
   await page.getByRole('button', { name: 'Stäng' }).click();
 
   // Tap an animal that can move, then a lit zone.

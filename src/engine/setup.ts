@@ -1,13 +1,13 @@
-import { SPECIES, START_BONDS, START_GROUP, nameFor, type Member } from '../data/animals';
+import { CAST_IDS, RANDOM_CAST, SPECIES, castDef, nameFor, startBond, type CastId, type Member } from '../data/animals';
 import { LOADOUT, SKILLS } from '../data/skills';
 import { BAD_TRAITS, GOOD_TRAITS } from '../data/traits';
-import { shuffle, type RngHolder } from './rng';
+import { pick, randInt, shuffle, type RngHolder } from './rng';
 import { DALEN, type RegionDef } from '../data/regions/dalen';
 import { generateRegion } from './regions';
 import { ROAD } from './encounters/road';
 import { bondKey } from './rules';
 import { VERSES } from '../data/verses';
-import type { Animal, Card, GameState, Journey, Verse, VerseId, ZoneId } from './types';
+import type { Animal, Card, GameState, Journey, Species, Verse, VerseId, ZoneId } from './types';
 
 /** We swear a single verse in the glen; later verses come from the journey. */
 export const OATH_VERSES = 1;
@@ -78,13 +78,50 @@ export function idFor(species: string, taken: string[]): string {
   return `${species}-${n}`;
 }
 
-export function createGame(seed: number): GameState {
+/** The kinds of the random group, drawn from its own stream of the seed so the other groups stay the same. */
+export function rollCast(seed: number): Member[] {
+  const h: RngHolder = { rng: (seed ^ 0x2c1b3a7) | 0 };
+  const all = Object.keys(SPECIES) as Species[];
+  const prey = all.filter((sp) => !SPECIES[sp].predator);
+  const size = RANDOM_CAST.min + randInt(h, RANDOM_CAST.max - RANDOM_CAST.min + 1);
+  const kinds: Species[] = shuffle(h, [...prey]).slice(0, RANDOM_CAST.minPrey);
+  while (kinds.length < size) {
+    const sp = pick(h, all);
+    const ofKind = kinds.filter((k) => k === sp).length;
+    const predators = kinds.filter((k) => SPECIES[k].predator).length;
+    if (ofKind >= RANDOM_CAST.maxOfKind || (SPECIES[sp].predator && predators >= RANDOM_CAST.maxPredators)) continue;
+    kinds.push(sp);
+  }
+  // The eldest is the one who believes most; the guide one of the prey who isn't the eldest.
+  const elder = kinds.reduce((best, k, i) => (SPECIES[k].belief > SPECIES[kinds[best]].belief ? i : best), 0);
+  const guides = kinds.map((_, i) => i).filter((i) => i !== elder && !SPECIES[kinds[i]].predator);
+  const guide = pick(h, guides);
+  const members = kinds.map((species, i): Member => ({ species, ...(i === elder ? { elder: true } : {}), ...(i === guide ? { guide: true } : {}) }));
+  // Eldest first, guide second, the rest as drawn – the order we are shown in.
+  return [members[elder], members[guide], ...members.filter((_, i) => i !== elder && i !== guide)];
+}
+
+/** Which kinds a group holds. */
+export const castMembers = (seed: number, id: CastId): Member[] => (id === 'slumpad' ? rollCast(seed) : castDef(id).members);
+
+export interface CastGroup {
+  cast: CastId;
+  animals: Animal[];
+  draw: Card[];
+  bonds: Record<string, number>;
+  nextUid: number;
+  /** The run's generator after the group was rolled. */
+  rng: number;
+}
+
+/** Everyone in a group, as they would be this run: names, traits and skills rolled from the seed. */
+export function buildCast(seed: number, cast: CastId): CastGroup {
   const h: RngHolder = { rng: seed };
   let uid = 1;
   const animals: Animal[] = [];
   const draw: Card[] = [];
 
-  for (const m of START_GROUP) {
+  for (const m of castMembers(seed, cast)) {
     const id = idFor(m.species, animals.map((a) => a.id));
     const name = nameFor(m.species, seed, animals.map((a) => a.name), m.elder);
     const made = makeAnimal(m, id, name, h, () => uid++, ROAD.zones.find((z) => z.start)!.id);
@@ -92,12 +129,26 @@ export function createGame(seed: number): GameState {
     draw.push(...made.cards);
   }
 
-  // Kinds that know each other: the first of each kind carries the old bonds.
+  // Kinds that know each other start with the old bonds; two of a kind already belong together.
   const bonds: Record<string, number> = {};
-  for (const [a, b, v] of START_BONDS) if (animals.some((x) => x.id === a) && animals.some((x) => x.id === b)) bonds[bondKey(a, b)] = v;
+  for (const [i, a] of animals.entries()) {
+    for (const b of animals.slice(i + 1)) {
+      const v = startBond(a.species, b.species);
+      if (v) bonds[bondKey(a.id, b.id)] = v;
+    }
+  }
+  return { cast, animals, draw, bonds, nextUid: uid, rng: h.rng };
+}
+
+/** The groups we may choose between before the oath. */
+export const castOffers = (seed: number): CastGroup[] => CAST_IDS.map((id) => buildCast(seed, id));
+
+export function createGame(seed: number): GameState {
+  const { cast, animals, draw, bonds, nextUid, rng } = buildCast(seed, 'dalensSista');
 
   return {
-    version: 19,
+    version: 20,
+    cast,
     journey: firstRegion(seed),
     variant: 'normal',
     time: 'night',
@@ -105,7 +156,7 @@ export function createGame(seed: number): GameState {
     unmourned: [],
     encounterId: 'road',
     seed,
-    rng: h.rng,
+    rng,
     phase: 'oath',
     turn: 0,
     maxTurn: ROAD.maxTurn,
@@ -117,7 +168,7 @@ export function createGame(seed: number): GameState {
     draw,
     hand: [],
     discard: [],
-    nextUid: uid,
+    nextUid,
     // Planned when each encounter starts.
     trafficPlan: [],
     moonPlan: [],
