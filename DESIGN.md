@@ -303,7 +303,7 @@ Design from the milestone 3 interview:
     - **over the stones:** 3 steps (Första stenen → Andra stenen → the far bank)
     - **through the current:** 3 steps (a stone → Strömmen → the far bank)
     - **over the beaver dam:** 2 steps
-  - **Hala stenar** (slippery stones): each hour 0–2 stones are telegraphed as wet. Whoever stands there when the hour passes slips into Strömmen. *Bita ihop* (brace) holds you on the stone.
+  - **Hala stenar** (slippery stones): each hour 0–2 stones are telegraphed as wet. Whoever stands there when the hour passes slips into Strömmen. *Bita ihop* (brace) holds you on the stone. Since 7.2 the old card is gone: the guard skills that brace do it instead (Gräva ner sig, Gömma sig, Frysa stilla, Hacka, Stå som en sten, Stampa varning).
   - **Strömmen** (the current): calm or strong hour by hour (50%, never in the first hour).
     - A strong current carries small and medium animals toward the rapids. That's a killing hit with a last moment: "X grep tag i Y och höll emot".
     - **Who isn't carried away:**

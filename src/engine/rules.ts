@@ -208,9 +208,6 @@ export function cardAnimals(s: GameState, card: Card): string[] {
     case 'bara':
       if (!canMove(o)) return [];
       return others.filter((x) => x.zone === o.zone && !isFrozen(x)).map((x) => x.id);
-    case 'hallaSigNara':
-      if (!canMove(o)) return [];
-      return others.filter((x) => neighbors(s, o).includes(x.zone) && !zoneDef(s, x.zone).slow).map((x) => x.id);
     case 'trosta':
       if (!isPresent(o)) return [];
       return others.filter((x) => zoneDistance(s, o.zone, x.zone) <= 1).map((x) => x.id);
@@ -239,7 +236,6 @@ export function cardZones(s: GameState, card: Card): ZoneId[] {
   if (!o || !canMove(o)) return [];
   switch (card.kind) {
     case 'snabbaTassar':
-    case 'rusa':
     case 'flyga':
     case 'lockbete':
     case 'lockaBort':
@@ -356,7 +352,7 @@ export function cardBlockReason(s: GameState, card: Card): string | null {
   if (!o) return 'Kan inte spelas.';
   if (speciesCardBroken(s, card)) return o.flier ? `${o.name}s vinge är bruten.` : `${o.name}s tass är bruten.`;
   const spec = cardTarget(card);
-  const movesOwner = spec === 'zone' || spec === 'animalZone' || card.kind === 'hallaSigNara';
+  const movesOwner = spec === 'zone' || spec === 'animalZone';
   if (o.status === 'safe' && movesOwner) return `${o.name} är redan över.`;
   if (o.status !== 'active' && o.status !== 'safe') return `${o.name} är borta.`;
   if (isFrozen(o) && movesOwner) return `${o.name} fryser.`;

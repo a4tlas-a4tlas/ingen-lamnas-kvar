@@ -121,7 +121,7 @@ export const GUIDES: Record<EncounterId, Guide> = {
     hard: 'Ibland svämmar ån över: strömmen är strid de flesta timmar, redan från första, stenarna är nästan alltid hala, och dammen är redan halvt borta (2/4).',
     goal: `Få alla från Strandbrinken till Andra stranden – ${RIVER.maxTurn} timmar. Över stenarna eller genom strömmen är fyra steg – ingen hinner över på en timme. Över dammen är två.`,
     dangers: [
-      { icon: '≈', name: 'Hala stenar', text: 'Vågorna gör en eller två av de tre stenarna hala varje timme – det syns i förväg. Den som står där när timmen går glider ner i strömmen. ”Bita ihop” håller kvar.' },
+      { icon: '≈', name: 'Hala stenar', text: 'Vågorna gör en eller två av de tre stenarna hala varje timme – det syns i förväg. Den som står där när timmen går glider ner i strömmen – om den inte håller i sig (se nedan).' },
       { icon: '↯', name: 'Strömmen', effect: 'dödar', text: 'Lugn eller strid, timme för timme. När den är strid dras små och mellanstora djur i strömmen mot forsen – sista stunden: någon intill kan gripa tag.' },
       { icon: '⌇', name: `Bäverdammen (${DAM_MAX})`, text: `Snabbast över, men den knakar: +1 för varje djur som går ut på den, +2 för de stora. Vid ${DAM_MAX} brister den – den som står där faller i strömmen, och flodvågen gör strömmen strid två timmar.` },
       { icon: '⌐', name: 'Hägern', effect: 'skadar', text: 'Bara i dagsljus. Vaktar en sten varje timme och hugger de små som står där – ett sår som blöder.' },
@@ -131,7 +131,7 @@ export const GUIDES: Record<EncounterId, Guide> = {
       { icon: '◉', name: 'De stora står emot', text: 'De stora står stadigt i strömmen, och den som står i strömmen bredvid ett stort djur håller sig fast och dras inte med.' },
       { icon: '∽', name: 'Paddan simmar', text: 'Strömmen tar inte paddan. Vattnet är dess hem.' },
       { icon: '⇡', name: 'Ugglan flyger', text: 'Ugglan flyger över allt: halka, ström och damm rör den inte – så länge vingen är hel.' },
-      { icon: '◈', name: 'Bita ihop', text: 'Håller kvar den som står på en hal sten den här timmen.' },
+      { icon: '◈', name: 'Hålla i sig', text: 'Den som har grävt ner sig, gömt sig, frusit stilla eller hackat – eller står i zonen när någon stampar varning eller står som en sten – glider inte av en hal sten den här timmen.' },
     ],
     tips: [
       'Läs strömmen: gå ut i den bara när den är lugn – eller med ett stort djur bredvid.',
