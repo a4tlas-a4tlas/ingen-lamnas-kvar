@@ -34,8 +34,8 @@ import {
   verseStatus,
 } from '../engine/rules';
 import { OATH_VERSES, createGame } from '../engine/setup';
-import { step } from '../engine/step';
-import type { Action, Animal, Card, CardKind, GameEvent, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
+import { XP_TO_LEARN, step } from '../engine/step';
+import type { Action, Animal, Card, CardKind, GameEvent, Teaching, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
 import { fireSceneSvg, firePanelHtml, guideHtml, mapSvg, meetingHtml, memoryLine, memorialHtml, moveToSeat, occupants, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
 import { MEETINGS, currentFrame } from '../data/meetings';
@@ -109,7 +109,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 17 && s.phase !== 'over' ? s : null;
+    return s.version === 18 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -137,6 +137,8 @@ export class App {
   private guideOpen = false;
   private fireSeats: Seats | null = null;
   private fireMourning: Record<string, 'bury' | 'carry'> = {};
+  /** The lesson one pair by the embers will spend the night on, if any. */
+  private fireTeach: Teaching | undefined;
   /** Picking a card for the crow: which reply, and which card so far. */
   private meetingPick: { option: string; uid?: number } | null = null;
   /** The animal lifted up by a tap, waiting for a place. */
@@ -311,9 +313,18 @@ export class App {
         return this.render();
       case 'fire-rest': {
         if (!this.fireSeats) return;
-        const plan = planFromSeats(this.fireSeats, this.fireMourning);
-        return this.dispatch({ type: 'restAtFire', watch: plan.watch, scout: plan.scout, pairs: plan.pairs, mourning: plan.mourning });
+        const plan = planFromSeats(this.fireSeats, this.fireMourning, this.fireTeach);
+        this.fireTeach = undefined;
+        return this.dispatch({ type: 'restAtFire', watch: plan.watch, scout: plan.scout, pairs: plan.pairs, mourning: plan.mourning, teach: plan.teach });
       }
+      case 'fire-teach': {
+        const t: Teaching = { teacher: el.dataset.teacher!, learner: el.dataset.learner!, skill: el.dataset.skill as CardKind };
+        const same = this.fireTeach && this.fireTeach.teacher === t.teacher && this.fireTeach.learner === t.learner && this.fireTeach.skill === t.skill;
+        this.fireTeach = same ? undefined : t;
+        return this.render();
+      }
+      case 'learn':
+        return this.dispatch({ type: 'learn', animal: el.dataset.animal!, skill: el.dataset.kind as CardKind });
       case 'meet': {
         const option = currentFrame(s)?.options.find((o) => o.id === el.dataset.option);
         if (option?.pickCard) {
@@ -1177,7 +1188,7 @@ export class App {
         <aside class="between-side">
           <p class="muted small">${esc(guideName(s))}s minne av vägen · ${esc(REGIONS[s.journey.region].name)}</p>
           <h2>${esc(here.name)}</h2>
-          <button class="btn small skills-btn" data-act="skills-open">Förmågor</button>
+          <button class="btn small skills-btn ${s.animals.some((a) => isPresent(a) && a.offer) ? 'pending' : ''}" data-act="skills-open">Förmågor${s.animals.some((a) => isPresent(a) && a.offer) ? ' ●' : ''}</button>
           ${this.voicesHtml(s)}
           <div class="onward">
             ${onward.map(({ path, to }) => {
@@ -1236,16 +1247,32 @@ export class App {
           footer: `<span class="cwhere">${carried ? 'bärs' : 'vilar'}</span>`,
         });
       }).join('');
+      // Learned from another kind, by the fire.
+      const foreign = a.skills.filter((k) => !allSkills(a.species).includes(k)).map((kind) => {
+        const carried = a.loadout.includes(kind);
+        return cardFaceHtml(s, { uid: -1, kind, owner: a.id }, {
+          tag: 'button',
+          attrs: `data-act="skill" data-animal="${a.id}" data-kind="${kind}" aria-pressed="${carried}"`,
+          classes: ['mini', carried ? 'carried' : 'resting'],
+          footer: `<span class="cwhere">${carried ? 'bärs' : 'vilar'} · lärd av en annan</span>`,
+        });
+      }).join('');
+      const offer = a.offer?.length ? `<div class="skill-offer"><p class="small"><b>${esc(a.name)} har lärt sig något på vägen.</b> Välj en:</p>
+        <div class="deck-grid skill-grid">${a.offer.map((kind) => cardFaceHtml(s, { uid: -1, kind, owner: a.id }, {
+          tag: 'button', attrs: `data-act="learn" data-animal="${a.id}" data-kind="${kind}"`, classes: ['mini', 'offered'], footer: '<span class="cwhere">lär dig</span>',
+        })).join('')}</div></div>` : '';
+      const toNext = allSkills(a.species).some((k) => !a.skills.includes(k)) && !a.offer ? ` · ${XP_TO_LEARN - a.xp} faror till nästa` : '';
       return `<section class="deck-animal" style="--owner:${speciesColor(a.species)}">
-        <h4>${silhouette(a.species)} ${esc(a.name)} <span class="muted">· ${esc(SPECIES[a.species].kindName)} · bär ${a.loadout.length} av ${LOADOUT}</span></h4>
-        <div class="deck-grid skill-grid">${cards}</div>
+        <h4>${silhouette(a.species)} ${esc(a.name)} <span class="muted">· ${esc(SPECIES[a.species].kindName)} · bär ${a.loadout.length} av ${LOADOUT}${toNext}</span></h4>
+        ${offer}
+        <div class="deck-grid skill-grid">${cards}${foreign}</div>
       </section>`;
     }).join('');
     return `
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="skills-title">
         <div class="modal-card deck skills-modal">
           <div class="deck-head"><h2 id="skills-title">Förmågor</h2><button class="btn small" data-act="skills-close">Stäng</button></div>
-          <p class="muted small">Varje art kan sex saker. Var och en av oss bär ${LOADOUT} av dem – det är dess kort i leken. Tryck för att bära eller lägga undan. Det går bara här, inte mitt i en fara.</p>
+          <p class="muted small">Varje art kan sex saker. Var och en av oss bär ${LOADOUT} av dem – det är dess kort i leken. Tryck för att bära eller lägga undan. Det går bara här, inte mitt i en fara. Den som tagit sig igenom ${XP_TO_LEARN} faror lär sig något nytt, och vid elden kan två som står varandra nära lära varandra.</p>
           ${this.skillsHint ? `<p class="hint">${esc(this.skillsHint)}</p>` : ''}
           ${sections}
         </div>
@@ -1374,11 +1401,11 @@ export class App {
     this.root.innerHTML = `
       <div class="screen between fire-screen">
         <div class="fire-wrap">
-          <h2>${esc(place(s, s.journey.at).name)} <span class="muted">· lägerelden</span> <button class="btn small skills-btn" data-act="skills-open">Förmågor</button></h2>
+          <h2>${esc(place(s, s.journey.at).name)} <span class="muted">· lägerelden</span> <button class="btn small skills-btn ${s.animals.some((a) => isPresent(a) && a.offer) ? 'pending' : ''}" data-act="skills-open">Förmågor${s.animals.some((a) => isPresent(a) && a.offer) ? ' ●' : ''}</button></h2>
           ${fireSceneSvg(s, this.fireSeats, { crow: !!s.meeting || s.fireDebt.apart.length > 0 || s.fireDebt.embers > 0, picked: this.firePicked ?? undefined })}
           ${memorialHtml(s)}
         </div>
-        <aside class="between-side">${firePanelHtml(s, this.fireSeats, this.fireMourning, this.fireHint)}</aside>
+        <aside class="between-side">${firePanelHtml(s, this.fireSeats, this.fireMourning, this.fireHint, this.fireTeach)}</aside>
         ${meetingHtml(s, this.meetingPickerHtml(s)) || (this.skillsOpen ? this.skillsHtml(s) : '')}
       </div>`;
   }

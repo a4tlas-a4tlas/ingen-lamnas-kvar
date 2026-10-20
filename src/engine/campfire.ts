@@ -2,7 +2,8 @@
 import { TRAITS } from '../data/traits';
 import { bond, canFly, canPrey, huntsAt, isPresent } from './rules';
 import { place, placesAhead } from '../data/journey';
-import type { Animal, GameState, MourningChoice, TraitId } from './types';
+import { CARDS } from '../data/cards';
+import type { Animal, CardKind, GameState, MourningChoice, Teaching, TraitId } from './types';
 
 /** Two pairs of places by the embers. Whoever has none sits alone in the dark. */
 export const EMBER_PAIRS = 2;
@@ -13,6 +14,22 @@ export interface FirePlan {
   scout?: string;
   pairs: [string, string][];
   mourning: Record<string, MourningChoice>;
+  /** One pair by the embers spends the night teaching. */
+  teach?: Teaching;
+}
+
+/** How close two must be before one will teach the other. */
+export const TEACH_BOND = 2;
+
+/**
+ * What one can teach another: anything it knows that the other doesn't, if they are of a kind;
+ * across kinds, only what any of us could learn – comfort and insight.
+ */
+export function teachable(s: GameState, teacherId: string, learnerId: string): CardKind[] {
+  const t = s.animals.find((a) => a.id === teacherId);
+  const l = s.animals.find((a) => a.id === learnerId);
+  if (!t || !l || !isPresent(t) || !isPresent(l) || bond(s, t.id, l.id) < TEACH_BOND) return [];
+  return t.skills.filter((k) => !l.skills.includes(k) && (t.species === l.species || ['comfort', 'insight'].includes(CARDS[k].tag)));
 }
 
 export const living = (s: GameState) => s.animals.filter(isPresent);
@@ -111,5 +128,10 @@ export function planProblem(s: GameState, plan: FirePlan): string | null {
     if (sc.id === plan.watch || seated.includes(sc.id)) return 'Den som spanar kan inte också vaka eller sitta vid glöden.';
   }
   for (const d of s.unmourned) if (plan.mourning[d] !== 'bury' && plan.mourning[d] !== 'carry') return 'Välj hur vi minns de döda.';
+  if (plan.teach) {
+    const { teacher, learner, skill } = plan.teach;
+    if (!plan.pairs.some((p) => p.includes(teacher) && p.includes(learner))) return 'Bara ett par vid glöden kan lära varandra.';
+    if (!teachable(s, teacher, learner).includes(skill)) return 'Det går inte att lära ut i natt.';
+  }
   return null;
 }
