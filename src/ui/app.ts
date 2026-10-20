@@ -4,6 +4,7 @@ import { guideName } from '../engine/roles';
 import { CARDS, TAG_NAMES } from '../data/cards';
 import { HOPE_LINES, KRAFT_OUT_LINES } from '../data/text.sv';
 import { roarZones } from '../engine/encounters/machines';
+import { tractorRow, visibleMist } from '../engine/encounters/sprayer';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -108,7 +109,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 21 && s.phase !== 'over' ? s : null;
+    return s.version === 22 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -863,6 +864,18 @@ export class App {
       : b.maybe.map((z) => `<div class="wing-mark" style="${box(z)}"><span>vingslag?</span></div>`).join('')).join('');
   }
 
+  /** The sprayed field: where the tractor drives, the mist we can see, and which way the wind blows. */
+  private sprayerTelegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const row = tractorRow(s);
+    for (const z of visibleMist(s)) out.push(`<div class="mist-mark" style="${box(z)}"><i></i><span>dimma · förgiftar</span></div>`);
+    for (const z of row) out.push(`<div class="tractor-mark" style="${box(z)}"><span>Traktorn · dödar</span></div>`);
+    const wind = s.spray.windPlan[s.turn - 1];
+    if (wind) out.push(`<div class="wind-mark wind-${wind === 'norr' ? 'n' : wind === 'söder' ? 's' : wind === 'öster' ? 'e' : 'w'}"><span>vinden → ${wind}</span></div>`);
+    return out.join('');
+  }
+
   /** The river: the current in the water, the wet stones, the heron. */
   private riverTelegraphHtml(s: GameState): string {
     const out: string[] = [];
@@ -919,6 +932,7 @@ export class App {
     if (s.encounterId === 'river') return s.phase === 'over' ? '' : this.riverTelegraphHtml(s);
     if (s.encounterId === 'machines') return s.phase === 'over' ? '' : this.machinesTelegraphHtml(s);
     if (s.encounterId === 'raptor') return s.phase === 'over' ? '' : this.raptorTelegraphHtml(s);
+    if (s.encounterId === 'sprayer') return s.phase === 'over' ? '' : this.sprayerTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {

@@ -9,10 +9,14 @@ export interface Leaning {
 
 /** Each kind's own nature. */
 export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leaning>>>> = {
-  toad: { river: { pull: 1, line: 'Vattnet är mitt hem. Ta ån – jag visar er stenarna.' } },
+  toad: {
+    river: { pull: 1, line: 'Vattnet är mitt hem. Ta ån – jag visar er stenarna.' },
+    sprayer: { pull: 1, line: 'Det går en bäck längs det fältet. I vattnet når dimman oss inte.' },
+  },
   mice: {
     river: { pull: -1, line: 'Vi kan inte simma. Inte ån, snälla.' },
     raptor: { pull: -1, line: 'Skuggan. Vi såg skuggan över fälten. Inte där.' },
+    sprayer: { pull: -1, line: 'Den söta lukten. Våra kusiner åt av det fältet och vaknade aldrig.' },
   },
   fox: { farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' } },
   badger: { river: { pull: 1, line: 'Strömmen rubbar inte mig. Håll er i mig, så går vi över.' } },
@@ -22,9 +26,18 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
   },
   hedgehog: { farm: { pull: 1, line: 'Gårdar har sniglar och mjölk. Hundarna biter inte i taggar.' } },
   squirrel: { raptor: { pull: -1, line: 'Inga träd på fälten. Ingenstans att klättra. Inte där.' } },
-  mole: { river: { pull: -1, line: 'Jag ser inte vattnet. Jag hör det bara. Inte ån.' } },
-  beaver: { river: { pull: 1, line: 'Ån är min. Jag vet var dammen håller.' } },
-  fawn: { farm: { pull: -1, line: 'Där bor människor. Mamma sa: aldrig nära människorna.' } },
+  mole: {
+    river: { pull: -1, line: 'Jag ser inte vattnet. Jag hör det bara. Inte ån.' },
+    sprayer: { pull: 1, line: 'Dimman ligger ovanpå jorden. Under den är det rent.' },
+  },
+  beaver: {
+    river: { pull: 1, line: 'Ån är min. Jag vet var dammen håller.' },
+    sprayer: { pull: 1, line: 'Bäcken där borta tvättar bort vad som helst.' },
+  },
+  fawn: {
+    farm: { pull: -1, line: 'Där bor människor. Mamma sa: aldrig nära människorna.' },
+    sprayer: { pull: -1, line: 'Traktorn. Jag har sett vad den gör med dem som ligger stilla i raderna.' },
+  },
 };
 
 /** What the body says louder than nature: injuries and hunger. */

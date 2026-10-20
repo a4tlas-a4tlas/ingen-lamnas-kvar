@@ -1,7 +1,9 @@
 /** Zones are defined per encounter (see encounters/); ids are plain strings. */
 export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
-export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor';
+export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer';
+/** Which way the wind carries the mist over the sprayed field. */
+export type Wind = 'norr' | 'söder' | 'öster' | 'väster';
 
 /** The river's current in a given hour. */
 export type Current = 'lugn' | 'strid';
@@ -10,7 +12,7 @@ export type Current = 'lugn' | 'strid';
  * Lasting harm from an injuring hit. Halt and broken never heal; bleeding and
  * shock heal by the campfire.
  */
-export type InjuryKind = 'halt' | 'broken' | 'bleeding' | 'shock';
+export type InjuryKind = 'halt' | 'broken' | 'bleeding' | 'shock' | 'poisoned';
 
 /** Every danger is telegraphed as one or the other. */
 export type Severity = 'injure' | 'kill';
@@ -183,6 +185,8 @@ export interface Animal {
   curled?: boolean;
   /** Up a tree: what runs on the ground can't reach it, but birds can – and a felled tree takes it down. */
   climbing?: boolean;
+  /** Dug down into the earth: the mist does not reach it, and the tractor rolls over it. */
+  underground?: boolean;
 }
 
 /** The farm's dogs can never be beaten, only misled. */
@@ -386,7 +390,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 21;
+  version: 22;
   /** Which group left the glen. */
   cast: CastId;
   /** The variant of the encounter we're in. */
@@ -448,6 +452,8 @@ export interface GameState {
   // The fields.
   /** Where the birds will strike this hour: one zone each by day; at night, only where they might. */
   raptors: { zone: ZoneId | null; maybe: ZoneId[] }[];
+  /** The sprayed field: the tractor's rows and the wind, hour by hour; where the mist lies; what of it we can see at night. */
+  spray: { rowPlan: number[]; windPlan: Wind[]; mist: ZoneId[]; shown: ZoneId[] };
   /** Someone trapped in this encounter, not yet one of us: they must come to trust us before we can free them. */
   rescue: Rescue | null;
   /** Newcomers we have met this run – rescued or left behind. Each is met only once. */

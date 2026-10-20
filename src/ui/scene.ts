@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -331,6 +331,48 @@ function machinesSvg(): string {
 }
 
 /** Fältet under himlen: a hedge at the top, the open stubble field and the stone pile, three furrows, the grassy field edge. */
+/** The sprayed field: green crop rows, a stream down the left side, a patch of weeds, the grove beyond. */
+function sprayerSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const grove: string[] = [];
+  for (let i = 0; i < 14; i++) grove.push(`<ellipse cx="${10 + i * 30}" cy="${y(12) - (i % 3) * 4}" rx="${24 + (i % 2) * 6}" ry="${26 + (i % 3) * 5}"/>`);
+  const crop: string[] = [];
+  for (const [top, h] of [[18, 22], [40, 22], [62, 20]] as const) {
+    for (let r = 0; r < 4; r++) crop.push(`<path d="M${x(20)} ${y(top) + 10 + r * (y(h) / 4)} H400" />`);
+  }
+  const sprouts: string[] = [];
+  for (let r = 0; r < 12; r++) for (let i = 0; i < 16; i++) sprouts.push(`<path d="M${x(21) + i * 20 + (r % 2) * 8} ${y(20) + r * 26} l-3 -7 M${x(21) + i * 20 + (r % 2) * 8} ${y(20) + r * 26} l3 -6"/>`);
+  const weeds: string[] = [];
+  for (let i = 0; i < 12; i++) weeds.push(tuft(x(62) + (i % 6) * 26, y(48) + Math.floor(i / 6) * 40, 2.2 + (i % 3) * 0.4));
+  const tufts: string[] = [];
+  for (let i = 0; i < 22; i++) tufts.push(tuft(8 + i * 18.5, y(100) - 2 - (i % 3) * 3, 1.5 + (i % 4) * 0.25));
+  return `
+<svg class="scene-bg sprayer" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="spraysky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a9b9c6"/><stop offset="1" stop-color="#e6dcbc"/>
+    </linearGradient>${DEFS}
+  </defs>
+  <rect width="400" height="${y(18)}" fill="url(#spraysky)"/>
+  <g fill="#35512c" filter="url(#cut)">${grove.join('')}</g>
+  <rect x="${x(20)}" y="${y(18)}" width="${x(80)}" height="${y(64)}" fill="#7f9a4a"/>
+  <g stroke="#5f7836" stroke-width="3">${crop.join('')}</g>
+  <g stroke="#a6bf62" stroke-width="1.6" fill="none">${sprouts.join('')}</g>
+  <path d="M${x(20)} ${y(40)} H400 M${x(20)} ${y(62)} H400" stroke="#4b5f2a" stroke-width="4"/>
+  <rect x="${x(60)}" y="${y(40)}" width="${x(40)}" height="${y(22)}" fill="#5d6e34"/>
+  <g fill="#3e5226" filter="url(#cut)">${weeds.join('')}</g>
+  <path d="M0 ${y(18)} H${x(20)} V${y(82)} H0 Z" fill="#4f7a8c" filter="url(#cut)"/>
+  <path d="M${x(4)} ${y(24)} q12 10 0 20 q-12 10 0 20 q12 10 0 20 q-12 10 0 20 q12 10 0 20 q-12 10 0 20 q12 10 0 20 q-12 10 0 20 q12 10 0 20 q-12 10 0 20 q12 10 0 20 q-12 10 0 20 q12 10 0 20 q-12 10 0 20" stroke="#8fb6c4" stroke-width="2" fill="none" opacity="0.7"/>
+  <rect y="${y(82)}" width="400" height="${y(18)}" fill="#6e8048" filter="url(#cut)"/>
+  <g fill="#566a36" filter="url(#cut)">${tufts.join('')}</g>
+  <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.6"/>
+  <g class="night-stars" fill="#fff6dc">
+    <circle cx="40" cy="20" r="1.2"/><circle cx="140" cy="34" r="1"/><circle cx="240" cy="16" r="1.3"/><circle cx="320" cy="40" r="1"/><circle cx="380" cy="22" r="1.2"/>
+  </g>
+</svg>`;
+}
+
 function fieldSvg(): string {
   const y = (p: number) => p * 5;
   const x = (p: number) => p * 4;

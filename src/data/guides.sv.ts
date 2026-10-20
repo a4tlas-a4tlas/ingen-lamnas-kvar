@@ -45,6 +45,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
     day: 'Maskinerna arbetar i gryningen. Det går inte att vänta på mörkret.',
     night: 'Maskinerna arbetar i gryningen. Det går inte att vänta på mörkret.',
   },
+  sprayer: {
+    day: 'Traktorn kör en rad i timmen och sprutar. Vi ser dimman, och åt vilket håll vinden drar.',
+    night: 'Ingen traktor – men dagens dimma ligger kvar i raderna och stiger på nytt. Vi känner bara vinden, och ser bara en del av dimman.',
+  },
 };
 
 export const TIME_NAMES: Record<TimeOfDay, string> = { day: 'dagsljus', night: 'natt' };
@@ -178,6 +182,26 @@ export const GUIDES: Record<EncounterId, Guide> = {
       'Läs skuggan och gå dit den inte kan nå – eller dit vi är gömda.',
       'Det öppna fältet är snabbt men naket. Stenröset är tryggare för de flesta.',
       'Låt ugglan gå på marken här.',
+    ],
+  },
+  sprayer: {
+    title: 'Så tar vi oss över det besprutade fältet',
+    hard: 'Ibland är sprutan dubbel: traktorn lämnar dimma i sin rad och i raden bredvid.',
+    goal: 'Få alla från Dikesrenen till Dungen – 8 timmar. Rakt upp genom raderna är fyra steg. Längs bäcken är det tre, men vattnet håller kvar den som inte simmar en hel timme i varje del.',
+    dangers: [
+      { icon: '▤', name: 'Traktorn', effect: 'dödar', text: 'Bara i dagsljus. Den kör en rad i timmen, fram och tillbaka – det syns i förväg vilken. Den som står i raden när timmen går blir överkörd (sista stunden). Den kör aldrig i bäcken eller ogräset.' },
+      { icon: '≈', name: 'Dimman', effect: 'skadar', text: 'Där traktorn kört ligger en söt dimma. Varje timme driver den en zon med vinden – vindens håll syns i förväg. Den som står i dimman när timmen går blir förgiftad. Den når upp i träden och i luften.' },
+      { icon: '☠', name: 'Förgiftad', text: 'Den förgiftades egna kort går inte att spela. Den kan fortfarande ledas och bäras. Läker vid lägerelden.' },
+    ],
+    shelter: [
+      { icon: '∽', name: 'Bäcken', text: 'Dimman når aldrig vattnet. Den som simmar tvättar av sig giftet där, och vattnet håller inte kvar den.' },
+      { icon: '♣', name: 'Ogräset', text: 'Det höga ogräset tar dimman, och traktorn kör runt det.' },
+      { icon: '◒', name: 'Under jord', text: 'Den som gräver ner sig – mullvaden, grävlingen – når varken dimman eller traktorn.' },
+    ],
+    tips: [
+      'Läs vinden: dimman driver dit den blåser, och traktorn lägger ny där den kör.',
+      'Paddan och bävern hör hemma i bäcken – där tvättas giftet bort.',
+      'Om natten: insikt (Lyssna i marken, Vittring, Läsa natten …) visar hela dimman.',
     ],
   },
 };

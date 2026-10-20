@@ -48,8 +48,6 @@ export interface EncounterDef {
   leftBehind: ByTime;
   /** Said in the last hour. */
   lastHour: ByTime;
-  /** Someone trapped here, the first time we come: where, and the words for it. */
-  /** Someone trapped here, the first time we come: what kind, where, and the words for it ({name} is theirs). */
   /**
    * Someone trapped here, of a kind not yet with us. {en} is "en hare", {Den} "Den", {name} its name.
    * `not` keeps kinds out that the place makes no sense for: a swimmer on a stone, a flier in the water.

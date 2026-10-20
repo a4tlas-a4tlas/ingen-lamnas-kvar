@@ -606,6 +606,39 @@ Design from the milestone 6 interview:
 - **On the map:** *Fälten* is one of Åkrarna's dangers. Skymning and Fröna speak against it at forks.
 - **Balance:** a lead-only bot, without cards or comforting, brings 4.5 of 6 across by day and 5.1 at night (4.6 and 4.8 with the pair). The bird kills about one animal in two runs.
 
+### Step 3: Sprutan – Det besprutade fältet (done)
+Åkrarna's second danger, 8 hours. A tractor drives the crop rows and leaves a sweet, poisoned mist that the wind carries over the field.
+
+| Row | West | East | Side |
+|---|---|---|---|
+| goal | **Dungen** | | |
+| 3 | Tredje raden | Tredje raden, öst | **Bäcken, övre** (water) |
+| 2 | Andra raden | **Ogräset** (cover) | |
+| 1 | Första raden | Första raden, öst | **Bäcken** (water) |
+| start | **Dikesrenen** | | |
+
+- **The way across:** four steps up through the rows, or three up the stream. The water holds everyone an hour in each part, except those who swim.
+- **The tractor** (by day) drives one row per hour, back and forth on a seeded plan, telegraphed.
+  - **Who it hits:** whoever stands in that row when the hour passes is run over, a killing hit with a last moment.
+  - **Where it never drives:** the stream and the weeds. It passes over the dug-in and under the flying.
+  - **The spray:** it leaves mist in its row (on the hard field, *två sprutor*, in the next row too).
+- **The mist:**
+  - **The wind** is telegraphed each hour (norr, söder, öster, väster), and every patch drifts one zone with it.
+  - **Where it ends:** mist that drifts into the stream, the weeds, the ditch, the grove or off the field is gone.
+  - **Whoever ends the hour in the mist** is **förgiftad**. That includes the flying and the climbing, since the spray rises to the treetops.
+  - **It never kills,** not even a swarm.
+- **Förgiftad** (a new injury): the animal's own cards can't be played ("Allt är för tungt"). It can still be led and carried. It heals at the fire.
+- **Answers to the mist:**
+  - **Swimmers** (the toad, the beaver) wash it off in the stream, and the stream doesn't hold them.
+  - **Those dug into the ground** (the mole's Under jord and Gräva gång, the badger's Gräva ner sig) are reached by neither the mist nor the tractor.
+- **At night:** no tractor. Three patches of the day's mist lie in the rows, and one more rises each hour.
+  - **What we see:** only the wind and about half the mist.
+  - **Reading the night** (Läsa natten, Lyssna i marken, Vittring …) shows all of it.
+- **Voices:**
+  - **Want it:** the toad and the beaver (the stream) and the mole (under the ground).
+  - **Fear it:** the mice and the fawn.
+- **Save version 22.**
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.
