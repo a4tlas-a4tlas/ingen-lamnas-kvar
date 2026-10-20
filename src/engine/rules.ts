@@ -2,6 +2,7 @@
 import { SPECIES } from '../data/animals';
 import { CARDS, type TargetSpec } from '../data/cards';
 import { encounterOf, zoneDef } from './encounters';
+import { GATE_PUSH } from './encounters/fence';
 import type { Animal, Card, GameState, Hit, InjuryKind, VerseId, ZoneId } from './types';
 
 export function animal(s: GameState, id: string): Animal {
@@ -92,15 +93,35 @@ const backOf = (s: GameState, z: ZoneId) => encounterOf(s).edges.filter(([, t]) 
 /** A slow zone (the culvert) holds you for one full hour before you can go on. */
 const heldBySlowZone = (s: GameState, z: ZoneId, slowTime: number) => !!zoneDef(s, z).slow && slowTime < 1;
 
+/** A fence across the way: only fliers cross it – and the gate, once it stands open, or when a large one
+ * pushes it, or two of us together. */
+export function canCross(s: GameState, a: Animal, from: ZoneId, to: ZoneId): boolean {
+  const f = encounterOf(s).fence;
+  if (!f || !f.edges.some(([x, y]) => x === from && y === to)) return true;
+  if (canFly(a)) return true;
+  const [gf, gt] = f.gate;
+  if (gf !== from || gt !== to) return false;
+  const together = s.animals.filter((x) => isActive(x) && x.zone === gf && !x.flying).length >= 2;
+  return s.fence.gateOpen || a.size === 'large' || together;
+}
+
+/** Pushing the closed gate open costs this much more than the step. */
+export function gatePush(s: GameState, a: Animal, to: ZoneId): number {
+  const f = encounterOf(s).fence;
+  if (!f || s.fence.gateOpen || canFly(a)) return 0;
+  return f.gate[0] === a.zone && f.gate[1] === to ? GATE_PUSH : 0;
+}
+
 /** Zones one step away, both directions. */
 export function neighbors(s: GameState, a: Animal): ZoneId[] {
   if (zoneDef(s, a.zone).goal) return [];
-  const fwd = heldBySlowZone(s, a.zone, a.slowTime) ? [] : forwardOf(s, a.zone);
+  const fwd = heldBySlowZone(s, a.zone, a.slowTime) ? [] : forwardOf(s, a.zone).filter((z) => canCross(s, a, a.zone, z));
   return [...fwd, ...backOf(s, a.zone)].filter((z) => canEnter(s, a, z));
 }
 
-/** Zones reachable moving forward up to `steps`. Slow zones and the goal end the move. A limp allows 1. */
-export function forwardReach(s: GameState, a: Animal, steps: number): ZoneId[] {
+/** Zones reachable moving forward up to `steps`. Slow zones and the goal end the move. A limp allows 1.
+ * `under` goes beneath a fence: the mole's tunnel. */
+export function forwardReach(s: GameState, a: Animal, steps: number, under = false): ZoneId[] {
   const n = hasInjury(a, 'halt') ? Math.min(steps, 1) : steps;
   const out = new Set<ZoneId>();
   let frontier: { zone: ZoneId; time: number }[] = [{ zone: a.zone, time: a.slowTime }];
@@ -109,7 +130,7 @@ export function forwardReach(s: GameState, a: Animal, steps: number): ZoneId[] {
     for (const f of frontier) {
       if (heldBySlowZone(s, f.zone, f.time)) continue;
       for (const z of forwardOf(s, f.zone)) {
-        if (!canEnter(s, a, z)) continue;
+        if (!canEnter(s, a, z) || (!under && !canCross(s, a, f.zone, z))) continue;
         out.add(z);
         const d = zoneDef(s, z);
         if (!d.slow && !d.goal) next.push({ zone: z, time: 0 });
@@ -127,7 +148,8 @@ export const isFast = (a: Animal) => !!SPECIES[a.species].fast;
 export function leadZones(s: GameState, a: Animal): ZoneId[] {
   const zones = new Set(neighbors(s, a));
   if ((canFly(a) || isFast(a)) && !hasInjury(a, 'halt')) for (const z of forwardReach(s, a, 2)) if (!zoneDef(s, z).slow) zones.add(z);
-  return [...zones];
+  // The gate is only a way for one with the strength left to push it.
+  return [...zones].filter((z) => !gatePush(s, a, z) || leadCost(a) + gatePush(s, a, z) <= s.kraft);
 }
 
 /** Where an animal that flees on its own goes: one step back along the main way. */
@@ -138,7 +160,7 @@ export function backZone(s: GameState, a: Animal): ZoneId | null {
 /** Where an animal that bolts on its own goes: one step forward along the main way, danger or not. */
 export function boltZone(s: GameState, a: Animal): ZoneId | null {
   if (zoneDef(s, a.zone).goal || heldBySlowZone(s, a.zone, a.slowTime)) return null;
-  return forwardOf(s, a.zone).find((z) => canEnter(s, a, z) && !zoneDef(s, z).hidden) ?? null;
+  return forwardOf(s, a.zone).find((z) => canEnter(s, a, z) && canCross(s, a, a.zone, z) && !zoneDef(s, z).hidden) ?? null;
 }
 
 /** Steps between two zones, ignoring direction (hidden zones count once found). */
@@ -266,10 +288,11 @@ export function cardZones(s: GameState, card: Card): ZoneId[] {
     case 'bara':
     case 'smyga':
     case 'ringla':
+    case 'gravaGang':
+      return forwardReach(s, o, 1, true);
     case 'krypaIn':
     case 'baraIhop':
     case 'tystGang':
-    case 'gravaGang':
     case 'fallaTrad':
       return forwardReach(s, o, 1);
     default:

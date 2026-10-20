@@ -639,6 +639,41 @@ Design from the milestone 6 interview:
   - **Fear it:** the mice and the fawn.
 - **Save version 22.**
 
+### Step 4: Diket och grinden (done)
+Åkrarna's third danger, 9 hours: a ditch that fills, an electric fence, and three ways through it.
+
+| Row | West | Middle | East |
+|---|---|---|---|
+| goal | **Betet** (beyond the fence) | | |
+| fence | **Stängslet** (wire) | **Grinden** (wire) | **Kaninhålet** (small only, slow) |
+| ditch | **Diket** (water) | **Spången** (dry plank) | **Diket, öst** (water) |
+| start | **Åkerkanten** | | |
+
+- **The way across:** three steps, but the fence stands between the fence row and the pasture. You can move along the fence, from the wire to the gate and from the gate to the hole.
+- **Through the fence:**
+  - **The gate:** a large one pushes it open, or two of us standing there together *(added so a group without a large animal isn't stuck)*. It costs ◆2 on top of the step, and the gate then stays open for all.
+  - **Kaninhålet:** for the small, an hour under the wire.
+  - **Over it:** the fliers. The owl's Bära liten takes a small one along.
+  - **Under it:** the mole's Gräva gång, with the small ones of its zone.
+- **The ditch:**
+  - **The level** starts at 0 and rises one most hours, telegraphed.
+  - **At 2** it takes the small in the water; **at 3** the medium too. Each is a killing hit with a last moment; a swarm loses members.
+  - **Who stands:** the large and swimmers. Beside a large one in the same stretch, the others hold on.
+  - **The beaver:** Laga dammen and Fälla träd lower it a level.
+- **The wire** hums in about two hours of five, never in the first. When it's on at the hour's end:
+  - the **small** at Stängslet or Grinden **die** (last moment)
+  - the rest get shock
+  - those in the air, the dug-in, and those in the hole are spared
+- **Day / night:** by day this hour's pulse and the next are shown. At night only the hum of this hour, and the ditch water is cold (−1 belief).
+- **Hard** (*diket är fullt*): the water starts at 1.
+- **Voices:**
+  - **Want it:** the beaver and the mole.
+  - **Fear it:** the mice and the hare (the wire).
+- **Tuning:**
+  - **Fewer steps:** the board first had a bank row (4 steps, 8 hours). With the gate's ◆2 that needed more Kraft than six animals have, so it is 3 steps and 9 hours.
+  - **A slower pulse:** the wire's chance went from 55 % to 40 %.
+- **Save version 23.**
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

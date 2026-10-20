@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -331,6 +331,45 @@ function machinesSvg(): string {
 }
 
 /** Fältet under himlen: a hedge at the top, the open stubble field and the stone pile, three furrows, the grassy field edge. */
+/** The ditch and the gate: a field bank, a ditch with a plank across, a wire fence on posts, the pasture beyond. */
+function fenceSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const posts: string[] = [];
+  for (let i = 0; i < 9; i++) if (i !== 3 && i !== 4) posts.push(`<rect x="${6 + i * 48}" y="${y(21)}" width="6" height="${y(10)}" fill="#5a4630"/>`);
+  const wires = [y(23), y(26.5), y(30)].map((wy) => `<path d="M0 ${wy} H${x(35)} M${x(65)} ${wy} H400" stroke="#b8b4a8" stroke-width="1.6"/>`).join('');
+  const grass: string[] = [];
+  for (let i = 0; i < 22; i++) grass.push(tuft(8 + i * 18.5, y(21) - (i % 3) * 2, 1.4 + (i % 4) * 0.2));
+  const tufts: string[] = [];
+  for (let i = 0; i < 22; i++) tufts.push(tuft(8 + i * 18.5, y(100) - 2 - (i % 3) * 3, 1.5 + (i % 4) * 0.25));
+  return `
+<svg class="scene-bg fence" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="fencesky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fb3c4"/><stop offset="1" stop-color="#e2d8b6"/>
+    </linearGradient>${DEFS}
+  </defs>
+  <rect width="400" height="${y(4)}" fill="url(#fencesky)"/>
+  <rect y="${y(4)}" width="400" height="${y(18)}" fill="#7f9e52"/>
+  <g fill="#6a8a44" filter="url(#cut)">${grass.join('')}</g>
+  <rect y="${y(22)}" width="400" height="${y(24)}" fill="#8a7a52"/>
+  ${posts.join('')}${wires}
+  <g stroke="#6b5636" stroke-width="5" fill="none"><path d="M${x(36)} ${y(24)} H${x(64)} M${x(36)} ${y(30)} H${x(64)} M${x(36)} ${y(24)} L${x(64)} ${y(30)}"/></g>
+  <rect x="${x(35)}" y="${y(22)}" width="6" height="${y(11)}" fill="#4a3826"/><rect x="${x(65) - 6}" y="${y(22)}" width="6" height="${y(11)}" fill="#4a3826"/>
+  <ellipse cx="${x(82)}" cy="${y(36)}" rx="22" ry="12" fill="#2a1e14"/>
+  <rect y="${y(46)}" width="400" height="${y(26)}" fill="#4d6f82" filter="url(#cut)"/>
+  <path d="M0 ${y(54)} q20 -6 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#86aebd" stroke-width="2" fill="none" opacity="0.7"/>
+  <rect x="${x(40)}" y="${y(46)}" width="${x(20)}" height="${y(26)}" fill="#7a6040"/>
+  <path d="M${x(40)} ${y(51)} H${x(60)} M${x(40)} ${y(59)} H${x(60)} M${x(40)} ${y(67)} H${x(60)}" stroke="#5a4428" stroke-width="2"/>
+  <rect y="${y(72)}" width="400" height="${y(28)}" fill="#6e8048" filter="url(#cut)"/>
+  <g fill="#566a36" filter="url(#cut)">${tufts.join('')}</g>
+  <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.6"/>
+  <g class="night-stars" fill="#fff6dc">
+    <circle cx="40" cy="8" r="1.2"/><circle cx="140" cy="12" r="1"/><circle cx="240" cy="6" r="1.3"/><circle cx="320" cy="14" r="1"/><circle cx="380" cy="9" r="1.2"/>
+  </g>
+</svg>`;
+}
+
 /** The sprayed field: green crop rows, a stream down the left side, a patch of weeds, the grove beyond. */
 function sprayerSvg(): string {
   const y = (p: number) => p * 5;

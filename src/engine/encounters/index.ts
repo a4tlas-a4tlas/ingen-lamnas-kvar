@@ -1,5 +1,6 @@
 import type { EncounterId, GameState, TimeOfDay, ZoneId } from '../types';
 import { FARM } from './farm';
+import { FENCE } from './fence';
 import { MACHINES } from './machines';
 import { RAPTOR } from './raptor';
 import { RIVER } from './river';
@@ -7,7 +8,7 @@ import { ROAD } from './road';
 import { SPRAYER } from './sprayer';
 import type { ByTime, EncounterDef, ZoneDef } from './types';
 
-export const ENCOUNTERS: Record<EncounterId, EncounterDef> = { road: ROAD, farm: FARM, river: RIVER, machines: MACHINES, raptor: RAPTOR, sprayer: SPRAYER };
+export const ENCOUNTERS: Record<EncounterId, EncounterDef> = { road: ROAD, farm: FARM, river: RIVER, machines: MACHINES, raptor: RAPTOR, sprayer: SPRAYER, fence: FENCE };
 
 export function encounterOf(s: GameState): EncounterDef {
   return ENCOUNTERS[s.encounterId];

@@ -4,6 +4,7 @@
 import { roarZones } from '../engine/encounters/machines';
 import { sheltered } from '../engine/encounters/raptor';
 import { mistAfter, rowZones, tractorRow } from '../engine/encounters/sprayer';
+import { GATE_PUSH, levelAfter, onTheWire, sweptIn } from '../engine/encounters/fence';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
@@ -82,6 +83,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'machines') out.push(...machinesStatuses(s, a));
   if (s.encounterId === 'raptor') out.push(...raptorStatuses(s, a));
   if (s.encounterId === 'sprayer') out.push(...sprayerStatuses(s, a));
+  if (s.encounterId === 'fence') out.push(...fenceStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -234,6 +236,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'machines') out.push(...machinesForecast(s, zoneOf));
   if (s.encounterId === 'raptor') out.push(...raptorForecast(s, zoneOf));
   if (s.encounterId === 'sprayer') out.push(...sprayerForecast(s, zoneOf));
+  if (s.encounterId === 'fence') out.push(...fenceForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -325,6 +328,47 @@ function riverForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[
     const left = DAM_MAX - s.damCreak;
     if (left === 1) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: nästa som går ut på den bryter den.`, tone: 'warn' });
     else if (left === 2) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: ett stort djur till bryter den.`, tone: 'warn' });
+  }
+  return out;
+}
+
+/** The ditch and the gate: swept away, on the wire. */
+function fenceStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active') return [];
+  if (sweptIn(s, levelAfter(s)).includes(a)) {
+    return [{ key: 'ditch', icon: '≋', label: 'dras med', tone: 'bad', explain: `Vattnet i diket stiger till ${levelAfter(s)}. Står ${a.name} kvar här dras ${a.name} med (sista stunden). Ett stort djur i samma del av diket kan hålla emot.` }];
+  }
+  if (s.fence.pulsePlan[s.turn - 1] && onTheWire(s).includes(a)) {
+    return [{ key: 'wire', icon: '⚡', label: a.size === 'small' ? 'strömmen · dödar' : 'strömmen · chock', tone: a.size === 'small' ? 'bad' : 'warn', explain: `Strömmen är på. Står ${a.name} kvar vid stängslet ${a.size === 'small' ? 'dör ' + a.name + ' (sista stunden)' : 'får ' + a.name + ' chock'}.` }];
+  }
+  return [];
+}
+
+/** The ditch and the gate: the water and whom it takes; the wire and whom it touches; the gate. */
+function fenceForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  const names = (xs: Animal[]) => xs.map((a) => a.name).join(' och ');
+  const level = levelAfter(s);
+  const swept = sweptIn(s, level, where);
+  const rise = level > s.fence.level ? `Diket stiger till ${level}` : `Diket står kvar på ${level}`;
+  // A swarm loses some of its own; anyone else is lost.
+  const kills = (xs: Animal[]) => xs.map((a) => (a.count !== undefined ? `${swarmLoss({ severity: 'kill' })} av ${a.name}` : a.name)).join(' och ');
+  const lethal = (xs: Animal[]) => xs.some((a) => isLethal(a, { severity: 'kill' }));
+  out.push(swept.length ? { text: `${rise} och drar med ${kills(swept)}${lethal(swept) ? ': dödar!' : '.'}`, tone: 'bad' } : { text: `${rise}.`, tone: level >= 2 ? 'warn' : 'info' });
+  const on = s.fence.pulsePlan[s.turn - 1];
+  const touch = on ? onTheWire(s, where).filter((a) => !swept.includes(a)) : [];
+  const dies = touch.filter((a) => a.size === 'small');
+  const shocked = touch.filter((a) => a.size !== 'small');
+  if (!on) out.push({ text: 'Strömmen i stängslet är av den här timmen.', tone: 'good' });
+  else if (!touch.length) out.push({ text: 'Strömmen i stängslet är på – ingen av oss rör vid det.', tone: 'good' });
+  if (dies.length) out.push({ text: `Strömmen i stängslet tar ${kills(dies)}${lethal(dies) ? ': dödar!' : '.'}`, tone: 'bad' });
+  if (shocked.length) out.push({ text: `Strömmen i stängslet slår ${names(shocked)}: chock.`, tone: 'warn' });
+  if (s.turn < s.maxTurn && (s.time === 'day' || s.peekNext)) out.push({ text: `Nästa timme är strömmen ${s.fence.pulsePlan[s.turn] ? 'på' : 'av'}.`, tone: 'info' });
+  if (!s.fence.gateOpen) out.push({ text: `Grinden är stängd. Ett stort djur kan trycka upp den, eller två av oss tillsammans (◆${GATE_PUSH} extra).`, tone: 'info' });
+  if (s.time === 'night') {
+    const cold = s.animals.filter((a) => isActive(a) && !a.flying && zoneDef(s, where(a)).water && !swept.includes(a));
+    if (cold.length) out.push({ text: `Vattnet är iskallt: ${names(cold)} tappar 1 tro.`, tone: 'warn' });
   }
   return out;
 }
