@@ -39,9 +39,13 @@ export function named(s: GameState): GameState {
   return s;
 }
 
-/** A new game on the fixed little map, with Kvarn remembering every place right. */
+/**
+ * A new game on the fixed little map, with Kvarn remembering every place right.
+ * No one has any traits: the tests about traits give them where they matter.
+ */
 export function classicGame(seed: number): GameState {
   const s = named(createGame(seed));
+  for (const a of s.animals) a.traits = [];
   s.journey = { ...s.journey, nodes: structuredClone(CLASSIC), truth: { garden: 'normal', an: 'normal' }, guess: { garden: 'normal', an: 'normal' } };
   return s;
 }

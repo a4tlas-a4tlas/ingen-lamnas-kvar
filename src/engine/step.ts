@@ -1,6 +1,6 @@
 import { DEATH_CAUSE, INJURY_LINES, LEAVE_CAUSE, intentLine } from '../data/text.sv';
 import { place, pathsFrom } from '../data/journey';
-import { TRAITS } from '../data/traits';
+import { TRAITS, heldOffBy } from '../data/traits';
 import { VERSES } from '../data/verses';
 import { closestTo, crowCards, crowOffers, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone, unseenAhead } from './campfire';
 import { trickChance } from '../data/meetings/crow.sv';
@@ -37,6 +37,7 @@ import {
   cardZones,
   handSize,
   hasInjury,
+  hasTrait,
   huntsAt,
   canPrey,
   isActive,
@@ -75,6 +76,7 @@ import type {
   Meeting,
   Proposal,
   RegionId,
+  TraitId,
 } from './types';
 
 interface Ctx {
@@ -151,6 +153,31 @@ function addBond(c: Ctx, a: Animal, b: Animal, d: number) {
   c.s.bonds[k] = Math.max(-3, Math.min(3, (c.s.bonds[k] ?? 0) + d));
 }
 
+/**
+ * A trait comes from what we live through. A light one drives out the dark one opposite it,
+ * and that dark one never comes while the light one is there. Says so, unless `quiet`.
+ */
+function gainTrait(c: Ctx, a: Animal, t: TraitId, quiet = false): boolean {
+  const def = TRAITS[t];
+  if (!isPresent(a) || hasTrait(a, t) || (def.predatorOnly && !a.predator) || (t === 'vattenradd' && a.swimmer)) return false;
+  const guard = heldOffBy(t);
+  if (guard && hasTrait(a, guard)) return false;
+  a.traits.push(t);
+  const out = def.drivesOut && hasTrait(a, def.drivesOut) ? def.drivesOut : undefined;
+  if (out) a.traits = a.traits.filter((x) => x !== out);
+  const many = a.count !== undefined;
+  const said = quiet ? '' : `${a.name} är ${many ? def.plural : def.adj} nu.`;
+  const gone = out ? `Det ${TRAITS[out].plural} i ${a.name} släpper.` : '';
+  if (said || gone) line(c, a.id, [said, gone].filter(Boolean).join(' '));
+  return true;
+}
+
+function loseTrait(c: Ctx, a: Animal, t: TraitId, text: string) {
+  if (!hasTrait(a, t)) return;
+  a.traits = a.traits.filter((x) => x !== t);
+  line(c, a.id, text);
+}
+
 // ---------------------------------------------------------------- oath
 
 function swear(c: Ctx, verses: VerseId[]) {
@@ -198,6 +225,12 @@ function travel(c: Ctx, to: string, wait = false) {
     if (wait) {
       narrate(c, s.time === 'night' ? 'Vi gömde oss och väntade tills mörkret kom.' : 'Vi gömde oss och väntade på ljuset.');
       changeHope(c, -1, 'wait');
+      // The one who already doubts the most can't bear the waiting.
+      const restless = s.animals.filter((a) => isPresent(a) && a.belief <= 4).sort((a, b) => a.belief - b.belief)[0];
+      if (restless && !hasTrait(restless, 'otalig')) {
+        line(c, restless.id, `${restless.name} trampade och trampade medan vi väntade.`);
+        gainTrait(c, restless, 'otalig');
+      }
     }
   }
   narrate(c, (s.time === 'night' ? p.arriveNight : p.arriveDay) ?? p.arrive);
@@ -358,8 +391,8 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
     if (teller) {
       const t = inheritedTrait(s, deadId, teller);
       if (t) {
-        teller.traits.push(t);
         line(c, teller.id, `${teller.name} berättade om ${dead.name} länge. Sedan dess bär ${teller.name} ${dead.name}s ${TRAITS[t].noun}.`);
+        gainTrait(c, teller, t, true);
       } else line(c, teller.id, `${teller.name} berättade om ${dead.name} länge.`);
     }
     if (plan.mourning[deadId] === 'bury') {
@@ -383,6 +416,7 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
         changeBelief(c, w, 2);
         living(s).filter((p) => canPrey(w, p)).forEach((p) => addBond(c, w, p, 1));
         narrate(c, `${w.name} vakade över oss hela natten. Ingen rörde de små.`);
+        loseTrait(c, w, 'glupsk', `Blodsmaken i ${w.name} har bleknat.`);
       }
     } else narrate(c, `${w.name} vakade medan vi sov. Natten var lång, men ingen kom.`);
   }
@@ -401,6 +435,8 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
     const l = animal(s, teaching.learner);
     addSkill(s, l, teaching.skill);
     line(c, t.id, `${t.name} visade ${l.name} hur man ${CARDS[teaching.skill].name.toLowerCase()} – hela natten, tills det satt.`);
+    gainTrait(c, t, 'omtanksam');
+    gainTrait(c, l, 'klok');
   }
   const teachers = teaching ? [teaching.teacher, teaching.learner] : [];
   for (const [ai, bi] of plan.pairs) {
@@ -408,15 +444,23 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
     const b = animal(s, bi);
     if (!isPresent(a) || !isPresent(b)) continue;
     const kind = a.predator !== b.predator ? 'wary' : bond(s, a.id, b.id) >= 2 ? 'close' : 'other';
-    addBond(c, a, b, 1);
+    const shut = [a, b].find((x) => hasTrait(x, 'sluten'));
+    if (!shut) addBond(c, a, b, 1);
     changeBelief(c, a, 1);
     changeBelief(c, b, 1);
     line(c, a.id, talk(FIRE_TALK[kind], a, b));
+    if (shut) line(c, shut.id, `Men ${shut.name} höll något för sig själv.`);
+  }
+  const playful = plan.pairs.flat().map((id) => animal(s, id)).find((x) => isPresent(x) && hasTrait(x, 'lekfull'));
+  if (playful) {
+    changeHope(c, 1, 'laugh', playful.id);
+    line(c, playful.id, `${playful.name} fick oss att skratta vid glöden. Natten blev ljusare.`);
   }
   const alone = sitsAlone(s, plan);
   for (const a of alone) {
     changeBelief(c, a, -1);
     line(c, a.id, `${a.name} satt ensam i mörkret, utanför glöden.`);
+    if (a.belief <= 4) gainTrait(c, a, 'sluten');
   }
   if (alone.length) breakPromises(c, 'noneAlone');
 
@@ -424,10 +468,13 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
   for (const a of living(s)) {
     const heal: InjuryKind[] = a.injuries.filter((k) => k === 'bleeding' || k === 'shock');
     if (!heal.length) continue;
-    if (a === w || a === scout || s.fireDebt.apart.includes(a.id) || teachers.includes(a.id)) {
+    const watchful = a === w && hasTrait(a, 'vaksam');
+    if ((a === w && !watchful) || a === scout || s.fireDebt.apart.includes(a.id) || teachers.includes(a.id)) {
       line(c, a.id, `${a.name} ${a === w ? 'vakade' : a === scout ? 'flög före' : teachers.includes(a.id) ? 'lärde och lärde ut' : 'berättade hela natten'} och fick ingen vila. Såren får vänta.`);
+      if (a === w) gainTrait(c, a, 'vaksam');
       continue;
     }
+    if (watchful) line(c, a.id, `${a.name} vakade med ett öga och vilade med det andra.`);
     a.injuries = a.injuries.filter((k) => !heal.includes(k));
     if (heal.includes('bleeding')) line(c, a.id, `${a.name}s sår slutade blöda.`);
     if (heal.includes('shock')) line(c, a.id, `Darrningen i ${a.name} släppte till slut.`);
@@ -695,7 +742,10 @@ function breakPromise(c: Ctx, v: ReturnType<typeof keptPromises>[number]) {
   narrate(c, `Vi lovade: ”${v.text}” Nu är det sant: ”${v.flippedText}”`);
   changeHope(c, -1, 'flip');
   const by = s.animals.find((a) => a.id === v.promise.by);
-  if (by && isPresent(by)) changeBelief(c, by, -2);
+  if (by && isPresent(by)) {
+    changeBelief(c, by, -2);
+    gainTrait(c, by, 'bitter');
+  }
 }
 
 function breakPromises(c: Ctx, rule: string, test: (p: { by: string; with?: string }) => boolean = () => true) {
@@ -731,8 +781,9 @@ function forgetCard(s: GameState, uid: number) {
   o.loadout = o.loadout.filter((k) => k !== card!.kind);
 }
 
-/** Dangers lived through before one of us may learn something new. */
+/** Dangers lived through before one of us may learn something new. The wise learn faster. */
 export const XP_TO_LEARN = 3;
+export const xpToLearn = (a: Animal) => (hasTrait(a, 'klok') ? XP_TO_LEARN - 1 : XP_TO_LEARN);
 
 /** One more danger lived through. At three, two skills of its kind it doesn't know are offered. */
 function gainXp(c: Ctx, a: Animal) {
@@ -740,7 +791,7 @@ function gainXp(c: Ctx, a: Animal) {
   const left = allSkills(a.species).filter((k) => !a.skills.includes(k));
   if (!left.length || a.offer) return;
   a.xp++;
-  if (a.xp < XP_TO_LEARN) return;
+  if (a.xp < xpToLearn(a)) return;
   a.xp = 0;
   a.offer = shuffle(s, left).slice(0, 2);
   line(c, a.id, `${a.name} har lärt sig något av det vi gått igenom. Välj vad, under Förmågor.`);
@@ -867,7 +918,7 @@ function startTurn(c: Ctx) {
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
-    for (const a of s.animals.filter((x) => isActive(x) && hasInjury(x, 'bleeding'))) {
+    for (const a of s.animals.filter((x) => isActive(x) && hasInjury(x, 'bleeding') && !hasTrait(x, 'envis'))) {
       changeBelief(c, a, -1);
       line(c, a.id, `${a.name} blöder fortfarande. Det gör ont att tro.`);
     }
@@ -915,9 +966,9 @@ function chooseIntent(c: Ctx, a: Animal): Intent {
 
   const elderNear = elderVerse && s.animals.some((e) => e.elder && isActive(e) && e.zone === a.zone);
   const weights: [Intent, number][] = [
-    [{ kind: 'freeze' }, elderNear ? 0 : (dark ? 1 : 3) + (a.traits.includes('skygg') ? 2 : 0) + (hasInjury(a, 'shock') ? 2 : 0)],
+    [{ kind: 'freeze' }, elderNear ? 0 : (dark ? 1 : 3) + (hasTrait(a, 'skygg') ? 2 : 0) + (hasInjury(a, 'shock') ? 2 : 0)],
     [{ kind: 'flee' }, backZone(s, a) ? (dark ? 2 : 1) : 0],
-    [{ kind: 'bolt' }, (dark ? 2 : 0) + (a.traits.includes('otalig') ? 2 : 0) + (isFast(a) ? 2 : 0)],
+    [{ kind: 'bolt' }, (dark ? 2 : 0) + (hasTrait(a, 'otalig') ? 2 : 0) + (isFast(a) ? 2 : 0)],
   ];
   const total = weights.reduce((t, [, w]) => t + w, 0);
   let r = random(s) * total;
@@ -970,6 +1021,7 @@ function moveAnimal(c: Ctx, a: Animal, to: ZoneId, byPlayer: boolean) {
     changeBelief(c, a, 1);
     line(c, a.id, `${a.name} når ${zone.name}. Gräset luktar annorlunda här.`);
     c.ev.push({ kind: 'safe', who: a.id });
+    if (hasInjury(a, 'bleeding')) gainTrait(c, a, 'envis');
   }
 }
 
@@ -1127,6 +1179,7 @@ function creakDam(c: Ctx, a: Animal) {
   for (const o of s.animals.filter((x) => isActive(x) && x.zone === DAM)) {
     o.zone = CURRENT;
     line(c, o.id, `${o.name} faller ner i strömmen.`);
+    gainTrait(c, o, 'vattenradd');
   }
   // The flood wave: the current is strong now and for the next hour.
   for (let t = s.turn - 1; t < Math.min(s.turn - 1 + FLOOD_HOURS, s.currentPlan.length); t++) s.currentPlan[t] = 'strid';
@@ -1327,6 +1380,9 @@ function playCard(c: Ctx, uid: number, target?: string, zone?: ZoneId) {
   applyCard(c, card, animal(s, card.owner), tgt, zone);
 }
 
+/** Comfort from one to another: more from the caring, less to the bitter. */
+const comfortFrom = (o: Animal, tgt: Animal) => 2 + (hasTrait(o, 'omtanksam') ? 1 : 0) - (hasTrait(tgt, 'bitter') ? 1 : 0);
+
 function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone: ZoneId | undefined) {
   const s = c.s;
   switch (card.kind) {
@@ -1381,7 +1437,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       line(c, o.id, `${o.name} håller sig nära ${tgt!.name}.`);
       break;
     case 'trosta':
-      changeBelief(c, tgt!, 2);
+      changeBelief(c, tgt!, comfortFrom(o, tgt!));
       tgt!.intent = { kind: 'follow' };
       line(c, o.id, `${o.name} tröstar ${tgt!.name}.`);
       break;
@@ -1433,7 +1489,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       addBond(c, o, tgt!, 1);
       break;
     case 'talamod':
-      changeBelief(c, tgt!, 2);
+      changeBelief(c, tgt!, comfortFrom(o, tgt!));
       tgt!.intent = { kind: 'follow' };
       line(c, o.id, `${o.name} sitter stilla hos ${tgt!.name} tills rädslan går över.`);
       break;
@@ -1723,6 +1779,7 @@ function applyHit(c: Ctx, v: Animal, h: Hit) {
     else line(c, v.id, `${v.name} träffas igen och släpar sig vidare.`);
   }
   changeBelief(c, v, -1);
+  if (h.source === 'berguv') gainTrait(c, v, 'morkradd');
 }
 
 function resolveLastMoment(c: Ctx, action: Extract<Action, { type: 'lastMoment' }>) {
@@ -1745,6 +1802,11 @@ function resolveLastMoment(c: Ctx, action: Extract<Action, { type: 'lastMoment' 
     const pushed: Hit = { ...h, victim: by.id, severity: 'injure' };
     if (isLethal(by, pushed)) die(c, by, 'sacrifice', h.source);
     else applyHit(c, by, pushed);
+    // What it was like stays with both: the courage, the being saved – and what it was saved from.
+    gainTrait(c, by, 'modig');
+    gainTrait(c, v, 'trogen');
+    if (h.source === 'forsen') gainTrait(c, v, 'vattenradd');
+    else if (s.time === 'night') gainTrait(c, v, 'morkradd');
     // Sometimes the one who was saved asks a promise of us, there and then.
     const both = isPresent(v) && isPresent(by) && !promises(s).some((x) => x.promise.rule === 'stay' && x.promise.by === v.id && x.promise.with === by.id);
     if (both && !s.meeting && random(s) < 0.5) {
@@ -1757,6 +1819,8 @@ function resolveLastMoment(c: Ctx, action: Extract<Action, { type: 'lastMoment' 
     narrate(c, `Vi lät ${v.name} gå.`);
     die(c, v, 'letGo', h.source);
     if (verseStatus(s, 'ingenLamnas') === 'intact') flipVerse(c, 'ingenLamnas');
+    // Those who were close to the one we let go don't forgive us.
+    for (const o of s.animals.filter((x) => isPresent(x) && bond(s, x.id, v.id) >= 2)) gainTrait(c, o, 'bitter');
   } else {
     // Verses are lasting modifiers and story, never a price to pay for a life.
     fail('Det valet finns inte.');
@@ -1782,6 +1846,8 @@ function hunt(c: Ctx, pred: Animal, prey: Animal) {
   s.animals.filter((x) => isPresent(x) && x !== pred && x !== prey).forEach((x) => changeBelief(c, x, -1));
   changeBelief(c, pred, 1);
   changeHope(c, -1, 'hunt', pred.id);
+  if (!hasTrait(pred, 'glupsk')) line(c, pred.id, `${pred.name} har känt smaken av blod, och glömmer den inte.`);
+  gainTrait(c, pred, 'glupsk');
   if (verseStatus(s, 'viJagarInte') === 'intact') flipVerse(c, 'viJagarInte');
   if ((prey.count !== undefined && prey.count <= 0) || kills) die(c, prey, 'hunt');
 }
@@ -1797,7 +1863,7 @@ function removeCards(s: GameState, owner: string) {
 
 function grieve(c: Ctx, lost: Animal) {
   for (const o of c.s.animals.filter(isPresent)) {
-    if (o.traits.includes('envis') || o.traits.includes('modig')) {
+    if (hasTrait(o, 'envis') || hasTrait(o, 'modig')) {
       changeBelief(c, o, 1);
       log(c, { kind: 'grief', who: o.id, text: `${o.name} hårdnar. Något i blicken blir till sten.` });
       continue;
@@ -1822,7 +1888,11 @@ function die(c: Ctx, a: Animal, cause: keyof typeof DEATH_CAUSE, source?: string
   changeHope(c, -1, 'death', a.id);
   grieve(c, a);
   // Those who saw it happen up close carry it in the body.
-  for (const w of s.animals.filter((x) => isActive(x) && x.zone === a.zone && !hasInjury(x, 'shock'))) injure(c, w, 'shock');
+  for (const w of s.animals.filter((x) => isActive(x) && x.zone === a.zone)) {
+    // One who already shakes, and sees it again, shies from everything after.
+    if (hasInjury(w, 'shock')) gainTrait(c, w, 'skygg');
+    else injure(c, w, 'shock');
+  }
   if (a.elder && verseStatus(s, 'denAldste') === 'intact') flipVerse(c, 'denAldste');
   if (a.count !== undefined && cause !== 'hunt' && verseStatus(s, 'denStarke') === 'intact') flipVerse(c, 'denStarke');
 }

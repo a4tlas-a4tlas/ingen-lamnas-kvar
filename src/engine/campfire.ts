@@ -39,10 +39,10 @@ export function closestTo(s: GameState, deadId: string): Animal | undefined {
   return [...living(s)].sort((a, b) => bond(s, b.id, deadId) - bond(s, a.id, deadId) || b.belief - a.belief)[0];
 }
 
-/** The trait the teller takes over from the dead: the first one the teller doesn't already have. */
+/** The trait the teller takes over from the dead: the first light one the teller doesn't already have. */
 export function inheritedTrait(s: GameState, deadId: string, teller: Animal): TraitId | undefined {
   const dead = s.animals.find((a) => a.id === deadId);
-  return dead?.traits.find((t) => !teller.traits.includes(t));
+  return dead?.traits.find((t) => TRAITS[t].light && !teller.traits.includes(t));
 }
 
 export function inheritanceLine(s: GameState, deadId: string): string | null {

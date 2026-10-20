@@ -141,11 +141,13 @@ describe('the campfire', () => {
     // Kvarn has died on the road; Gamla Ljung was closest.
     const k = get(s, 'toad');
     k.status = 'dead';
+    k.traits = ['skygg', 'klok', 'lekfull'];
+    get(s, 'badger').traits = ['klok', 'otalig'];
     s.unmourned = ['toad'];
     s.discard.push({ uid: 999, kind: 'minne', owner: 'toad', memoryOf: 'toad' });
-    const trait = k.traits.find((t) => !get(s, 'badger').traits.includes(t))!;
     s = run(s, { type: 'restAtFire', watch: 'mice', pairs: [], mourning: { toad: 'bury' } });
-    expect(get(s, 'badger').traits).toContain(trait);
+    // Only a light trait is carried on: the first one Gamla Ljung doesn't already have.
+    expect(get(s, 'badger').traits).toEqual(['klok', 'otalig', 'lekfull']);
     expect(s.discard.find((c) => c.uid === 999)?.buried).toBe(true);
     expect(get(s, 'badger').grief).toEqual([]);
   });

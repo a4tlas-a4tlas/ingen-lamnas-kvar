@@ -34,7 +34,7 @@ import {
   verseStatus,
 } from '../engine/rules';
 import { OATH_VERSES, createGame } from '../engine/setup';
-import { XP_TO_LEARN, step } from '../engine/step';
+import { XP_TO_LEARN, step, xpToLearn } from '../engine/step';
 import type { Action, Animal, Card, CardKind, GameEvent, Teaching, GameState, LogEntry, VerseId, ZoneId } from '../engine/types';
 import { sceneSvg, slotIn } from './scene';
 import { fireSceneSvg, firePanelHtml, guideHtml, mapSvg, meetingHtml, memoryLine, memorialHtml, moveToSeat, occupants, planFromSeats, rosterHtml, seatsFromPlan, type Seat, type Seats } from './screens';
@@ -103,6 +103,16 @@ function chipHtml(st: Status, withLabel: boolean): string {
 }
 
 const kindName = (s: GameState, id: string) => SPECIES[animal(s, id).species].kindName;
+
+/** An animal's traits, light and dark; hovering one tells what it does and how it comes. */
+function traitsHtml(a: Animal, withNotes = false): string {
+  return a.traits.map((t) => {
+    const d = TRAITS[t];
+    const icon = d.light ? '✦' : '☾';
+    const tag = `<span class="trait ${d.light ? 'is-light' : 'is-dark'}" data-tip-icon="${icon}" data-tip-title="${esc(d.name)}" data-tip="${esc(`${d.note} ${d.comes}`)}">${icon} ${esc(d.name)}</span>`;
+    return withNotes ? `<li>${tag}<span>${esc(d.note)}</span></li>` : tag;
+  }).join(withNotes ? '' : ' ');
+}
 
 function loadSave(): GameState | null {
   try {
@@ -638,7 +648,8 @@ export class App {
             <div class="cast-card">
               ${silhouette(a.species)}
               <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(s, a.id)}${a.predator ? ' · rovdjur' : ''}${a.count ? ` · ${a.count} st` : ''}</span></div>
-              <div class="muted">${a.traits.map((t) => TRAITS[t].name).join(', ')} · tro ${a.belief}</div>
+              <div class="traits">${traitsHtml(a)}</div>
+              <div class="muted">tro ${a.belief}</div>
             </div>`).join('')}
         </div>
         <button class="btn primary swear" data-act="swear" ${n === OATH_VERSES ? '' : 'disabled'}>${n ? `Svär eden: ”${esc(VERSES[this.oathPick[0]].text)}”` : 'Välj ett löfte'}</button>
@@ -1004,7 +1015,7 @@ export class App {
     return `
       <div class="inspect">
         <div><b>${esc(a.name)}</b> <span class="muted">· ${kindName(s, a.id)}${a.predator ? ' · rovdjur' : ''}${a.elder ? ' · den äldste' : ''}</span></div>
-        <div class="muted">${a.traits.map((t) => `${TRAITS[t].name} – ${TRAITS[t].note}`).join(' · ')}</div>
+        <ul class="trait-list">${traitsHtml(a, true)}</ul>
         <div>Tro ${a.belief}${a.count !== undefined ? ` · ${a.count} kvar` : ''}${a.injuries.length ? '' : ' · oskadd'}</div>
         <ul class="status-list">${animalStatuses(s, a).map((st) => `<li>${chipHtml(st, true)}<span>${esc(st.explain)}</span></li>`).join('') || `<li class="muted">${a.status === 'active' ? `${esc(a.name)} följer oss. Inga särskilda tillstånd.` : ''}</li>`}</ul>
         ${a.status === 'active' ? `<div class="reason">${esc(leadBlockReason(s, a) ?? (a.flier ? `${a.name} kan ledas – flyger upp till 2 steg och kan inte träffas i luften.` : `${a.name} kan ledas ett steg.`))}</div>` : ''}
@@ -1261,9 +1272,11 @@ export class App {
         <div class="deck-grid skill-grid">${a.offer.map((kind) => cardFaceHtml(s, { uid: -1, kind, owner: a.id }, {
           tag: 'button', attrs: `data-act="learn" data-animal="${a.id}" data-kind="${kind}"`, classes: ['mini', 'offered'], footer: '<span class="cwhere">lär dig</span>',
         })).join('')}</div></div>` : '';
-      const toNext = allSkills(a.species).some((k) => !a.skills.includes(k)) && !a.offer ? ` · ${XP_TO_LEARN - a.xp} faror till nästa` : '';
+      const left = xpToLearn(a) - a.xp;
+      const toNext = allSkills(a.species).some((k) => !a.skills.includes(k)) && !a.offer ? ` · ${left} ${left === 1 ? 'fara' : 'faror'} till nästa` : '';
       return `<section class="deck-animal" style="--owner:${speciesColor(a.species)}">
         <h4>${silhouette(a.species)} ${esc(a.name)} <span class="muted">· ${esc(SPECIES[a.species].kindName)} · bär ${a.loadout.length} av ${LOADOUT}${toNext}</span></h4>
+        <div class="traits">${traitsHtml(a)}</div>
         ${offer}
         <div class="deck-grid skill-grid">${cards}${foreign}</div>
       </section>`;
@@ -1272,7 +1285,7 @@ export class App {
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="skills-title">
         <div class="modal-card deck skills-modal">
           <div class="deck-head"><h2 id="skills-title">Förmågor</h2><button class="btn small" data-act="skills-close">Stäng</button></div>
-          <p class="muted small">Varje art kan sex saker. Var och en av oss bär ${LOADOUT} av dem – det är dess kort i leken. Tryck för att bära eller lägga undan. Det går bara här, inte mitt i en fara. Den som tagit sig igenom ${XP_TO_LEARN} faror lär sig något nytt, och vid elden kan två som står varandra nära lära varandra.</p>
+          <p class="muted small">Varje art kan sex saker. Var och en av oss bär ${LOADOUT} av dem – det är dess kort i leken. Tryck för att bära eller lägga undan. Det går bara här, inte mitt i en fara. Den som tagit sig igenom ${XP_TO_LEARN} faror lär sig något nytt, och vid elden kan två som står varandra nära lära varandra. Under namnet står vad var och en är: ljusa drag ✦ och mörka ☾. De kommer av det vi går igenom, och ett ljust drag driver ut det mörka som står emot det.</p>
           ${this.skillsHint ? `<p class="hint">${esc(this.skillsHint)}</p>` : ''}
           ${sections}
         </div>

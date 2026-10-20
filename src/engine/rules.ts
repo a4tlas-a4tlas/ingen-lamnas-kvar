@@ -1,7 +1,7 @@
 // Read-only rule helpers shared by the engine (validation) and the UI (targeting).
 import { CARDS, type TargetSpec } from '../data/cards';
 import { encounterOf, zoneDef } from './encounters';
-import type { Animal, Card, GameState, Hit, InjuryKind, VerseId, ZoneId } from './types';
+import type { Animal, Card, GameState, Hit, InjuryKind, TraitId, VerseId, ZoneId } from './types';
 
 export function animal(s: GameState, id: string): Animal {
   const a = s.animals.find((x) => x.id === id);
@@ -38,9 +38,9 @@ export function huntThreshold(s: GameState): number {
   return v === 'intact' ? 1 : v === 'flipped' ? 5 : 3;
 }
 
-/** The belief at or below which this predator forgets the oath and hunts. */
+/** The belief at or below which this predator forgets the oath and hunts. One who has tasted blood, earlier. */
 export function huntsAt(s: GameState, a: Animal): number {
-  return huntThreshold(s) + a.hunger;
+  return huntThreshold(s) + a.hunger + (hasTrait(a, 'glupsk') ? 1 : 0);
 }
 
 const SIZE_RANK: Record<Animal['size'], number> = { small: 0, medium: 1, large: 2 };
@@ -68,6 +68,7 @@ export function moonVisible(s: GameState): boolean {
 }
 
 export const hasInjury = (a: Animal, k: InjuryKind) => a.injuries.includes(k);
+export const hasTrait = (a: Animal, t: TraitId) => a.traits.includes(t);
 
 /** Fliers fly unless a wing is broken. */
 export const canFly = (a: Animal) => a.flier && !hasInjury(a, 'broken');
@@ -321,12 +322,13 @@ export function rescueBlockReason(s: GameState, a: Animal): string | null {
   return zoneDistance(s, a.zone, r.zone) <= 1 ? null : `${a.name} är för långt borta för att nå fram.`;
 }
 
-/** Who can throw themselves in the way during the last moment. */
+/** Who can throw themselves in the way during the last moment. The loyal reach further, frozen or not. */
 export function lastMomentShields(s: GameState): string[] {
   if (!s.pending) return [];
   const v = animal(s, s.pending.victim);
   return s.animals
-    .filter((x) => x.id !== v.id && isActive(x) && !isFrozen(x) && zoneDistance(s, x.zone, v.zone) <= 1)
+    .filter((x) => x.id !== v.id && isActive(x))
+    .filter((x) => (hasTrait(x, 'trogen') ? zoneDistance(s, x.zone, v.zone) <= 2 : !isFrozen(x) && zoneDistance(s, x.zone, v.zone) <= 1))
     .map((x) => x.id);
 }
 

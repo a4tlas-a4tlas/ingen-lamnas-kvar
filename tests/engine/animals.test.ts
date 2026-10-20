@@ -74,7 +74,8 @@ describe('our own will', () => {
   it('those who follow never show a will of their own', () => {
     let s = run(createGame(4), { type: 'swear', verses: ['manen'] }, { type: 'travel', to: 'vagen' });
     for (let h = 0; h < 6 && s.phase === 'play'; h++) {
-      for (const a of s.animals) if (a.status === 'active') a.belief = 6;
+      // Not afraid of the dark, nor shy: 6 is enough for anyone else.
+      for (const a of s.animals) if (a.status === 'active') { a.belief = 6; a.traits = []; }
       s = run(s, { type: 'endTurn' });
       if (s.phase !== 'play') break;
       expect(s.animals.filter((a) => a.status === 'active').every((a) => a.intent.kind === 'follow' || a.belief < 5)).toBe(true);

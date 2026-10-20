@@ -323,6 +323,22 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .chip.tone-good { background: var(--moss); color: var(--ink); }
 .chip.tone-info { background: #c9d4e6; color: var(--ink); }
 
+/* Traits: light and dark, a word each; hovering one explains it. */
+.traits { display: flex; flex-wrap: wrap; gap: 4px; justify-content: inherit; }
+.cast-card .traits { justify-content: center; margin: 2px 0; }
+.trait {
+  display: inline-block; white-space: nowrap; font-size: 0.78em; line-height: 1.35; padding: 0 6px; border-radius: 8px;
+  font-family: var(--serif); font-style: normal; cursor: help;
+}
+.trait.is-light { background: rgba(228,192,112,0.22); color: var(--gold); border: 1px solid rgba(228,192,112,0.5); }
+.trait.is-dark { background: rgba(20,16,26,0.45); color: #c9bfd8; border: 1px solid rgba(201,191,216,0.35); }
+.deck-animal .trait.is-light { background: rgba(160,120,40,0.15); color: #7a5a14; border-color: rgba(122,90,20,0.45); }
+.deck-animal .trait.is-dark { background: rgba(40,30,60,0.1); color: #4b3f63; border-color: rgba(75,63,99,0.4); }
+.deck-animal .traits { margin: -2px 0 6px; }
+.trait-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.trait-list li { display: flex; gap: 6px; align-items: baseline; }
+.trait-list li > span:last-child { color: var(--muted); }
+
 /* On the board chips are symbols only; hovering one explains it. */
 .token .chip {
   pointer-events: auto; cursor: help; justify-content: center; padding: 0; border-radius: 50%;

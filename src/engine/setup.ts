@@ -1,13 +1,13 @@
 import { SPECIES, START_BONDS, START_GROUP, nameFor, type Member } from '../data/animals';
 import { LOADOUT, SKILLS } from '../data/skills';
-import { TRAIT_IDS } from '../data/traits';
+import { DARK_TRAITS, LIGHT_TRAITS, TRAITS } from '../data/traits';
 import { shuffle, type RngHolder } from './rng';
 import { DALEN, type RegionDef } from '../data/regions/dalen';
 import { generateRegion } from './regions';
 import { ROAD } from './encounters/road';
 import { bondKey } from './rules';
 import { VERSES } from '../data/verses';
-import type { Animal, Card, GameState, Journey, Verse, VerseId, ZoneId } from './types';
+import type { Animal, Card, GameState, Journey, TraitId, Verse, VerseId, ZoneId } from './types';
 
 /** We swear a single verse in the glen; later verses come from the journey. */
 export const OATH_VERSES = 1;
@@ -28,11 +28,15 @@ export function regionJourney(def: RegionDef, seed: number): Journey {
 
 export const firstRegion = (seed: number) => regionJourney(DALEN, seed);
 
-/** Someone of a kind: species card plus two traits (fixed ones first, the rest rolled), and their cards. */
+/** Someone of a kind: one light trait and one dark (fixed ones count, the rest rolled), and their cards. */
 export function makeAnimal(member: Member, id: string, name: string, h: RngHolder, nextUid: () => number, zone: ZoneId): { animal: Animal; cards: Card[] } {
   const def = SPECIES[member.species];
   const fixed = member.traits ?? [];
-  const traits = [...fixed, ...shuffle(h, TRAIT_IDS.filter((t) => !fixed.includes(t)))].slice(0, 2);
+  const fits = (t: TraitId) => !fixed.includes(t) && !TRAITS[t].earned && !(def.swimmer && t === 'vattenradd');
+  const traits = [...fixed];
+  for (const pool of [LIGHT_TRAITS, DARK_TRAITS]) {
+    if (!fixed.some((t) => pool.includes(t))) traits.push(shuffle(h, pool.filter(fits))[0]);
+  }
   const animal: Animal = {
     id,
     name,

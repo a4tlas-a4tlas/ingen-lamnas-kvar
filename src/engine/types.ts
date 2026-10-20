@@ -17,15 +17,22 @@ export type Severity = 'injure' | 'kill';
 export type Species = 'fox' | 'badger' | 'toad' | 'owl' | 'mice' | 'adder' | 'hare';
 /** Only small animals fit through the culvert. */
 export type Size = 'small' | 'medium' | 'large';
+/** Light traits first, then the dark ones. */
 export type TraitId =
   | 'modig'
-  | 'skygg'
-  | 'omtanksam'
-  | 'otalig'
-  | 'klok'
   | 'envis'
+  | 'omtanksam'
+  | 'klok'
+  | 'trogen'
+  | 'vaksam'
   | 'lekfull'
-  | 'trogen';
+  | 'skygg'
+  | 'otalig'
+  | 'morkradd'
+  | 'vattenradd'
+  | 'bitter'
+  | 'sluten'
+  | 'glupsk';
 export type VerseId =
   | 'ingenLamnas'
   | 'viJagarInte'

@@ -682,3 +682,32 @@ Your direction:
   - **within a kind:** any skill
   - **across kinds:** only comfort and insight (Trösta, Läsa natten, Gamla vägar …)
   - **the cost:** neither of them rests, so the wounds wait. A skill from another kind shows up under *Förmågor* as "lärd av en annan".
+
+### Step 4: traits, light and dark (done)
+- **Traits are what we are like, not what we can do** (`src/data/traits.ts`). They're modifiers, light ✦ and dark ☾, and none of them gives a card.
+- **Each of us starts with one of each.** No one is born *Glupsk*, and no toad is afraid of water.
+
+  | Light | What it does | Comes from | Drives out |
+  |---|---|---|---|
+  | **Modig** | follows down to 4 belief; hardens from grief | throwing itself in the way, and living | Skygg |
+  | **Envis** | hardens from grief; bleeding takes no belief | reaching safety while bleeding | Vattenrädd |
+  | **Omtänksam** | its comfort gives +1 belief more | teaching another by the fire | Sluten |
+  | **Klok** | learns after 2 dangers instead of 3 | being taught by the fire | Otålig |
+  | **Trogen** | reaches a last moment from 2 steps away, even frozen | being saved in a last moment | Bitter |
+  | **Vaksam** | rests while it keeps watch: its wounds heal | keeping watch while wounded | Mörkrädd |
+  | **Lekfull** | by the embers: +1 hope | born so, or carried on from the dead | – |
+
+  | Dark | What it does | Comes from |
+  |---|---|---|
+  | **Skygg** | doubts below 6 in daylight; freezes easily | seeing a death up close while already in shock |
+  | **Otålig** | bolts rather than waits | waiting for dark or light, while doubting most (≤ 4) |
+  | **Mörkrädd** | doubts below 6 at night | the eagle owl's strike; being saved from a last moment at night |
+  | **Vattenrädd** | doubts below 6 by the river | falling in when the dam breaks; being saved from the rapids |
+  | **Bitter** | comfort gives it 1 belief less | its promise broken; one it was close to, let go |
+  | **Sluten** | no bond grows by the embers | sitting alone in the dark while doubting (≤ 4) |
+  | **Glupsk** (predators) | hunts one belief earlier | hunting one of us. It fades if it keeps watch over the small and doesn't hunt |
+
+- **Light against dark.** A light trait drives out the dark one opposite it ("Det skygga i Sotfot släpper"), and that dark trait never comes while the light one is there.
+- **Mourning** carries on a *light* trait of the dead, the first one the teller doesn't already have.
+- **Shown** as tags on the oath screen, under each name in *Förmågor*, and with what each one does in the animal's info. Hovering a tag also tells how it comes.
+- **Balance:** a crude bot (lead only, no cards, always lets go) brings 1.66 animals out of Dalen on average, against 1.74 before (2000 seeds). It feels only the dark traits, since most light ones need cards, shielding or the fire.
