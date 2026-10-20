@@ -78,4 +78,33 @@ export const CARDS: Record<CardKind, CardDef> = {
   stampa: { name: 'Stampa varning', cost: 1, target: 'none', tag: 'guard', text: 'Alla i samma zon som {o} biter ihop: nästa sår denna timme uteblir.' },
   lockaBort: { name: 'Locka bort', cost: 1, target: 'zone', tag: 'move', text: '{o} springer upp till 2 steg och visar sig: hundar och rovfåglar vänder sig dit.' },
   vidoga: { name: 'Vidöga', cost: 0, target: 'none', tag: 'insight', text: 'Se nästa timme. Dra 1 kort.' },
+  // The hedgehog.
+  rullaIhop: { name: 'Rulla ihop', cost: 0, target: 'none', tag: 'guard', text: '{o} rullar ihop sig: bett, klor och klor från ovan missar denna timme. Bilar och maskiner gör det inte.' },
+  taggar: { name: 'Taggar', cost: 1, target: 'none', tag: 'guard', text: 'De små i samma zon som {o} kryper intill taggarna: bett och klor missar dem denna timme.' },
+  snoka: { name: 'Snoka', cost: 0, target: 'none', tag: 'insight', text: '{o} nosar upp en dold väg, om det finns någon. Annars: se nästa timme.' },
+  tystGang: { name: 'Tyst gång', cost: 0, target: 'zone', tag: 'move', text: '{o} tassar 1 steg och syns inte denna timme.' },
+  vintersomn: { name: 'Vintersömn', cost: 1, target: 'none', tag: 'comfort', text: '{o} somnar en stund: +3 tro, chocken läker. {o} står kvar denna timme.' },
+  tryggRygg: { name: 'Trygg rygg', cost: 1, target: 'animal', tag: 'guard', text: 'Ett litet djur i samma zon som {o} kryper in under taggarna: bett och klor missar det denna timme.' },
+  // The squirrel.
+  klattra: { name: 'Klättra', cost: 0, target: 'none', tag: 'guard', text: '{o} klättrar upp i ett träd: inget på marken når dit denna timme. Men fåglar gör det – och ett fällt träd.' },
+  hoppa: { name: 'Hoppa', cost: 1, target: 'zone', tag: 'move', text: '{o} hoppar upp till 2 steg, gren till gren.' },
+  gommaForrad: { name: 'Gömma förråd', cost: 0, target: 'none', tag: 'insight', text: 'Dra 1 kort nu – och 1 till nästa timme.' },
+  varna: { name: 'Varna', cost: 1, target: 'none', tag: 'insight', text: 'Se nästa timme. Alla i samma zon som {o} håller i sig: nästa sår denna timme uteblir.' },
+  kastaKottar: { name: 'Kasta kottar', cost: 1, target: 'none', tag: 'guard', text: 'Hundar, fåglar och rovdjur som slår mot {o}s zon denna timme backar för kottarna.' },
+  pigg: { name: 'Pigg', cost: 0, target: 'none', tag: 'comfort', text: '+1 kraft denna timme. {o} får +1 tro.' },
+  // The mole.
+  gravaGang: { name: 'Gräva gång', cost: 1, target: 'zone', tag: 'move', text: '{o} gräver 1 steg under marken, och de små i samma zon följer med. Ingen av dem syns denna timme.' },
+  underJord: { name: 'Under jord', cost: 0, target: 'none', tag: 'guard', text: '{o} kan inte träffas denna timme, men står kvar.' },
+  kannaSkakningar: { name: 'Känna skakningar', cost: 0, target: 'none', tag: 'insight', text: '{o} ser nästan inget, men känner marken: det som kommer i mörkret, och dolda vägar. Dra 1 kort.' },
+  mjukJord: { name: 'Mjuk jord', cost: 1, target: 'animal', tag: 'comfort', text: 'Ett djur inom 1 steg från {o} vilar i den mjuka jorden: +2 tro, och det följer oss igen.' },
+  gamlaGangar: { name: 'Gamla gångar', cost: 1, target: 'none', tag: 'insight', text: '{o} hittar gamla gångar: dolda vägar syns. Dra 1 kort.' },
+  fastMark: { name: 'Fast mark', cost: 1, target: 'none', tag: 'guard', text: 'Marken under {o} håller: alla i samma zon biter ihop, nästa sår denna timme uteblir.' },
+  // The beaver.
+  lagaDammen: { name: 'Laga dammen', cost: 1, target: 'none', tag: 'guard', text: 'Vid ån: dammen knakar 2 mindre. Annars: alla i samma zon som {o} håller i sig, nästa sår uteblir.' },
+  svansslag: { name: 'Svansslag', cost: 0, target: 'none', tag: 'comfort', text: '{o} slår med svansen: de i samma zon som fryser, backar eller rusar följer oss igen.' },
+  fallaTrad: { name: 'Fälla träd', cost: 2, target: 'zone', tag: 'move', text: '{o} fäller ett träd att gå på: {o} och alla i samma zon går 1 steg tillsammans, skyddade denna timme.' },
+  // The fawn.
+  pipa: { name: 'Pipa', cost: 1, target: 'none', tag: 'comfort', text: '{o} piper efter sin mor. Alla inom 1 steg vill skydda det: +1 tro.' },
+  vittring: { name: 'Vittring', cost: 0, target: 'none', tag: 'insight', text: '{o} vädrar: se nästa timme och det som kommer i mörkret. Dra 1 kort.' },
+  ledaFlocken: { name: 'Leda flocken', cost: 1, target: 'zone', tag: 'move', text: '{o} springer upp till 2 steg. De som står kvar får +1 tro och följer oss igen.' },
 };

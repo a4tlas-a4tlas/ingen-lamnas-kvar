@@ -1,4 +1,4 @@
-import type { EncounterId, Size, Species, ZoneId, TimeOfDay } from '../types';
+import type { EncounterId, Size, ZoneId, TimeOfDay } from '../types';
 
 export interface ZoneDef {
   id: ZoneId;
@@ -50,7 +50,11 @@ export interface EncounterDef {
   lastHour: ByTime;
   /** Someone trapped here, the first time we come: where, and the words for it. */
   /** Someone trapped here, the first time we come: what kind, where, and the words for it ({name} is theirs). */
-  rescue?: { species: Species; zone: ZoneId; found: string; trapped: string; freed: string };
+  /**
+   * Someone trapped here, of a kind not yet with us. {en} is "en hare", {Den} "Den", {name} its name.
+   * `not` keeps kinds out that the place makes no sense for: a swimmer on a stone, a flier in the water.
+   */
+  rescue?: { zone: ZoneId; found: string; trapped: string; freed: string; not?: ('swimmer' | 'flier')[] };
   maxTurn: number;
   /** Always at this time of day: there is no waiting for the other. */
   fixedTime?: TimeOfDay;

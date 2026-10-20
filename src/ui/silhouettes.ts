@@ -88,6 +88,67 @@ const shapes: Record<Species, { paper: string; svg: string }> = {
       )
       .join(''),
   },
+  hedgehog: {
+    paper: '#8a6d50',
+    svg: `
+      <path d="M12 38 Q12 20 32 18 Q48 18 52 34 L52 38 Z"/>
+      <path d="M14 30 l-4 -3 M18 24 l-3 -5 M24 20 l-1 -6 M31 18 l1 -6 M38 19 l3 -5 M44 22 l5 -4 M48 27 l5 -2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M50 30 Q58 31 60 35 Q56 38 50 38 Z" fill="#c8a882"/>
+      <circle cx="60" cy="35" r="1.3" fill="${CUT}"/><circle cx="53" cy="33" r="1" fill="${CUT}"/>
+      <path d="M20 26 l3 3 M27 23 l3 3 M34 23 l3 3 M41 25 l3 3 M24 31 l3 3 M31 29 l3 3 M38 30 l3 3" stroke="${CUT}" stroke-width="0.9"/>
+      <rect x="20" y="37" width="3" height="5" rx="1"/><rect x="42" y="37" width="3" height="5" rx="1"/>`,
+  },
+  squirrel: {
+    paper: '#b5643a',
+    svg: `
+      <path d="M22 40 Q4 38 6 20 Q8 6 20 10 Q14 16 16 24 Q18 32 26 34 Z"/>
+      <ellipse cx="34" cy="33" rx="9" ry="8"/>
+      <circle cx="42" cy="22" r="6"/>
+      <path d="M39 17 L40 9 L43 16 Z"/><path d="M44 17 L47 10 L47 18 Z"/>
+      <circle cx="44.5" cy="21" r="1.2" fill="${CUT}"/>
+      <path d="M38 33 Q42 30 44 33" stroke="${CUT}" stroke-width="1" fill="none"/>
+      <path d="M28 40 L26 45 L32 45 L32 40 Z"/><rect x="38" y="38" width="3" height="7" rx="1"/>
+      <path d="M12 16 q3 4 2 9 M16 26 q3 3 6 4" stroke="${CUT}" stroke-width="0.9" fill="none"/>`,
+  },
+  mole: {
+    paper: '#4e4a52',
+    svg: `
+      <path d="M4 44 Q32 34 60 44 Z" fill="#6b4f36"/>
+      <ellipse cx="30" cy="34" rx="17" ry="9"/>
+      <path d="M45 30 Q56 32 60 35 Q55 38 45 38 Z"/>
+      <circle cx="59.5" cy="35" r="1.3" fill="#d8a8a0"/>
+      <path d="M41 39 q4 4 9 3 l-1 -3 l2 -1 l-2 -1 Z" fill="#d8a8a0"/>
+      <path d="M18 39 q-4 4 -9 3 l1 -3 l-2 -1 l2 -1 Z" fill="#d8a8a0"/>
+      <circle cx="47" cy="32" r="0.6" fill="${CUT}"/>
+      <path d="M14 34 q-3 1 -6 -1" stroke="currentColor" stroke-width="1.4" fill="none"/>`,
+  },
+  beaver: {
+    paper: '#7a5236',
+    svg: `
+      <ellipse cx="34" cy="31" rx="17" ry="11"/>
+      <ellipse cx="11" cy="37" rx="9" ry="4" transform="rotate(-12 11 37)" fill="#3e2c22"/>
+      <path d="M5 35 l12 3 M6 38 l11 1" stroke="${CUT}" stroke-width="0.7"/>
+      <circle cx="50" cy="26" r="7.5"/>
+      <circle cx="47" cy="19.5" r="2"/>
+      <circle cx="53" cy="24.5" r="1.2" fill="${CUT}"/>
+      <rect x="55" y="29" width="3.4" height="3.6" rx="0.6" fill="#efe3c8"/>
+      <rect x="24" y="39" width="5" height="5" rx="1.5"/><rect x="40" y="39" width="5" height="5" rx="1.5"/>
+      <path d="M24 26 q5 -3 10 0 q5 -3 10 0" stroke="${CUT}" stroke-width="0.9" fill="none"/>`,
+  },
+  fawn: {
+    paper: '#b58350',
+    svg: `
+      <ellipse cx="30" cy="25" rx="14" ry="7.5"/>
+      <path d="M41 21 Q46 12 46 6 L51 6 Q52 14 47 23 Z"/>
+      <ellipse cx="51" cy="8" rx="6.5" ry="4.2"/>
+      <path d="M46 5 L42 0 L48 3 Z"/><path d="M50 4 L51 -1 L53 4 Z"/>
+      <circle cx="52" cy="7" r="1.1" fill="${CUT}"/><circle cx="57.5" cy="8.8" r="0.9" fill="${CUT}"/>
+      <path d="M17 22 L14 19 L17 25 Z"/>
+      <rect x="19" y="30" width="2.4" height="15" rx="1"/><rect x="24" y="30" width="2.4" height="15" rx="1"/>
+      <rect x="35" y="30" width="2.4" height="15" rx="1"/><rect x="40" y="30" width="2.4" height="15" rx="1"/>
+      <circle cx="24" cy="23" r="1.3" fill="#efe3c8"/><circle cx="30" cy="21" r="1.3" fill="#efe3c8"/><circle cx="36" cy="24" r="1.3" fill="#efe3c8"/>
+      <circle cx="27" cy="26.5" r="1.1" fill="#efe3c8"/><circle cx="33" cy="27" r="1.1" fill="#efe3c8"/>`,
+  },
 };
 
 /** Each animal's paper colour doubles as its identity on cards and name tags. */

@@ -13,6 +13,12 @@ export interface SpeciesDef {
   flier?: boolean;
   /** Toads swim: the current doesn't take them. */
   swimmer?: boolean;
+  /** Hares and fawns: led two steps at once, and quick to bolt. */
+  fast?: boolean;
+  /** Swedish grammar for the lines that speak of one of this kind: "en hare", "den", "haren". */
+  en: 'en' | 'ett';
+  den: 'den' | 'det';
+  definite: string;
   hunger?: number;
   belief: number;
   swarm?: number;
@@ -21,13 +27,18 @@ export interface SpeciesDef {
 }
 
 export const SPECIES: Record<Species, SpeciesDef> = {
-  badger: { species: 'badger', kindName: 'grävling', predator: false, size: 'large', belief: 8, names: ['Ljung', 'Mossa', 'Tuva', 'Gråbo', 'Stubbe', 'Ekro'] },
-  toad: { species: 'toad', kindName: 'padda', predator: false, size: 'small', swimmer: true, belief: 7, names: ['Kvarn', 'Dy', 'Vass', 'Gyttja', 'Knott', 'Lera'] },
-  fox: { species: 'fox', kindName: 'räv', predator: true, size: 'medium', belief: 5, names: ['Sotfot', 'Glöd', 'Rönn', 'Rost', 'Snabbe', 'Brand'] },
-  owl: { species: 'owl', kindName: 'uggla', predator: true, size: 'medium', flier: true, belief: 4, names: ['Skymning', 'Gryning', 'Måne', 'Tyst', 'Vinge', 'Natt'] },
-  adder: { species: 'adder', kindName: 'huggorm', predator: true, size: 'small', hunger: 2, belief: 4, names: ['Sicksack', 'Slinga', 'Fjäll', 'Ringel', 'Ormbunke', 'Sten'] },
-  mice: { species: 'mice', kindName: 'musfamilj', predator: false, size: 'small', belief: 6, swarm: 6, names: ['Fröna', 'Smulorna', 'Kornen', 'Vipporna', 'Tussarna', 'Axen'] },
-  hare: { species: 'hare', kindName: 'hare', predator: false, size: 'small', belief: 4, names: ['Tistel', 'Klöver', 'Ärta', 'Vind', 'Hassel', 'Språng'] },
+  badger: { species: 'badger', kindName: 'grävling', en: 'en', den: 'den', definite: 'grävlingen', predator: false, size: 'large', belief: 8, names: ['Ljung', 'Mossa', 'Tuva', 'Gråbo', 'Stubbe', 'Ekro'] },
+  toad: { species: 'toad', kindName: 'padda', en: 'en', den: 'den', definite: 'paddan', predator: false, size: 'small', swimmer: true, belief: 7, names: ['Kvarn', 'Dy', 'Vass', 'Gyttja', 'Knott', 'Lera'] },
+  fox: { species: 'fox', kindName: 'räv', en: 'en', den: 'den', definite: 'räven', predator: true, size: 'medium', belief: 5, names: ['Sotfot', 'Glöd', 'Rönn', 'Rost', 'Snabbe', 'Brand'] },
+  owl: { species: 'owl', kindName: 'uggla', en: 'en', den: 'den', definite: 'ugglan', predator: true, size: 'medium', flier: true, belief: 4, names: ['Skymning', 'Gryning', 'Måne', 'Tyst', 'Vinge', 'Natt'] },
+  adder: { species: 'adder', kindName: 'huggorm', en: 'en', den: 'den', definite: 'huggormen', predator: true, size: 'small', hunger: 2, belief: 4, names: ['Sicksack', 'Slinga', 'Fjäll', 'Ringel', 'Ormbunke', 'Sten'] },
+  mice: { species: 'mice', kindName: 'musfamilj', en: 'en', den: 'den', definite: 'musfamiljen', predator: false, size: 'small', belief: 6, swarm: 6, names: ['Fröna', 'Smulorna', 'Kornen', 'Vipporna', 'Tussarna', 'Axen'] },
+  hare: { species: 'hare', kindName: 'hare', en: 'en', den: 'den', definite: 'haren', predator: false, size: 'small', fast: true, belief: 4, names: ['Tistel', 'Klöver', 'Ärta', 'Vind', 'Hassel', 'Språng'] },
+  hedgehog: { species: 'hedgehog', kindName: 'igelkott', en: 'en', den: 'den', definite: 'igelkotten', predator: false, size: 'small', belief: 6, names: ['Borre', 'Nypon', 'Sticka', 'Tagg', 'Hassla', 'Ljungbo'] },
+  squirrel: { species: 'squirrel', kindName: 'ekorre', en: 'en', den: 'den', definite: 'ekorren', predator: false, size: 'small', belief: 5, names: ['Kotte', 'Rödpäls', 'Kvist', 'Nötta', 'Gran', 'Tofs'] },
+  mole: { species: 'mole', kindName: 'mullvad', en: 'en', den: 'den', definite: 'mullvaden', predator: false, size: 'small', belief: 6, names: ['Mull', 'Sammet', 'Rot', 'Torva', 'Mörker', 'Grus'] },
+  beaver: { species: 'beaver', kindName: 'bäver', en: 'en', den: 'den', definite: 'bävern', predator: false, size: 'large', swimmer: true, belief: 7, names: ['Bark', 'Spån', 'Al', 'Flotte', 'Ek', 'Vide'] },
+  fawn: { species: 'fawn', kindName: 'rådjurskid', en: 'ett', den: 'det', definite: 'rådjurskidet', predator: false, size: 'medium', fast: true, belief: 4, names: ['Fläcka', 'Dagg', 'Vitsvans', 'Löv', 'Mjuka', 'Ljus'] },
 };
 
 /** A place in a group: what kind it is, and the part it plays among us. */
@@ -116,6 +127,17 @@ export const START_BONDS: [Species, Species, number][] = [
   ['adder', 'mice', -2],
   ['adder', 'toad', -1],
   ['adder', 'badger', 1],
+  ['hedgehog', 'adder', -2],
+  ['hedgehog', 'badger', 1],
+  ['squirrel', 'owl', -1],
+  ['squirrel', 'mice', 1],
+  ['mole', 'badger', 1],
+  ['mole', 'toad', 1],
+  ['beaver', 'toad', 2],
+  ['beaver', 'badger', 1],
+  ['fawn', 'fox', -1],
+  ['fawn', 'hare', 1],
+  ['fawn', 'badger', 1],
 ];
 
 export const SAME_KIND_BOND = 1;

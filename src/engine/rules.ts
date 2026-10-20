@@ -1,4 +1,5 @@
 // Read-only rule helpers shared by the engine (validation) and the UI (targeting).
+import { SPECIES } from '../data/animals';
 import { CARDS, type TargetSpec } from '../data/cards';
 import { encounterOf, zoneDef } from './encounters';
 import type { Animal, Card, GameState, Hit, InjuryKind, VerseId, ZoneId } from './types';
@@ -119,10 +120,10 @@ export function forwardReach(s: GameState, a: Animal, steps: number): ZoneId[] {
   return [...out];
 }
 
-/** The hare runs: two steps on the ground when led. */
-export const isFast = (a: Animal) => a.species === 'hare';
+/** The fast – the hare, the fawn – run: two steps on the ground when led. */
+export const isFast = (a: Animal) => !!SPECIES[a.species].fast;
 
-/** Where leading can take an animal. Fliers cover two steps forward in one flight; the hare runs two. */
+/** Where leading can take an animal. Fliers cover two steps forward in one flight; the fast run two. */
 export function leadZones(s: GameState, a: Animal): ZoneId[] {
   const zones = new Set(neighbors(s, a));
   if ((canFly(a) || isFast(a)) && !hasInjury(a, 'halt')) for (const z of forwardReach(s, a, 2)) if (!zoneDef(s, z).slow) zones.add(z);
@@ -216,12 +217,16 @@ export function cardAnimals(s: GameState, card: Card): string[] {
       if (!isActive(o)) return [];
       return others.filter((x) => x.zone === o.zone).map((x) => x.id);
     case 'talamod':
+    case 'mjukJord':
       if (!isPresent(o)) return [];
       return others.filter((x) => zoneDistance(s, o.zone, x.zone) <= 1).map((x) => x.id);
     case 'baraLiten':
     case 'baraIhop':
       if (!canMove(o)) return [];
       return others.filter((x) => x.zone === o.zone && !isFrozen(x) && x.size === 'small' && x.count === undefined).map((x) => x.id);
+    case 'tryggRygg':
+      if (!isActive(o)) return [];
+      return others.filter((x) => x.zone === o.zone && x.size === 'small' && !x.curled).map((x) => x.id);
     default:
       return [];
   }
@@ -240,6 +245,8 @@ export function cardZones(s: GameState, card: Card): ZoneId[] {
     case 'lockbete':
     case 'lockaBort':
     case 'baraLiten':
+    case 'hoppa':
+    case 'ledaFlocken':
       return forwardReach(s, o, 2);
     case 'sprang':
       return forwardReach(s, o, 3);
@@ -252,11 +259,17 @@ export function cardZones(s: GameState, card: Card): ZoneId[] {
     case 'ringla':
     case 'krypaIn':
     case 'baraIhop':
+    case 'tystGang':
+    case 'gravaGang':
+    case 'fallaTrad':
       return forwardReach(s, o, 1);
     default:
       return [];
   }
 }
+
+/** Cards that hold the owner still for the hour: no use playing them twice. */
+const STAY_PUT: Card['kind'][] = ['gravaNer', 'gommaSig', 'frysaStilla', 'underJord', 'vintersomn'];
 
 export function canPlay(s: GameState, card: Card): boolean {
   if (s.phase !== 'play' || cardCost(s, card) > s.kraft || speciesCardBroken(s, card)) return false;
@@ -271,7 +284,10 @@ export function canPlay(s: GameState, card: Card): boolean {
       // Insight and comfort can be given from the far side too.
       if (CARDS[card.kind].tag === 'insight' || card.kind === 'gamlaVagar' || card.kind === 'ropINatten' || card.kind === 'gamlesRost') return isPresent(o);
       // Holding still is no use to one who already stands safe.
-      if (card.kind === 'gravaNer' || card.kind === 'gommaSig' || card.kind === 'frysaStilla') return isActive(o) && !o.rooted;
+      if (STAY_PUT.includes(card.kind)) return isActive(o) && !o.rooted;
+      // Trees grow on land: there is nothing to climb in the water, and nothing to climb in the air.
+      if (card.kind === 'klattra') return isActive(o) && !o.rooted && !o.flying && !inWater(s, o.zone);
+      if (card.kind === 'rullaIhop') return isActive(o) && !o.curled;
       return isActive(o);
   }
 }
@@ -308,7 +324,7 @@ export function rescueHelpers(s: GameState): string[] {
   if (!r || s.phase !== 'play' || s.kraft < 1) return [];
   return s.animals
     .filter((a) => canMove(a))
-    .filter((a) => (r.trust >= RESCUE_TRUST ? a.zone === r.zone : !a.predator && zoneDistance(s, a.zone, r.zone) <= 1))
+    .filter((a) => (r.trust >= r.need ? a.zone === r.zone : !a.predator && zoneDistance(s, a.zone, r.zone) <= 1))
     .map((a) => a.id);
 }
 
@@ -319,7 +335,7 @@ export function rescueBlockReason(s: GameState, a: Animal): string | null {
   const name = r.name;
   if (s.kraft < 1) return 'Vi har ingen kraft kvar den här timmen.';
   if (!canMove(a)) return `${a.name} kan inte röra sig nu.`;
-  if (r.trust >= RESCUE_TRUST) return a.zone === r.zone ? null : `${a.name} måste stå bredvid ${name} för att befria.`;
+  if (r.trust >= r.need) return a.zone === r.zone ? null : `${a.name} måste stå bredvid ${name} för att befria.`;
   if (a.predator) return `${name} litar inte på ${a.name}. Ett rovdjur skrämmer bara.`;
   return zoneDistance(s, a.zone, r.zone) <= 1 ? null : `${a.name} är för långt borta för att nå fram.`;
 }

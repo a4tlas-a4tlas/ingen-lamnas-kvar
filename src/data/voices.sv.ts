@@ -20,6 +20,11 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     farm: { pull: -1, line: 'Jag har sett gården från ovan. Hundarna sover inte så djupt som ni tror.' },
     raptor: { pull: -1, line: 'Där ute är det jag som är bytet. Inte fälten.' },
   },
+  hedgehog: { farm: { pull: 1, line: 'Gårdar har sniglar och mjölk. Hundarna biter inte i taggar.' } },
+  squirrel: { raptor: { pull: -1, line: 'Inga träd på fälten. Ingenstans att klättra. Inte där.' } },
+  mole: { river: { pull: -1, line: 'Jag ser inte vattnet. Jag hör det bara. Inte ån.' } },
+  beaver: { river: { pull: 1, line: 'Ån är min. Jag vet var dammen håller.' } },
+  fawn: { farm: { pull: -1, line: 'Där bor människor. Mamma sa: aldrig nära människorna.' } },
 };
 
 /** What the body says louder than nature: injuries and hunger. */

@@ -61,7 +61,7 @@ export const HOUR_STEPS: string[] = [
 /** When someone is trapped in the area. */
 export const RESCUE_ROWS: GuideRow[] = [
   { icon: '?', name: 'Någon sitter fast', text: 'En främling är fången här och rädd för oss. Ett eget kort ligger bredvid handen så länge den väntar.' },
-  { icon: '♡', name: 'Nå fram (◆1)', text: 'Ett djur inom ett steg kryper närmare: +1 tillit. Rovdjur skrämmer bara. Vid 2 litar den på oss.' },
+  { icon: '♡', name: 'Nå fram (◆1)', text: 'Ett djur inom ett steg kryper närmare: +1 tillit. Rovdjur skrämmer bara. Vid 2 litar den på oss – ett fångat rovdjur först vid 3.' },
   { icon: '✓', name: 'Befria (◆1)', text: 'Ett djur bredvid befriar den. Då är den en av oss – med egna kort, och lika sårbar som vi.' },
   { icon: '…', name: 'Om vi går', text: 'Lämnar vi platsen utan den blir den kvar. Inget löfte bryts – den var inte en av oss än – men vi hör den länge.' },
 ];

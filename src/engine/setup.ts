@@ -147,7 +147,7 @@ export function createGame(seed: number): GameState {
   const { cast, animals, draw, bonds, nextUid, rng } = buildCast(seed, 'dalensSista');
 
   return {
-    version: 20,
+    version: 21,
     cast,
     journey: firstRegion(seed),
     variant: 'normal',
@@ -190,12 +190,14 @@ export function createGame(seed: number): GameState {
     warded: [],
     rescue: null,
     met: [],
+    rescues: [],
     knowledge: [],
     run: { regions: ['dalen'], offered: [], between: false },
     meeting: null,
     proposal: null,
     fireDebt: { embers: 0, apart: [], dark: [] },
     peekNext: false,
+    stash: 0,
     darkRevealed: false,
     hitQueue: [],
     log: [],
