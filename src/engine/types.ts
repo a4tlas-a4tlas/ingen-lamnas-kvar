@@ -49,7 +49,38 @@ export type CardKind =
   | 'taEmot'
   | 'giftIReserv'
   | 'sprang'
-  | 'minne';
+  | 'minne'
+  // The species' own skills.
+  | 'gravaNer'
+  | 'gamlesRost'
+  | 'staSomSten'
+  | 'simma'
+  | 'talamod'
+  | 'lyssnaIMarken'
+  | 'giftIHuden'
+  | 'smyga'
+  | 'lockbete'
+  | 'list'
+  | 'mattForStunden'
+  | 'flyga'
+  | 'tystVinge'
+  | 'vaka'
+  | 'ropINatten'
+  | 'baraLiten'
+  | 'ringla'
+  | 'gommaSig'
+  | 'hota'
+  | 'varmaSig'
+  | 'omsaSkinn'
+  | 'spridaSig'
+  | 'krypaIn'
+  | 'baraIhop'
+  | 'mangaOgon'
+  | 'hacka'
+  | 'frysaStilla'
+  | 'stampa'
+  | 'lockaBort'
+  | 'vidoga';
 
 /** active = still on the road side, safe = reached the far ditch. */
 export type Status = 'active' | 'safe' | 'dead' | 'left';
@@ -93,10 +124,21 @@ export interface Animal {
   intent: Intent;
   /** End-of-turns spent in a slow zone (the culvert); 1 is needed to get out. */
   slowTime: number;
+  /** What this one of its kind knows how to do, and the ones it carries: its cards. */
+  skills: CardKind[];
+  loadout: CardKind[];
+  /** Fed for this danger: it will not hunt here. */
+  sated?: boolean;
   // Per-turn flags.
   protectedBy?: string;
   braced: boolean;
   flying: boolean;
+  /** Unseen this hour: nothing that hunts by sight or scent finds it. */
+  hidden?: boolean;
+  /** Dug in or holding still: it cannot move this hour. */
+  rooted?: boolean;
+  /** A swarm spread out: the next hit takes only one. */
+  scattered?: boolean;
 }
 
 /** The farm's dogs can never be beaten, only misled. */
@@ -291,7 +333,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 16;
+  version: 17;
   /** The variant of the encounter we're in. */
   variant: Variant;
   journey: Journey;
@@ -344,6 +386,8 @@ export interface GameState {
   // The machines.
   /** The trees that fall at the end of each hour. */
   fellPlan: ZoneId[];
+  /** Zones where hunters back off this hour: someone stands there and threatens. */
+  warded: ZoneId[];
   /** The ground the bulldozer takes at the end of each hour, if any. */
   dozePlan: (ZoneId | null)[];
   // The fields.
@@ -379,5 +423,7 @@ export type Action =
   | { type: 'rescue'; by: string }
   | { type: 'restAtFire'; watch?: string; scout?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice> }
   | { type: 'respond'; option: string; uid?: number }
+  /** Choose which of its skills an animal carries: on the map or by the fire, never in danger. */
+  | { type: 'equip'; animal: string; skills: CardKind[] }
   | { type: 'lastMoment'; choice: 'shield'; by: string }
   | { type: 'lastMoment'; choice: 'letGo' };

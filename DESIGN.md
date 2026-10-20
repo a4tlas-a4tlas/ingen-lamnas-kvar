@@ -639,3 +639,38 @@ Your direction:
   - Predators still hunt by the truce's own threshold.
 - **Rescues are someone new:** whoever is trapped has a kind and a name drawn when we arrive. For now always a hare; random kinds come in step 6.
 - **Balance:** a lead-only bot brings 3.8 of 6 over the ridge (was 3.6). Those at 5–6 belief now always follow.
+
+### Step 2: the species' skills (done)
+- **Each kind knows six things** (`src/data/skills.ts`): four first skills and two that are learned on the way.
+
+  | Kind | First skills | Learned on the way |
+  |---|---|---|
+  | Grävling | Bära, Ta emot, Trösta, Gräva ner sig | Den gamles röst, Stå som en sten |
+  | Padda | Gamla vägar, Simma, Läsa natten, Tålamod | Lyssna i marken, Gift i huden |
+  | Räv | Snabba tassar, Smyga, Gå först, Lockbete | List, Mätt för stunden |
+  | Uggla | Spana från ovan, Flyga, Tyst vinge, Vaka | Rop i natten, Bära liten |
+  | Huggorm | Ringla, Gift i reserv, Gömma sig under sten, Hota | Värma sig, Ömsa skinn |
+  | Möss | Små steg, Sprida sig, Krypa in, Pip i mörkret | Bära ihop, Många ögon |
+  | Hare | Språng, Hacka, Frysa stilla, Stampa varning | Locka bort, Vidöga |
+
+- **Each of us starts knowing three of its kind's first four** and carries all three. The cards in the deck are what we carry: three per animal. The traits no longer give cards.
+- ***Förmågor*** (the skills screen, on the map and at the fire, never in danger):
+  - each animal's six skills: carried ones lit, resting ones faded, unknown ones a "?"
+  - a tap carries a skill or puts it down, 1–3 at a time
+  - the deck is rebuilt to match
+- **New ways to play:**
+  - **Hidden** (Smyga, Krypa in, Tyst vinge): not found by dogs, the farmer, the heron or the birds, and leaves no scent.
+  - **Dug in or holding still** (Gräva ner sig, Gömma sig, Frysa stilla): can't be hit, but can't move this hour.
+  - **The whole zone braces** (Stå som en sten, Stampa varning).
+  - **A scattered swarm** loses only one.
+  - **Hota:** hunters back off from that zone.
+  - **Gift i huden:** a hunt in its zone is given up, and the hunter loses 2 belief.
+  - **Mätt för stunden:** won't hunt in this danger.
+  - **Calling the frightened back** (Rop i natten, Den gamles röst).
+  - **Bait** (Lockbete, Locka bort): the dogs turn to it, and the birds' shadow glides after it.
+  - **Swimming:** 2 steps in water.
+- **A broken limb** blocks the animal's moving skills (and the owl's flight).
+- **Learning and losing:**
+  - A story part teaches a skill of the kind. If the animal already carries three, it learns now and chooses on the map.
+  - A card the crow or the starving fox takes is a skill its owner forgets.
+- **Mourning:** the closest carries on a trait of the dead, without a card.

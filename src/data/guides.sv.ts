@@ -52,7 +52,7 @@ export const TIME_NAMES: Record<TimeOfDay, string> = { day: 'dagsljus', night: '
 /** How an hour goes, the same everywhere. */
 export const HOUR_STEPS: string[] = [
   'Tryck på ett djur med guldring och sedan på en upplyst zon för att leda det ett steg (◆1).',
-  'Eller spela ett kort. Färgen och namnet på kortet visar vems det är – kortet kan bara användas av det djuret.',
+  'Eller spela ett kort. Korten är djurens förmågor: färgen och namnet visar vems det är, och bara det djuret kan använda det. På kartan och vid elden väljer du vilka tre förmågor var och en bär.',
   'Läs ”När timmen går”: där står vad som händer oss om timmen går nu.',
   'Tryck ”Låt timmen gå”. Faran slår till, och Kraften fylls på till 3.',
   'Symbolerna över djuren visar deras egen vilja – fryser, vill tillbaka, rusar, jagar. Håll muspekaren över en symbol för att se vad den betyder. Trösta för att bryta den.',

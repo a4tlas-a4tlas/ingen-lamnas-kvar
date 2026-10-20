@@ -888,3 +888,12 @@ h1, h2, h3, h4 { font-family: var(--caps); font-weight: 600; letter-spacing: 0.0
 .shadow-mark span { background: var(--blood); color: var(--paper); }
 .wing-mark { box-shadow: inset 0 0 0 2px rgba(201,212,230,0.6); background: repeating-linear-gradient(135deg, rgba(201,212,230,0.08) 0 8px, transparent 8px 16px); animation: approach 2.4s ease-in-out infinite; }
 .wing-mark span { background: #c9d4e6; color: var(--ink); }
+
+/* The skills each of us knows: carried ones lit, resting ones faded, unknown ones still a question. */
+.skills-btn { margin: 0 0 8px; }
+h2 .skills-btn { margin: 0 0 0 8px; vertical-align: middle; }
+.skill-grid .card.resting { opacity: 0.55; filter: saturate(0.6); }
+.skill-grid .card.carried { box-shadow: 0 0 0 2px var(--gold), 0 4px 10px rgba(0,0,0,0.35); }
+.card.skill-unknown { display: grid; place-content: center; text-align: center; background: repeating-linear-gradient(135deg, rgba(42,36,32,0.07) 0 8px, transparent 8px 16px); border: 2px dashed var(--owner); color: var(--ink); min-height: 120px; box-shadow: none; }
+.card.skill-unknown .cname { font-size: 2em; opacity: 0.55; }
+.card.skill-unknown .ctext { opacity: 0.75; }

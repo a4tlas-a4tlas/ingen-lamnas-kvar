@@ -48,7 +48,8 @@ describe('the rescue', () => {
     s = run(s, { type: 'rescue', by: 'toad' });
     const t = get(s, 'hare');
     expect(t).toMatchObject({ status: 'active', zone: 'honshuset', belief: 4, species: 'hare' });
-    expect(t.traits).toContain('skygg');
+    expect(t.skills).toHaveLength(3);
+    expect(t.loadout).toEqual(t.skills);
     expect(s.discard.filter((c) => c.owner === 'hare')).toHaveLength(3);
     expect(bond(s, 'hare', 'toad')).toBe(1);
     expect(s.rescue).toBeNull();
