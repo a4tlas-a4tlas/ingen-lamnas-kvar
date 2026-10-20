@@ -1,0 +1,123 @@
+# Handoff – *Ingen lämnas kvar*
+
+This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
+
+## Status (after step 7.3)
+
+| | |
+|---|---|
+| **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
+| **Latest merged PR** | #23 – Milestone 7.3: Att lära sig på vägen |
+| **Save version** | 18 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 195 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+
+## The game in brief
+A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
+- **The player is Eden, the oath:** you swear one verse at the start.
+- **Each animal has belief (0–10).** At 5 and up it follows. Below 5 it has its own will; below 3 the will is worse; at 0 it leaves.
+- **The group shares hope (0–10).** Below 4 you draw fewer cards.
+
+**The run:**
+1. The oath.
+2. The region map (Kvarn's sketch: 6 rows of dangers, meetings, finds and fires, then a boss).
+3. The interlude (looking back, a promise, choosing the way).
+4. The next region.
+5. When the built regions run out: "fortsättning följer".
+
+**Built so far:**
+
+| Region | Dangers | Boss |
+|---|---|---|
+| **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
+| **Åkrarna** | the birds of prey (Rovfåglarna) + old dangers in new places | none yet (ends at "Bortom åkrarna") |
+
+**Animals** are species, not characters (badger, toad, fox, owl, adder, mice, hare). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
+
+**Skills:**
+- 6 per species (4 basic + 2 learned on the way), 3 carried at a time: those are the animal's cards.
+- Chosen under *Förmågor* on the map and at the fire.
+- Learned after 3 dangers survived, from story parts, or from each other at the fire.
+
+## Where things live
+| Path | What |
+|---|---|
+| `src/engine/` | The pure, deterministic rules. `step(state, action) → { state, events }` (`step.ts`). Seeded RNG in `s.rng`. Also `rules.ts`, `campfire.ts`, `regions.ts` (map generator), `roles.ts`, `will.ts`, `promises.ts`, `voices.ts`. |
+| `src/engine/encounters/` | One file per danger (`road`, `farm`, `river`, `machines`, `raptor`): zones, edges, plans. |
+| `src/data/` | Content as data: `animals.ts` (species, names, start group), `skills.ts`, `cards.ts`, `traits.ts`, `verses.ts`, `guides.sv.ts`, `promises.sv.ts`, `voices.sv.ts`, `regions/`, `meetings/` (frames for every meeting). All Swedish text lives here. |
+| `src/ui/` | Plain DOM + SVG, no framework: `app.ts` (screens and input), `screens.ts` (map, fire, meetings, guide), `scene.ts` (backdrops), `status.ts` (chips and forecast). |
+| `DESIGN.md` | The living design document, one section per milestone/step. |
+
+## How we work
+- **Design** happens by interview: ask the user in every part, push toward originality, and mark your own fill-ins *(my proposal)*. The plan is kept in `/root/.claude/plans/lets-create-a-game-spicy-eich.md` (the session's plan file).
+- **One PR per step.** The user reviews and says **"merge"** (merge only) or **"go"** (start the next step).
+  - Merge: `gh api -X PUT repos/a4tlas-a4tlas/ingen-lamnas-kvar/pulls/N/merge -f merge_method=merge`
+  - Open a PR: `gh api repos/a4tlas-a4tlas/ingen-lamnas-kvar/pulls -f title=… -f head=<branch> -f base=main -F body=@file` (GraphQL is blocked)
+  - Check the deploy: `gh api "repos/a4tlas-a4tlas/ingen-lamnas-kvar/actions/runs?head_sha=<sha>"`
+- **Commits** end with these trailers:
+  ```
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_01WB9uVrKsiTtNjkGajixQAL
+  ```
+  PR bodies end with "🤖 Generated with [Claude Code](https://claude.com/claude-code)" and the session link.
+- **Before each PR:**
+  - `npx tsc --noEmit`, `npx vitest run`, and `npx playwright test --repeat-each=2 --workers=4` (Chromium is at `/opt/pw-browsers`).
+  - **Bot balance:** a temporary `tests/engine/bot.tmp.test.ts`, a lead-only bot that is deleted afterwards. Reference: the machines boss 3.9 of 6 safe; the fields 4.5 by day, 5.1 by night.
+  - **Screenshots:**
+    1. A temporary vitest test (`tests/engine/shots.tmp.test.ts`, `// @ts-ignore` on the `node:fs` import) writes state JSON to the scratchpad.
+    2. `npm run build` and `npx vite preview --port <new port> --strictPort` in the background.
+    3. A temporary `shots.tmp.mjs` Playwright script puts the state in `localStorage['ingen-lamnas-kvar/save-v1']` and clicks "continue".
+    4. Delete the temporary files afterwards.
+- **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
+
+## Next step: 7.4 – traits as modifiers
+Approved design (Milestone 7 in `DESIGN.md` and the plan file):
+- **The start:** each animal has 1 good + 1 bad trait. Traits are pure modifiers and give no cards.
+  - **Good** (examples):
+
+    | Trait | Effect |
+    |---|---|
+    | Modig | own will only below 4 |
+    | Lugn | never bolts |
+    | Omtänksam | comfort gives +1 more |
+    | Seglivad | the first injury in each danger misses |
+    | Snabbfotad | one free step per danger |
+    | Klok | sees one more hour ahead |
+
+  - **Bad** (examples):
+
+    | Trait | Effect |
+    |---|---|
+    | Skygg | own will below 6 in daylight |
+    | Hetsig | bolts rather than freezes |
+    | Hungrig | for predators, hunts at +1 belief |
+    | Tvivlande | −1 belief at the start |
+    | Ensamvarg | bonds grow only up to 0 |
+    | Klumpig | the first step in each danger costs ◆2 |
+
+- **Earned on the way:**
+  - *Härdad* (good) – saved in a last moment
+  - *Trogen* (good) – shielded someone
+  - *Sörjande* (bad) – lost someone with bond ≥ 2
+  - *Ärrad* (bad) – broken or halt
+- **Fading:** some bad traits fade after 2 nights in a row by the embers.
+- **Where the code is:**
+  - `src/data/traits.ts` (rewrite it as modifiers)
+  - `ownWillBelow` in `src/engine/will.ts`
+  - `chooseIntent` in `src/engine/step.ts`
+  - the mourning (`inheritedTrait` in `src/engine/campfire.ts`)
+  - the UI: trait names on the oath screen and the inspect panel in `src/ui/app.ts`
+
+**After that:**
+- **7.5:** choosing between 3 rolled groups before the oath, This War of Mine-style (*Dalens sista*, *Rovdjurens pakt*, *De små*).
+- **7.6:** new species (hedgehog, squirrel), and random rescues of a species not already in the group.
+- **Then Milestone 6 resumes:**
+  - Åkrarna: Sprutan, Diket och grinden, story parts, and the boss Skördetröskan (with the hedgehog; an earlier meeting decides whether it trusts us)
+  - Stadens utkant: four dangers, and the boss Fyrverkerinatten (the danger is fear itself)
+  - finally, the choice between 2 random regions
+
+## Open questions and known quirks
+- **Hope** only affects the hand size (and waiting). It may deserve more weight; 7.4 could tie it to traits.
+- **The fields** are easier for the bot at night than by day: the eagle owl strikes only one of two marked zones.
+- **Gamla vägar can be taught across kinds** (it's "insight"). A badger can then find the culvert but doesn't fit through it.
+- **The adder starts hungry** (belief 4, hunger 2) and often hunts from hour 1. That's older behaviour, kept on purpose so far.
+- **The old trait cards** (`hallaSigNara`, `rusa`, `bitaIhop`) are still defined in `CARDS` but no longer in any species set. Remove them in 7.4 if nothing uses them.
