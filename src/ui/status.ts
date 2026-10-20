@@ -3,6 +3,7 @@
 // the forecast box so they always say the same thing.
 import { roarZones } from '../engine/encounters/machines';
 import { sheltered } from '../engine/encounters/raptor';
+import { mistAfter, rowZones, tractorRow } from '../engine/encounters/sprayer';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
@@ -80,6 +81,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'river') out.push(...riverStatuses(s, a));
   if (s.encounterId === 'machines') out.push(...machinesStatuses(s, a));
   if (s.encounterId === 'raptor') out.push(...raptorStatuses(s, a));
+  if (s.encounterId === 'sprayer') out.push(...sprayerStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -171,6 +173,9 @@ export function injuryStatus(a: Animal, k: InjuryKind): Status {
     case 'shock':
       return { key: 'shock', icon: '≋', label: 'chock', tone: 'warn',
         explain: `${a.name} är i chock: tvivlar och fryser mycket lättare. Läker vid lägerelden.` };
+    case 'poisoned':
+      return { key: 'poisoned', icon: '☠', label: 'förgiftad', tone: 'bad',
+        explain: `${a.name} är förgiftad: ${a.name}s egna kort går inte att spela. ${a.name} kan fortfarande ledas. Läker vid lägerelden${a.swimmer ? ', eller i bäcken' : ''}.` };
   }
 }
 
@@ -228,6 +233,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'river') out.push(...riverForecast(s, zoneOf));
   if (s.encounterId === 'machines') out.push(...machinesForecast(s, zoneOf));
   if (s.encounterId === 'raptor') out.push(...raptorForecast(s, zoneOf));
+  if (s.encounterId === 'sprayer') out.push(...sprayerForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -319,6 +325,45 @@ function riverForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[
     const left = DAM_MAX - s.damCreak;
     if (left === 1) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: nästa som går ut på den bryter den.`, tone: 'warn' });
     else if (left === 2) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: ett stort djur till bryter den.`, tone: 'warn' });
+  }
+  return out;
+}
+
+/** The sprayed field: in the tractor's way, or where the mist will lie. */
+function sprayerStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active' || a.underground) return [];
+  if (!a.flying && tractorRow(s).includes(a.zone)) {
+    return [{ key: 'tractor', icon: '▤', label: 'i traktorns väg', tone: 'bad', explain: `Traktorn kör här när timmen går. Står ${a.name} kvar blir ${a.name} överkörd.` }];
+  }
+  if (mistAfter(s).includes(a.zone)) {
+    return [{ key: 'mist', icon: '≈', label: 'i dimman', tone: 'warn', explain: `Dimman ligger här när timmen går. ${a.name} blir förgiftad: ${a.name}s egna kort går inte att spela förrän vid elden.` }];
+  }
+  return [];
+}
+
+/** The sprayed field: where the tractor drives and whom it runs over; where the wind takes the mist, and who breathes it. */
+function sprayerForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const at = (zs: ZoneId[]) => s.animals.filter((a) => isActive(a) && zs.includes(zoneOf.get(a.id) ?? a.zone) && !a.underground);
+  const names = (xs: Animal[]) => xs.map((a) => a.name).join(' och ');
+  const row = tractorRow(s);
+  const run = at(row).filter((a) => !a.flying);
+  if (row.length) {
+    const place = zoneDef(s, row[0]).name;
+    out.push(run.length ? { text: `Traktorn kör längs ${place} och kör över ${names(run)}: dödar!`, tone: 'bad' } : { text: `Traktorn kör längs ${place} – ingen av oss där.`, tone: 'good' });
+  }
+  const wind = s.spray.windPlan[s.turn - 1];
+  const mist = mistAfter(s);
+  const sick = at(mist).filter((a) => !run.includes(a) && !a.injuries.includes('poisoned'));
+  out.push({ text: `Vinden drar mot ${wind}.${mist.length ? ` Dimman ligger sedan i ${mist.map((z) => zoneDef(s, z).name).join(', ')}.` : ' Ingen dimma vi kan se.'}`, tone: 'info' });
+  if (sick.length) out.push({ text: `${names(sick)} andas in dimman: förgiftad.`, tone: 'warn' });
+  if (s.time === 'night' && !s.peekNext && !s.darkRevealed) out.push({ text: 'I mörkret ser vi bara en del av dimman.', tone: 'info' });
+  for (const a of s.animals.filter((x) => isActive(x) && x.swimmer && x.injuries.includes('poisoned') && zoneDef(s, zoneOf.get(x.id) ?? x.zone).water)) {
+    out.push({ text: `${a.name} tvättar av sig giftet i bäcken.`, tone: 'good' });
+  }
+  if (s.peekNext && s.turn < s.maxTurn) {
+    const next = s.time === 'day' ? ` Traktorn kör längs ${zoneDef(s, rowZones(s.spray.rowPlan[s.turn])[0]).name}.` : '';
+    out.push({ text: `Nästa timme drar vinden mot ${s.spray.windPlan[s.turn]}.${next}`, tone: 'info' });
   }
   return out;
 }

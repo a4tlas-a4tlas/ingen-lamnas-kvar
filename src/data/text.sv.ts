@@ -51,4 +51,5 @@ export const INJURY_LINES: Record<InjuryKind, string> = {
   broken: '{name} träffas. Något går av med ett ljud vi aldrig glömmer.',
   bleeding: '{name} blöder. Det slutar inte.',
   shock: '{name} såg det hända. Något i {name} stannade kvar där.',
+  poisoned: '{name} andas in den söta dimman. Allt blir tungt och långsamt.',
 };

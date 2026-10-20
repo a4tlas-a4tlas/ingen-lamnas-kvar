@@ -27,6 +27,13 @@ export const AKRARNA: RegionDef = {
       note: 'Öppet, och himmel. Inget skydd utom fårorna.',
     },
     {
+      key: 'sprutan', kind: 'encounter', encounter: 'sprayer', name: 'Sprutan', fogName: 'Det luktar sött från fälten?',
+      memory: { normal: 'en spruta på fältet', hard: 'två sprutor' },
+      arrive: 'En traktor kör fram och tillbaka över raderna. Bakom den hänger en söt, vit dimma.',
+      arriveNight: 'Traktorn står stilla vid kanten. Men det luktar sött över raderna, och dimman ligger lågt.',
+      note: 'Raderna, traktorn och dimman. Bäcken längs kanten.',
+    },
+    {
       ...farm, key: 'akergarden', name: 'Gården vid åkern', fogName: 'En röd lada?',
       arrive: 'En gård mitt bland fälten. Ladan är större än den hemma, och hundarna också.',
       arriveNight: 'En gård mitt bland fälten. Ett ensamt ljus brinner i köket.',

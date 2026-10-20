@@ -13,6 +13,7 @@ import { forkVoices, voiceStake } from './voices';
 import { CURRENT, DAM, DAM_MAX, FLOOD_DAM_CREAK, FLOOD_HOURS, FLOOD_HOURS_TOTAL, STONES, aboveTheWater, carriedAway, holdsOnTo, planRiver, swims } from './encounters/river';
 import { planMachines, roarZones } from './encounters/machines';
 import { exposedIn, prey, shadowOptions } from './encounters/raptor';
+import { CROP, drift, nightMist, planSprayer, rowZones, sprayed } from './encounters/sprayer';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, buildCast, idFor, makeAnimal, oathVerse, regionJourney } from './setup';
@@ -50,6 +51,7 @@ import {
   lureZones,
   isFast,
   RESCUE_TRUST,
+  HEALS_AT_FIRE,
   rescueBlockReason,
   moonHidden,
   moonVisible,
@@ -331,6 +333,11 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.dozePlan = machines.dozePlan;
   // Over the fields one bird circles – or, where Kvarn's memory was too kind, a pair.
   s.raptors = id === 'raptor' ? Array.from({ length: hard ? 2 : 1 }, () => ({ zone: null, maybe: [] })) : [];
+  // The sprayed field: by day the tractor's plan, by night the mist the day left behind.
+  if (id === 'sprayer') {
+    const plan = planSprayer(s, s.maxTurn);
+    s.spray = { ...plan, mist: s.time === 'night' ? nightMist(s) : [], shown: [] };
+  } else s.spray = { rowPlan: [], windPlan: [], mist: [], shown: [] };
   // Someone is trapped here, the first time we come.
   s.rescue = null;
   const sp = def.rescue && !s.rescues.includes(s.journey.region) ? trappedKind(s, def.rescue.not ?? []) : undefined;
@@ -467,7 +474,7 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
 
   // 4. Rest heals what can heal, for all but the one who kept watch.
   for (const a of living(s)) {
-    const heal: InjuryKind[] = a.injuries.filter((k) => k === 'bleeding' || k === 'shock');
+    const heal: InjuryKind[] = a.injuries.filter((k) => HEALS_AT_FIRE.includes(k));
     if (!heal.length) continue;
     if (a === w || a === scout || s.fireDebt.apart.includes(a.id) || teachers.includes(a.id)) {
       line(c, a.id, `${a.name} ${a === w ? 'vakade' : a === scout ? 'flög före' : teachers.includes(a.id) ? 'lärde och lärde ut' : 'berättade hela natten'} och fick ingen vila. Såren får vänta.`);
@@ -827,9 +834,9 @@ function equip(c: Ctx, id: string, skills: CardKind[]) {
   for (const k of chosen) s.draw.push({ uid: s.nextUid++, kind: k, owner: a.id });
 }
 
-/** Bleeding and shock heal. */
+/** Bleeding, shock and poison heal. */
 function heal(c: Ctx, a: Animal, text: string) {
-  const healed: InjuryKind[] = a.injuries.filter((k) => k === 'bleeding' || k === 'shock');
+  const healed: InjuryKind[] = a.injuries.filter((k) => HEALS_AT_FIRE.includes(k));
   if (!healed.length) return;
   a.injuries = a.injuries.filter((k) => !healed.includes(k));
   line(c, a.id, text);
@@ -888,6 +895,7 @@ function startTurn(c: Ctx) {
     a.scattered = false;
     a.curled = false;
     a.climbing = false;
+    a.underground = false;
   }
   s.peekNext = false;
   s.darkRevealed = false;
@@ -911,6 +919,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'river') telegraphRiver(c);
   if (s.encounterId === 'machines') telegraphMachines(c);
   if (s.encounterId === 'raptor') telegraphRaptors(c);
+  if (s.encounterId === 'sprayer') telegraphSprayer(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1006,7 +1015,8 @@ function moveAnimal(c: Ctx, a: Animal, to: ZoneId, byPlayer: boolean) {
     a.flying = false;
   }
   const zone = zoneDef(s, to);
-  if (zone.slow) a.slowTime = 0;
+  // Water slows us all – but not those who swim.
+  if (zone.slow) a.slowTime = a.swimmer && zone.water ? 1 : 0;
   // Fliers never walk: they take off, and stay airborne for the rest of the hour.
   if (canFly(a)) a.flying = true;
   if (s.encounterId === 'river' && to === DAM && !a.flying) creakDam(c, a);
@@ -1334,6 +1344,52 @@ function raptorHazards(c: Ctx) {
   }
 }
 
+// ---------------------------------------------------------------- the sprayed field
+
+/** Start of the hour: which way the wind blows, and by day where the tractor turns. By night the mist rises unseen. */
+function telegraphSprayer(c: Ctx) {
+  const s = c.s;
+  const wind = s.spray.windPlan[s.turn - 1];
+  if (s.time === 'night') {
+    if (s.turn > 1) {
+      const z = CROP[Math.floor(random(s) * CROP.length)];
+      if (!s.spray.mist.includes(z)) s.spray.mist.push(z);
+    }
+    s.spray.shown = s.spray.mist.filter(() => random(s) < 0.5);
+    narrate(c, s.spray.shown.length
+      ? `Vinden drar mot ${wind}. Det luktar sött från ${s.spray.shown.map((z) => zoneDef(s, z).name).join(' och ')}.`
+      : `Vinden drar mot ${wind}. Vi ser ingen dimma – men den finns där.`);
+    return;
+  }
+  s.spray.shown = [...s.spray.mist];
+  const row = rowZones(s.spray.rowPlan[s.turn - 1]);
+  narrate(c, `Vinden drar mot ${wind}. Traktorn vänder och kör längs ${zoneDef(s, row[0]).name} när timmen går.`);
+}
+
+/** End of the hour: the wind moves the mist, the tractor drives its row and sprays, and whoever stands in the mist breathes it. */
+function sprayerHazards(c: Ctx) {
+  const s = c.s;
+  const wind = s.spray.windPlan[s.turn - 1];
+  s.spray.mist = drift(s.spray.mist, wind);
+  if (s.time === 'day') {
+    const row = s.spray.rowPlan[s.turn - 1];
+    const zones = rowZones(row);
+    const under = s.animals.filter((a) => isActive(a) && zones.includes(a.zone) && !a.flying && !a.underground);
+    narrate(c, under.length ? `Traktorn kommer längs ${zoneDef(s, zones[0]).name}.` : `Traktorn kör längs ${zoneDef(s, zones[0]).name}. Ingen av oss var där.`);
+    for (const a of under) s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'traktor' });
+    s.spray.mist = [...new Set([...s.spray.mist, ...sprayed(row, s.variant === 'hard')])];
+  }
+  // Those who swim wash the poison off in the stream.
+  for (const a of s.animals.filter((x) => isActive(x) && x.swimmer && zoneDef(s, x.zone).water && hasInjury(x, 'poisoned'))) {
+    a.injuries = a.injuries.filter((k) => k !== 'poisoned');
+    line(c, a.id, `${a.name} tvättar av sig giftet i bäcken.`);
+  }
+  for (const a of s.animals.filter((x) => isActive(x) && s.spray.mist.includes(x.zone) && !x.underground && !s.hitQueue.some((h) => h.victim === x.id))) {
+    s.hitQueue.push({ victim: a.id, severity: 'injure', sudden: false, zone: a.zone, source: 'gift' });
+  }
+  for (const a of s.animals.filter((x) => isActive(x) && s.spray.mist.includes(x.zone) && x.underground)) line(c, a.id, `Dimman drar över ${a.name}, men når inte ner i jorden.`);
+}
+
 // ---------------------------------------------------------------- the rescue
 
 /** A rescued one starts here at most: it has only just met the oath. */
@@ -1520,6 +1576,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       o.hidden = true;
       o.braced = true;
       o.rooted = true;
+      if (card.kind === 'gravaNer') o.underground = true;
       line(c, o.id, card.kind === 'gravaNer' ? `${o.name} gräver ner sig.` : card.kind === 'gommaSig' ? `${o.name} ringlar in under en sten.` : `${o.name} blir alldeles stilla.`);
       break;
     case 'tystVinge':
@@ -1668,7 +1725,10 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       const with_ = s.animals.filter((a) => a !== o && isActive(a) && a.zone === o.zone && a.size === 'small' && !isFrozen(a) && !a.rooted);
       moveAnimal(c, o, zone!, true);
       for (const x of with_) moveAnimal(c, x, zone!, true);
-      for (const x of [o, ...with_]) if (isActive(x)) x.hidden = true;
+      for (const x of [o, ...with_]) if (isActive(x)) {
+        x.hidden = true;
+        x.underground = true;
+      }
       line(c, o.id, with_.length ? `${o.name} gräver en gång, och ${with_.map((x) => x.name).join(' och ')} kryper efter.` : `${o.name} gräver sig fram under marken.`);
       break;
     }
@@ -1676,6 +1736,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       o.hidden = true;
       o.braced = true;
       o.rooted = true;
+      o.underground = true;
       line(c, o.id, `${o.name} försvinner ner i jorden.`);
       break;
     case 'kannaSkakningar':
@@ -1794,6 +1855,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'river') riverHazards(c);
   if (s.encounterId === 'machines') machinesHazards(c);
   if (s.encounterId === 'raptor') raptorHazards(c);
+  if (s.encounterId === 'sprayer') sprayerHazards(c);
   processHits(c);
 }
 
@@ -1861,7 +1923,7 @@ function processHits(c: Ctx) {
       continue;
     }
     // Over the fields the air is the bird's: lifting off is no escape. A tree that falls takes the climber with it.
-    if (v.flying && !BIRDS.includes(h.source) && !(v.climbing && TREE_FALL.includes(h.source))) {
+    if (v.flying && !BIRDS.includes(h.source) && h.source !== 'gift' && !(v.climbing && TREE_FALL.includes(h.source))) {
       line(c, v.id, v.climbing ? `${v.name} sitter kvar uppe i trädet, utom räckhåll.` : `${v.name} lyfter i sista stund.`);
       continue;
     }
@@ -1884,7 +1946,8 @@ function processHits(c: Ctx) {
     // It reached one of us: some promises cannot survive that.
     if (LIGHT.includes(h.source)) breakPromises(c, 'light');
     if (h.source === 'forsen') breakPromises(c, 'current');
-    if (isLethal(v, h)) {
+    // The mist makes us sick, never dead.
+    if (h.source !== 'gift' && isLethal(v, h)) {
       if (h.sudden) {
         narrate(c, `Det fanns ingen varning. ${v.name} hann aldrig förstå.`);
         die(c, v, 'dark', h.source);
@@ -1921,7 +1984,7 @@ const TREE_FALL = ['fällaren', 'schaktaren'];
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'bonde'];
 
-const HIT_BY: Record<string, string> = { vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
+const HIT_BY: Record<string, string> = { traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
@@ -1946,7 +2009,9 @@ function injure(c: Ctx, v: Animal, k: InjuryKind, text = INJURY_LINES[k]) {
 /** A hit that doesn't kill: a swarm loses members, anyone else takes an injury. */
 function applyHit(c: Ctx, v: Animal, h: Hit) {
   c.ev.push({ kind: 'hit', who: v.id });
-  if (v.count !== undefined) {
+  if (h.source === 'gift') {
+    injure(c, v, 'poisoned');
+  } else if (v.count !== undefined) {
     const loss = Math.min(swarmLoss(h), v.count - 1);
     v.count -= loss;
     line(c, v.id, `${HIT_BY[h.source] ?? capitalize(h.source)} tog ${num(loss)} av ${v.name}. ${v.count} är kvar.`);

@@ -192,6 +192,15 @@ export function leadCost(a: Animal): number {
   return base;
 }
 
+/** What a night's rest by the fire mends. Halt and broken never heal. */
+export const HEALS_AT_FIRE: InjuryKind[] = ['bleeding', 'shock', 'poisoned'];
+
+/** Poisoned, every skill feels too heavy to use: none of the animal's own cards can be played. */
+export function poisonedCard(s: GameState, card: Card): boolean {
+  const o = s.animals.find((x) => x.id === card.owner);
+  return !!o && card.kind !== 'minne' && hasInjury(o, 'poisoned');
+}
+
 /** A broken wing or paw takes away how the animal moves: its moving skills can't be played. */
 export function speciesCardBroken(s: GameState, card: Card): boolean {
   const o = s.animals.find((x) => x.id === card.owner);
@@ -272,7 +281,7 @@ export function cardZones(s: GameState, card: Card): ZoneId[] {
 const STAY_PUT: Card['kind'][] = ['gravaNer', 'gommaSig', 'frysaStilla', 'underJord', 'vintersomn'];
 
 export function canPlay(s: GameState, card: Card): boolean {
-  if (s.phase !== 'play' || cardCost(s, card) > s.kraft || speciesCardBroken(s, card)) return false;
+  if (s.phase !== 'play' || cardCost(s, card) > s.kraft || speciesCardBroken(s, card) || poisonedCard(s, card)) return false;
   const o = s.animals.find((x) => x.id === card.owner);
   switch (cardTarget(card)) {
     case 'zone': return cardZones(s, card).length > 0;
@@ -366,6 +375,7 @@ export function cardBlockReason(s: GameState, card: Card): string | null {
   if (canPlay(s, card)) return null;
   const o = s.animals.find((x) => x.id === card.owner);
   if (!o) return 'Kan inte spelas.';
+  if (poisonedCard(s, card)) return `${o.name} är förgiftad. Allt är för tungt.`;
   if (speciesCardBroken(s, card)) return o.flier ? `${o.name}s vinge är bruten.` : `${o.name}s tass är bruten.`;
   const spec = cardTarget(card);
   const movesOwner = spec === 'zone' || spec === 'animalZone';

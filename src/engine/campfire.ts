@@ -1,6 +1,6 @@
 // Read-only campfire rules, shared by the engine (resolution) and the UI (planning).
 import { TRAITS } from '../data/traits';
-import { bond, canFly, canPrey, huntsAt, isPresent } from './rules';
+import { HEALS_AT_FIRE, bond, canFly, canPrey, huntsAt, isPresent } from './rules';
 import { place, placesAhead } from '../data/journey';
 import { CARDS } from '../data/cards';
 import type { Animal, CardKind, GameState, MourningChoice, Teaching, TraitId } from './types';
@@ -74,7 +74,7 @@ export function defaultPlan(s: GameState): FirePlan {
   const locked = lockedAtFire(s);
   const alive = living(s).filter((a) => !locked.includes(a.id));
   // Someone calm who doesn't need the rest: not hungry, not bleeding or in shock.
-  const needsRest = (a: Animal) => a.injuries.some((k) => k === 'bleeding' || k === 'shock');
+  const needsRest = (a: Animal) => a.injuries.some((k) => HEALS_AT_FIRE.includes(k));
   const watcher =
     [...alive]
       .filter((a) => !a.predator)

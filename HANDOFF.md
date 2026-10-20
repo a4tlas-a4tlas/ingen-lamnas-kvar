@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 7.6 – Milestone 7 done)
+## Status (after step 6.3)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 7.6: Nya arter (branch `nya-arter`, open, awaiting review). Latest merged: #28, Vilka går? |
-| **Save version** | 21 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 232 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 6.3: Sprutan (branch `sprutan`, open, awaiting review). Latest merged: #29, Milestone 7.6: Nya arter. |
+| **Save version** | 22 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 246 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -30,7 +30,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 | Region | Dangers | Boss |
 |---|---|---|
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
-| **Åkrarna** | the birds of prey (Rovfåglarna) + old dangers in new places | none yet (ends at "Bortom åkrarna") |
+| **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan) + old dangers in new places | none yet (ends at "Bortom åkrarna") |
 
 **Animals** are species, not characters: badger, toad, fox, owl, adder, mice, hare, and since 7.6 hedgehog, squirrel, mole, beaver and fawn (`SPECIES` in `src/data/animals.ts`, with Swedish grammar fields `en` / `den` / `definite`). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
 
@@ -51,7 +51,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 | Path | What |
 |---|---|
 | `src/engine/` | The pure, deterministic rules. `step(state, action) → { state, events }` (`step.ts`). Seeded RNG in `s.rng`. Also `rules.ts`, `campfire.ts`, `regions.ts` (map generator), `roles.ts`, `will.ts`, `promises.ts`, `voices.ts`. |
-| `src/engine/encounters/` | One file per danger (`road`, `farm`, `river`, `machines`, `raptor`): zones, edges, plans. |
+| `src/engine/encounters/` | One file per danger (`road`, `farm`, `river`, `machines`, `raptor`, `sprayer`): zones, edges, plans. |
 | `src/data/` | Content as data: `animals.ts` (species, names, start group), `skills.ts`, `cards.ts`, `traits.ts`, `verses.ts`, `guides.sv.ts`, `promises.sv.ts`, `voices.sv.ts`, `regions/`, `meetings/` (frames for every meeting). All Swedish text lives here. |
 | `src/ui/` | Plain DOM + SVG, no framework: `app.ts` (screens and input), `screens.ts` (map, fire, meetings, guide), `scene.ts` (backdrops), `status.ts` (chips and forecast). |
 | `DESIGN.md` | The living design document, one section per milestone/step. |
@@ -78,17 +78,18 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: Milestone 6 resumes – 6.3 Sprutan
-Milestone 7 (the animals rethought) is done. Next is Åkrarna's second danger. From the approved design (Milestone 6 in `DESIGN.md` and the plan file):
-- **The tractor** drives one telegraphed row per hour. **The mist** drifts one zone per hour, in a wind direction that is also telegraphed.
-- **A new injury, *förgiftad* (sick):** the animal's own cards can't be played until a fire heals it *(proposal)*.
-- **Shelter:** the stream and the tall weeds wash the mist off.
-- **Build it like `raptor.ts`:** a definition, a telegraph each hour, hazards, then art, forecast, chips, a guide card, bot balance and screenshots.
-- **Ask the user first,** in the interview style. With the new kinds, the beaver and toad (swimmers) and the mole (underground) are natural counters to the mist.
+## Next step: 6.4 – Diket och grinden
+Åkrarna's third danger. From the approved design (Milestone 6 in `DESIGN.md` and the plan file):
+- **The ditch** rises one level each hour (a flood). Over the level, the small ones are swept away.
+- **The electric fence** pulses on a telegraphed rhythm. Touching it while it's on gives shock.
+- **The gate:** a large animal can push it open (◆2), and it stays open.
+- **Under the fence:** a rabbit's hole, small animals only and slow.
+- **Build it like `sprayer.ts` / `raptor.ts`:** a definition, a telegraph and hazards in `step.ts`, art in `scene.ts`, forecast and chips in `status.ts`, a guide card, an Åkrarna template, voices, tests, the bot and screenshots.
+- **Ask the user first.** The beaver (large, swims), the mole (under the fence?) and the hedgehog are natural answers here.
 
 **After that:**
 - **The rest of Milestone 6:**
-  - Åkrarna: Diket och grinden, story parts, and the boss Skördetröskan (with the hedgehog, which is now a real species that can already be with us; its story must adapt if so)
+  - Åkrarna: story parts, and the boss Skördetröskan (with the hedgehog, which is now a real species that can already be with us; its story must adapt if so)
   - Stadens utkant: four dangers, and the boss Fyrverkerinatten (the danger is fear itself)
   - finally, the choice between 2 random regions
 
@@ -97,6 +98,9 @@ Milestone 7 (the animals rethought) is done. Next is Åkrarna's second danger. F
 - **The fields** are easier for the bot at night than by day: the eagle owl strikes only one of two marked zones.
 - **Gamla vägar can be taught across kinds** (it's "insight"). A badger can then find the culvert but doesn't fit through it.
 - **The adder starts hungry** (belief 4, hunger 2) and often hunts from hour 1. That's older behaviour, kept on purpose so far.
+- **Sprutan's bot balance (6.3):** a lead-only bot that avoids the telegraphed tractor row and mist, 300 seeds. By day 4.5 of 6 safe, at night 4.7 (normal and hard alike); the fields are 4.5 / 5.1.
+  - **What the losses are:** mostly animals left behind when time runs out (~1.1 per run) and hunting. The tractor kills ~0.18 per run and the mist poisons ~0.09.
+  - **A fast group** passes the rows before the tractor matters much. If it should bite harder, the levers are the tractor's plan (follow us?) and more mist.
 - **Bot balance after 7.6** (the same walker, all of Dalen, 300 seeds): share of the group still with us after Dalen. Dalens sista 8 %, Rovdjurens pakt 7 %, De små 23 %, Slumpad 17 %. Slumpad dropped a little, because it can now draw the fragile fawn.
 - **Bot balance per group (7.5):** a crude walker (leads only, always lets go, takes the first reply) through all of Dalen, 300 seeds. The share of the group still with us after Dalen: Dalens sista 8 %, Rovdjurens pakt 6 %, De små 20 %, Slumpad 21 %. Through the machines boss alone: 43 / 44 / 71 / 57 %.
   - **De små is the easiest** for a player who never comforts, because it has no predators who can turn.
