@@ -5,6 +5,7 @@ import { CARDS, TAG_NAMES } from '../data/cards';
 import { HOPE_LINES, KRAFT_OUT_LINES } from '../data/text.sv';
 import { roarZones } from '../engine/encounters/machines';
 import { tractorRow, visibleMist } from '../engine/encounters/sprayer';
+import { DITCH_MAX, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL, levelAfter } from '../engine/encounters/fence';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -109,7 +110,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 22 && s.phase !== 'over' ? s : null;
+    return s.version === 23 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -876,6 +877,20 @@ export class App {
     return out.join('');
   }
 
+  /** The ditch and the gate: the water's level and who it takes; the wire when it hums; whether the gate stands open. */
+  private fenceTelegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const level = levelAfter(s);
+    const takes = level >= SWEEPS_MEDIUM ? 'drar med små och mellanstora' : level >= SWEEPS_SMALL ? 'drar med de små' : 'går att vada';
+    for (const z of ['diketV', 'diketO']) out.push(`<div class="ditch-mark lvl-${level}" style="${box(z)}"><span>vatten ${level}/${DITCH_MAX} · ${takes}</span></div>`);
+    if (s.fence.pulsePlan[s.turn - 1]) for (const z of ['stangslet', 'grinden']) out.push(`<div class="wire-mark" style="${box(z)}"><span>strömmen på · dödar små</span></div>`);
+    const next = s.turn < s.maxTurn && (s.time === 'day' || s.peekNext) ? s.fence.pulsePlan[s.turn] : undefined;
+    if (next !== undefined) out.push(`<div class="next-mark" style="${box('stangslet')}"><em>nästa timme: ${next ? 'på' : 'av'}</em></div>`);
+    out.push(`<div class="gate-mark ${s.fence.gateOpen ? 'open' : ''}" style="${box('grinden')}"><em>${s.fence.gateOpen ? 'grinden öppen' : `stängd · ett stort djur, eller två tillsammans, trycker upp den (◆${GATE_PUSH})`}</em></div>`);
+    return out.join('');
+  }
+
   /** The river: the current in the water, the wet stones, the heron. */
   private riverTelegraphHtml(s: GameState): string {
     const out: string[] = [];
@@ -933,6 +948,7 @@ export class App {
     if (s.encounterId === 'machines') return s.phase === 'over' ? '' : this.machinesTelegraphHtml(s);
     if (s.encounterId === 'raptor') return s.phase === 'over' ? '' : this.raptorTelegraphHtml(s);
     if (s.encounterId === 'sprayer') return s.phase === 'over' ? '' : this.sprayerTelegraphHtml(s);
+    if (s.encounterId === 'fence') return s.phase === 'over' ? '' : this.fenceTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {

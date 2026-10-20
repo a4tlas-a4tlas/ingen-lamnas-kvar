@@ -17,6 +17,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     river: { pull: -1, line: 'Vi kan inte simma. Inte ån, snälla.' },
     raptor: { pull: -1, line: 'Skuggan. Vi såg skuggan över fälten. Inte där.' },
     sprayer: { pull: -1, line: 'Den söta lukten. Våra kusiner åt av det fältet och vaknade aldrig.' },
+    fence: { pull: -1, line: 'Tråden som surrar. Vi rörde vid en sådan en gång. Bara en gång.' },
   },
   fox: { farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' } },
   badger: { river: { pull: 1, line: 'Strömmen rubbar inte mig. Håll er i mig, så går vi över.' } },
@@ -24,15 +25,18 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     farm: { pull: -1, line: 'Jag har sett gården från ovan. Hundarna sover inte så djupt som ni tror.' },
     raptor: { pull: -1, line: 'Där ute är det jag som är bytet. Inte fälten.' },
   },
+  hare: { fence: { pull: -1, line: 'Stängsel. Jag har sett en hare fastna i ett. Den skrek länge.' } },
   hedgehog: { farm: { pull: 1, line: 'Gårdar har sniglar och mjölk. Hundarna biter inte i taggar.' } },
   squirrel: { raptor: { pull: -1, line: 'Inga träd på fälten. Ingenstans att klättra. Inte där.' } },
   mole: {
     river: { pull: -1, line: 'Jag ser inte vattnet. Jag hör det bara. Inte ån.' },
     sprayer: { pull: 1, line: 'Dimman ligger ovanpå jorden. Under den är det rent.' },
+    fence: { pull: 1, line: 'Ett stängsel? Jag gräver under det. Följ mig.' },
   },
   beaver: {
     river: { pull: 1, line: 'Ån är min. Jag vet var dammen håller.' },
     sprayer: { pull: 1, line: 'Bäcken där borta tvättar bort vad som helst.' },
+    fence: { pull: 1, line: 'Ett dike som stiger? Jag har dämt större än så.' },
   },
   fawn: {
     farm: { pull: -1, line: 'Där bor människor. Mamma sa: aldrig nära människorna.' },

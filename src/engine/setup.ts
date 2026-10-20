@@ -147,7 +147,7 @@ export function createGame(seed: number): GameState {
   const { cast, animals, draw, bonds, nextUid, rng } = buildCast(seed, 'dalensSista');
 
   return {
-    version: 22,
+    version: 23,
     cast,
     journey: firstRegion(seed),
     variant: 'normal',
@@ -188,6 +188,7 @@ export function createGame(seed: number): GameState {
     dozePlan: [],
     raptors: [],
     spray: { rowPlan: [], windPlan: [], mist: [], shown: [] },
+    fence: { level: 0, risePlan: [], pulsePlan: [], gateOpen: false },
     warded: [],
     rescue: null,
     met: [],

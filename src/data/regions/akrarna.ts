@@ -34,6 +34,13 @@ export const AKRARNA: RegionDef = {
       note: 'Raderna, traktorn och dimman. Bäcken längs kanten.',
     },
     {
+      key: 'stangslet', kind: 'encounter', encounter: 'fence', name: 'Diket och grinden', fogName: 'Ett stängsel tvärs över?',
+      memory: { normal: 'diket är torrt', hard: 'diket är fullt' },
+      arrive: 'Ett dike, och bakom det ett stängsel som surrar. Bortom ligger ett grönt bete.',
+      arriveNight: 'Vi hör stängslet innan vi ser det: ett lågt surr i mörkret. Vattnet i diket glittrar.',
+      note: 'Ett dike som stiger, och ett stängsel med ström. En grind.',
+    },
+    {
       ...farm, key: 'akergarden', name: 'Gården vid åkern', fogName: 'En röd lada?',
       arrive: 'En gård mitt bland fälten. Ladan är större än den hemma, och hundarna också.',
       arriveNight: 'En gård mitt bland fälten. Ett ensamt ljus brinner i köket.',

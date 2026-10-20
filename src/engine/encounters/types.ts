@@ -30,6 +30,8 @@ export interface ZoneDef {
   stone?: boolean;
   /** Trees stand here: the felling machine wants them. */
   trees?: boolean;
+  /** Electrified: whoever stands here touches the wire when it hums. */
+  wire?: boolean;
   /** Cover only for these sizes: a furrow hides a mouse, not a fox. */
   coverFor?: Size[];
 }
@@ -59,4 +61,6 @@ export interface EncounterDef {
   zones: ZoneDef[];
   /** Paths toward the goal; walking them in reverse goes back. First listed is the main way. */
   edges: [ZoneId, ZoneId][];
+  /** Edges a fence stands across: only fliers cross – and, through the gate, the large who push it open. */
+  fence?: { edges: [ZoneId, ZoneId][]; gate: [ZoneId, ZoneId] };
 }

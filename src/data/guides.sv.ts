@@ -1,3 +1,4 @@
+import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
 // The guide for each area: what we are trying to do, what kills and what
 // shelters. Numbers come from the rules so the guide cannot drift from them.
 import { ALARM_MAX, ALARM_MAX_NIGHT, FARM, SCENT_MAX } from '../engine/encounters/farm';
@@ -48,6 +49,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   sprayer: {
     day: 'Traktorn kör en rad i timmen och sprutar. Vi ser dimman, och åt vilket håll vinden drar.',
     night: 'Ingen traktor – men dagens dimma ligger kvar i raderna och stiger på nytt. Vi känner bara vinden, och ser bara en del av dimman.',
+  },
+  fence: {
+    day: 'Vi ser när strömmen i stängslet är på – den här timmen och nästa.',
+    night: 'Vi hör bara om stängslet surrar just nu, inte vad som kommer. Och vattnet i diket är iskallt: den som står där tappar 1 tro.',
   },
 };
 
@@ -202,6 +207,28 @@ export const GUIDES: Record<EncounterId, Guide> = {
       'Läs vinden: dimman driver dit den blåser, och traktorn lägger ny där den kör.',
       'Paddan och bävern hör hemma i bäcken – där tvättas giftet bort.',
       'Om natten: insikt (Lyssna i marken, Vittring, Läsa natten …) visar hela dimman.',
+    ],
+  },
+  fence: {
+    title: 'Så tar vi oss genom stängslet',
+    hard: 'Ibland är diket redan fullt: vattnet börjar på 1.',
+    goal: `Få alla från Åkerkanten till Betet – ${FENCE.maxTurn} timmar. Genom diket eller över spången, och sedan genom stängslet – om vi kan. Tre steg.`,
+    dangers: [
+      { icon: '≋', name: 'Diket', effect: 'dödar', text: `Vattnet stiger nästan varje timme – det syns i förväg. Vid ${SWEEPS_SMALL} drar det med sig de små som står i diket (sista stunden), vid ${SWEEPS_MEDIUM} de mellanstora också. De stora och de som simmar står kvar – och den som står bredvid ett stort djur håller sig fast i det.` },
+      { icon: '⚡', name: 'Stängslet', effect: 'dödar', text: 'Strömmen slår på och av. Den som står vid stängslet eller grinden när den är på: de små dör (sista stunden), de andra får chock.' },
+      { icon: '▥', name: 'Stängt', text: 'Stängslet går inte att gå igenom. Bara de som flyger kommer över.' },
+    ],
+    shelter: [
+      { icon: '⊓', name: 'Grinden', text: `Ett stort djur kan trycka upp grinden (◆${GATE_PUSH} extra) – eller två av oss tillsammans. Sedan står den öppen för alla.` },
+      { icon: '◌', name: 'Kaninhålet', text: 'Ett hål under stängslet – bara för de små, och långsamt. Strömmen når inte dit.' },
+      { icon: '⇡', name: 'Över', text: 'Ugglan flyger över – och kan bära en liten med sig (Bära liten).' },
+      { icon: '◒', name: 'Under', text: 'Mullvaden gräver en gång under stängslet (Gräva gång), och de små följer med.' },
+      { icon: '≈', name: 'Bävern', text: 'Laga dammen eller Fälla träd sänker vattnet i diket en nivå.' },
+    ],
+    tips: [
+      'Spången är torr, men smal: gå över medan vattnet står lågt.',
+      'Få ett stort djur till grinden tidigt. En öppen grind är vägen för alla som inte flyger.',
+      'Låt ingen liten vänta vid stängslet när strömmen är på.',
     ],
   },
 };

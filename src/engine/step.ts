@@ -14,6 +14,7 @@ import { CURRENT, DAM, DAM_MAX, FLOOD_DAM_CREAK, FLOOD_HOURS, FLOOD_HOURS_TOTAL,
 import { planMachines, roarZones } from './encounters/machines';
 import { exposedIn, prey, shadowOptions } from './encounters/raptor';
 import { CROP, drift, nightMist, planSprayer, rowZones, sprayed } from './encounters/sprayer';
+import { DITCH_MAX, FENCE, levelAfter, onTheWire, planFence, sweptIn } from './encounters/fence';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, buildCast, idFor, makeAnimal, oathVerse, regionJourney } from './setup';
@@ -52,6 +53,7 @@ import {
   isFast,
   RESCUE_TRUST,
   HEALS_AT_FIRE,
+  gatePush,
   rescueBlockReason,
   moonHidden,
   moonVisible,
@@ -338,6 +340,8 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
     const plan = planSprayer(s, s.maxTurn);
     s.spray = { ...plan, mist: s.time === 'night' ? nightMist(s) : [], shown: [] };
   } else s.spray = { rowPlan: [], windPlan: [], mist: [], shown: [] };
+  // The ditch and the gate: the water starts low – or, where the guide's memory was too kind, already high.
+  s.fence = id === 'fence' ? { ...planFence(s, s.maxTurn), level: hard ? 1 : 0, gateOpen: false } : { level: 0, risePlan: [], pulsePlan: [], gateOpen: false };
   // Someone is trapped here, the first time we come.
   s.rescue = null;
   const sp = def.rescue && !s.rescues.includes(s.journey.region) ? trappedKind(s, def.rescue.not ?? []) : undefined;
@@ -920,6 +924,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'machines') telegraphMachines(c);
   if (s.encounterId === 'raptor') telegraphRaptors(c);
   if (s.encounterId === 'sprayer') telegraphSprayer(c);
+  if (s.encounterId === 'fence') telegraphFence(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1009,6 +1014,11 @@ function rollIntents(c: Ctx) {
 function moveAnimal(c: Ctx, a: Animal, to: ZoneId, byPlayer: boolean) {
   const s = c.s;
   if (a.zone === to) return;
+  // A large one through the closed gate pushes it open, and it stays open.
+  if (s.encounterId === 'fence' && !s.fence.gateOpen && !canFly(a) && FENCE.fence!.gate[0] === a.zone && FENCE.fence!.gate[1] === to) {
+    s.fence.gateOpen = true;
+    line(c, a.id, a.size === 'large' ? `${a.name} lägger hela sin tyngd mot grinden. Den ger efter, och står öppen.` : `${a.name} och de andra vid grinden trycker tillsammans. Den ger efter, och står öppen.`);
+  }
   a.zone = to;
   if (a.climbing) {
     a.climbing = false;
@@ -1048,7 +1058,7 @@ function lead(c: Ctx, target: string, zone: ZoneId) {
   if (!leadTargets(s).includes(target)) fail('Det djuret kan inte ledas nu.');
   const a = animal(s, target);
   if (!leadZones(s, a).includes(zone)) fail('Dit kan vi inte leda.');
-  s.kraft -= leadCost(a);
+  s.kraft -= leadCost(a) + gatePush(s, a, zone);
   a.steps = (a.steps ?? 0) + 1;
   moveAnimal(c, a, zone, true);
 }
@@ -1388,6 +1398,55 @@ function sprayerHazards(c: Ctx) {
     s.hitQueue.push({ victim: a.id, severity: 'injure', sudden: false, zone: a.zone, source: 'gift' });
   }
   for (const a of s.animals.filter((x) => isActive(x) && s.spray.mist.includes(x.zone) && x.underground)) line(c, a.id, `Dimman drar över ${a.name}, men når inte ner i jorden.`);
+}
+
+// ---------------------------------------------------------------- the ditch and the gate
+
+/** The beaver holds the water back: the ditch sinks a level. */
+function lowerDitch(c: Ctx, o: Animal) {
+  const s = c.s;
+  if (s.fence.level === 0) {
+    line(c, o.id, `${o.name} lägger grenar i diket, men vattnet står redan lågt.`);
+    return;
+  }
+  s.fence.level -= 1;
+  line(c, o.id, `${o.name} dämmer diket. Vattnet sjunker (${s.fence.level}/${DITCH_MAX}).`);
+}
+
+/** Start of the hour: how high the water stands and whether it rises; whether the wire hums – and by day, the next hour too. */
+function telegraphFence(c: Ctx) {
+  const s = c.s;
+  const rise = s.fence.risePlan[s.turn - 1];
+  narrate(c, `Diket står på ${s.fence.level}${rise ? ' och stiger' : ''}.`);
+  const on = s.fence.pulsePlan[s.turn - 1];
+  if (s.time === 'night') {
+    narrate(c, on ? 'Stängslet surrar i mörkret.' : 'Stängslet är tyst. Just nu.');
+    return;
+  }
+  const next = s.turn < s.maxTurn ? s.fence.pulsePlan[s.turn] : undefined;
+  narrate(c, `Strömmen i stängslet är ${on ? 'på' : 'av'} den här timmen${next === undefined ? '' : `, ${next ? 'på' : 'av'} nästa`}.`);
+}
+
+/** End of the hour: the water rises and takes those it can; the wire, when it hums, kills the small and shocks the rest; the night water is cold. */
+function fenceHazards(c: Ctx) {
+  const s = c.s;
+  s.fence.level = levelAfter(s);
+  for (const a of sweptIn(s, s.fence.level)) {
+    narrate(c, `Vattnet i diket tar tag i ${a.name}.`);
+    s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'diket' });
+  }
+  if (s.fence.pulsePlan[s.turn - 1]) {
+    for (const a of onTheWire(s)) {
+      if (s.hitQueue.some((h) => h.victim === a.id)) continue;
+      s.hitQueue.push({ victim: a.id, severity: a.size === 'small' ? 'kill' : 'injure', sudden: false, zone: a.zone, source: 'stängslet' });
+    }
+  }
+  if (s.time === 'night') {
+    for (const a of s.animals.filter((x) => isActive(x) && zoneDef(s, x.zone).water && !x.flying)) {
+      changeBelief(c, a, -1);
+      line(c, a.id, `Vattnet i diket är iskallt. ${a.name} skakar.`);
+    }
+  }
 }
 
 // ---------------------------------------------------------------- the rescue
@@ -1760,7 +1819,9 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       break;
     // ------------------------------------------------ the beaver
     case 'lagaDammen':
-      if (s.encounterId === 'river' && !s.closed.includes(DAM)) {
+      if (s.encounterId === 'fence') {
+        lowerDitch(c, o);
+      } else if (s.encounterId === 'river' && !s.closed.includes(DAM)) {
         s.damCreak = Math.max(0, s.damCreak - 2);
         line(c, o.id, `${o.name} lagar dammen. Den knakar mindre nu (${s.damCreak}/${DAM_MAX}).`);
       } else {
@@ -1782,6 +1843,8 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
         moveAnimal(c, x, zone!, true);
         if (isActive(x)) x.protectedBy = o.id;
       }
+      // The trunk falls across the ditch, too, and holds the water back.
+      if (s.encounterId === 'fence') lowerDitch(c, o);
       break;
     }
     // ------------------------------------------------ the fawn
@@ -1856,6 +1919,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'machines') machinesHazards(c);
   if (s.encounterId === 'raptor') raptorHazards(c);
   if (s.encounterId === 'sprayer') sprayerHazards(c);
+  if (s.encounterId === 'fence') fenceHazards(c);
   processHits(c);
 }
 
@@ -1984,11 +2048,11 @@ const TREE_FALL = ['fällaren', 'schaktaren'];
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'bonde'];
 
-const HIT_BY: Record<string, string> = { traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
+const HIT_BY: Record<string, string> = { diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
-  const pool: InjuryKind[] = ['hund', 'bett', 'häger', ...BIRDS].includes(h.source) ? ['bleeding'] : ['halt', 'broken'];
+  const pool: InjuryKind[] = h.source === 'stängslet' ? ['shock'] : ['hund', 'bett', 'häger', ...BIRDS].includes(h.source) ? ['bleeding'] : ['halt', 'broken'];
   const fresh = pool.filter((k) => !hasInjury(v, k));
   if (fresh.length) return fresh[Math.floor(random(c.s) * fresh.length)];
   return hasInjury(v, 'bleeding') ? null : 'bleeding';

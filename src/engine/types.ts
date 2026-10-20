@@ -1,7 +1,7 @@
 /** Zones are defined per encounter (see encounters/); ids are plain strings. */
 export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
-export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer';
+export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence';
 /** Which way the wind carries the mist over the sprayed field. */
 export type Wind = 'norr' | 'söder' | 'öster' | 'väster';
 
@@ -390,7 +390,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 22;
+  version: 23;
   /** Which group left the glen. */
   cast: CastId;
   /** The variant of the encounter we're in. */
@@ -454,6 +454,8 @@ export interface GameState {
   raptors: { zone: ZoneId | null; maybe: ZoneId[] }[];
   /** The sprayed field: the tractor's rows and the wind, hour by hour; where the mist lies; what of it we can see at night. */
   spray: { rowPlan: number[]; windPlan: Wind[]; mist: ZoneId[]; shown: ZoneId[] };
+  /** The ditch and the gate: the water's level, when it rises, when the wire hums, whether the gate stands open. */
+  fence: { level: number; risePlan: boolean[]; pulsePlan: boolean[]; gateOpen: boolean };
   /** Someone trapped in this encounter, not yet one of us: they must come to trust us before we can free them. */
   rescue: Rescue | null;
   /** Newcomers we have met this run – rescued or left behind. Each is met only once. */
