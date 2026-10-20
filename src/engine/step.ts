@@ -1361,10 +1361,6 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
     case 'sprang':
       moveAnimal(c, o, zone!, true);
       break;
-    case 'rusa':
-      moveAnimal(c, o, zone!, true);
-      changeBelief(c, o, -1);
-      break;
     case 'vingar': {
       o.flying = true;
       s.darkRevealed = true;
@@ -1401,11 +1397,6 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
         line(c, o.id, `${o.name} lyssnar mot asfalten.`);
       }
       break;
-    case 'hallaSigNara':
-      moveAnimal(c, o, tgt!.zone, true);
-      addBond(c, o, tgt!, 1);
-      line(c, o.id, `${o.name} håller sig nära ${tgt!.name}.`);
-      break;
     case 'trosta':
       changeBelief(c, tgt!, has(o, 'omtanksam') ? 3 : 2);
       tgt!.intent = { kind: 'follow' };
@@ -1415,9 +1406,6 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       s.peekNext = true;
       drawCards(c, 1);
       line(c, o.id, `${o.name} lyssnar till natten.`);
-      break;
-    case 'bitaIhop':
-      o.braced = true;
       break;
     case 'skratt':
       s.animals.filter((x) => isPresent(x) && x.zone === o.zone).forEach((x) => changeBelief(c, x, 1));

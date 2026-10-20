@@ -237,7 +237,7 @@ describe('reasons shown to the player', () => {
     expect(leadBlockReason(s, get(s, 'fox'))).toMatch(/fryser/);
     expect(cardBlockReason(s, { uid: 1, kind: 'snabbaTassar', owner: 'fox' })).toBe('Sotfot fryser.');
     s.kraft = 0;
-    expect(cardBlockReason(s, { uid: 2, kind: 'bitaIhop', owner: 'badger' })).toBe('Behöver ◆1.');
+    expect(cardBlockReason(s, { uid: 2, kind: 'trosta', owner: 'badger' })).toBe('Behöver ◆1.');
     expect(leadBlockReason(s, get(s, 'toad'))).toMatch(/kostar/);
   });
 });

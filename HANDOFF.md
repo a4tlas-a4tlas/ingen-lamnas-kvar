@@ -7,7 +7,7 @@ This file is updated with every step (every PR). It is enough, together with `DE
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 7.4: Egenskaper som modifierare (branch `egenskaper`, open, awaiting review). Latest merged: #25, this handoff file. The older #24 (branch `drag`) is an earlier, different take on 7.4 that this one replaces. |
+| **Latest PR** | Städning efter 7.4 (branch `stadning`, open). Latest merged: #26 – Milestone 7.4: Egenskaper som modifierare. #24 (an older take on 7.4) is closed. |
 | **Save version** | 19 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
 | **Tests** | 206 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
@@ -102,5 +102,5 @@ Approved design (Milestone 7 in `DESIGN.md` and the plan file): before the oath,
 - **Gamla vägar can be taught across kinds** (it's "insight"). A badger can then find the culvert but doesn't fit through it.
 - **The adder starts hungry** (belief 4, hunger 2) and often hunts from hour 1. That's older behaviour, kept on purpose so far.
 - **Bot balance after 7.4:** the machines boss is 3.53 of 6 safe (was 3.88). Random bad traits hurt a lead-only bot that never comforts or plays insight. It was measured just before Tvivlande was limited to animals starting at 5+, so the real number is the same or a little higher.
+- **Old branches:** 25 merged branches (and `drag`) are still on GitHub. Deleting them was blocked by the session's permission check; they can be removed in GitHub's branch list, or in a session that allows it.
 - **Tests and random traits:** `createGame` rolls traits. A test that builds its own game and checks belief, injuries or hunting should call `plain(s)` from `tests/engine/helpers.ts`, as `raptor.test.ts` does.
-- **The old trait cards** (`hallaSigNara`, `rusa`, `bitaIhop`) are still defined in `CARDS` but no longer in any species set. Only one engine test still uses them (`bitaIhop`, for a Kraft cost check), so they were left in 7.4. They can be removed together with that test.
