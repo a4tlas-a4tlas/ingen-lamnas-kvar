@@ -14,6 +14,8 @@ export interface RegionDef {
   epilogue: string;
   /** Where we stand once its boss is behind us: the end screen's heading, if the story stops here. */
   beyond: string;
+  /** Only offered once these regions are behind us. */
+  after?: RegionId[];
   /** The promise someone asks of us when we look back on the region. */
   verse?: PromiseRule;
   start: Template;

@@ -7,6 +7,7 @@ import { roarZones } from '../engine/encounters/machines';
 import { tractorRow, visibleMist } from '../engine/encounters/sprayer';
 import { DITCH_MAX, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL, levelAfter } from '../engine/encounters/fence';
 import { cutting } from '../engine/encounters/harvest';
+import { LAMPED, lit, walkerZone } from '../engine/encounters/lamps';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -111,7 +112,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 25 && s.phase !== 'over' ? s : null;
+    return s.version === 26 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -878,6 +879,21 @@ export class App {
     return out.join('');
   }
 
+  /** The street: where the light falls, when the next lamps come on, and where the men with dogs walk. */
+  private lampsTelegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    for (const z of LAMPED) {
+      const at = s.lamps.litAt[z];
+      out.push(lit(s, z) ? `<div class="lamp-mark on" style="${box(z)}"><i></i><span>ljus</span></div>` : `<div class="lamp-mark" style="${box(z)}"><span>tänds om ${at - s.turn} ${at - s.turn === 1 ? 'timme' : 'timmar'}</span></div>`);
+    }
+    for (const w of s.lamps.walkers) {
+      const z = walkerZone(w);
+      out.push(`<div class="walker-mark ${lit(s, z) ? 'seen' : ''}" style="${box(z)}"><span>Mannen med hunden${lit(s, z) ? ' · skadar' : ' · i mörkret'}</span></div>`);
+    }
+    return out.join('');
+  }
+
   /** The harvest: the strip being cut, the next, the stubble, the buzzard's shadow. */
   private harvestTelegraphHtml(s: GameState): string {
     const out: string[] = [];
@@ -962,6 +978,7 @@ export class App {
     if (s.encounterId === 'sprayer') return s.phase === 'over' ? '' : this.sprayerTelegraphHtml(s);
     if (s.encounterId === 'fence') return s.phase === 'over' ? '' : this.fenceTelegraphHtml(s);
     if (s.encounterId === 'harvest') return s.phase === 'over' ? '' : this.harvestTelegraphHtml(s);
+    if (s.encounterId === 'lamps') return s.phase === 'over' ? '' : this.lampsTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {

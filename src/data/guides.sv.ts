@@ -1,3 +1,4 @@
+import { LAMPS } from '../engine/encounters/lamps';
 import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
 // The guide for each area: what we are trying to do, what kills and what
@@ -58,6 +59,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   harvest: {
     day: 'Skördetröskan arbetar i dagsljus. Det går inte att vänta på mörkret.',
     night: 'Skördetröskan arbetar i dagsljus. Det går inte att vänta på mörkret.',
+  },
+  lamps: {
+    day: 'Lyktorna tänds i skymningen. Det går inte att vänta på dagen.',
+    night: 'Lyktorna tänds i skymningen. Det går inte att vänta på dagen.',
   },
 };
 
@@ -250,6 +255,24 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Gå i vetet dit skördetröskan inte ska nästa timme – och sedan ut, innan vetet är borta.',
       'Stubben är farligast för de små. Korsa den snabbt, eller tillsammans med en stor.',
+    ],
+  },
+  lamps: {
+    title: 'Så tar vi oss förbi gatlyktorna',
+    hard: 'Ibland är de två: två män med hund, som går åt var sitt håll runt kvarteret.',
+    goal: `Få alla från Dikeskanten till Trädgårdarna – ${LAMPS.maxTurn} timmar. Över gatan, genom framgårdarna: tre steg.`,
+    dangers: [
+      { icon: '☀', name: 'Gatlyktorna', text: 'Över gatan och framgårdarna sitter lyktor. De tänds en i taget, och det syns hur länge det är kvar. En lykta som tänts släcks inte igen.' },
+      { icon: '◣', name: 'Mannen med hunden', effect: 'skadar', text: 'Han går runt kvarteret, en zon i timmen – det syns var. Står vi i ljuset där han går när timmen går, får hunden syn på oss: den biter den minsta (ett sår som blöder) och jagar de andra tillbaka. I mörkret ser han ingen.' },
+    ],
+    shelter: [
+      { icon: '♣', name: 'Busskuren och soptunnorna', text: 'Här finns ingen lykta. Här är det alltid mörkt.' },
+      { icon: '◌', name: 'Gömd', text: 'Den som har gömt sig – smugit, krupit in, frusit stilla – hittar hunden inte, inte ens i ljuset.' },
+      { icon: '⇡', name: 'Luften', text: 'Den som flyger når hunden inte.' },
+    ],
+    tips: [
+      'Läs lyktorna: gå där det är mörkt, och där det blir mörkt längst.',
+      'Mannen följer alltid samma runda. Var inte där han ska vara när ljuset är tänt.',
     ],
   },
 };

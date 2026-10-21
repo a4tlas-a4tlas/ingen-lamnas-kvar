@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 6.6 – Åkrarna complete)
+## Status (after step 6.7)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 6.6: Skördetröskan (branch `skordetroskan`, open, awaiting review). Latest merged: #32, Milestone 6.5: Åkrarnas berättelser. |
-| **Save version** | 25 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 280 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 6.7: Stadens utkant och Gatlyktorna (branch `staden`, open, awaiting review). Latest merged: #33, Milestone 6.6: Skördetröskan. |
+| **Save version** | 26 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 293 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -31,6 +31,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 |---|---|---|
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
 | **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden), the gravel road (Grusvägen) + old dangers in new places; six story parts of its own (`src/data/meetings/akrarna.sv.ts`) | Skördetröskan |
+| **Stadens utkant** | the street lights (Gatlyktorna) + old dangers; story parts borrowed for now; comes after Åkrarna (`RegionDef.after`) | none yet (ends at "Stadens bortre kant") |
 
 **Animals** are species, not characters: badger, toad, fox, owl, adder, mice, hare, and since 7.6 hedgehog, squirrel, mole, beaver and fawn (`SPECIES` in `src/data/animals.ts`, with Swedish grammar fields `en` / `den` / `definite`). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
 
@@ -51,7 +52,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 | Path | What |
 |---|---|
 | `src/engine/` | The pure, deterministic rules. `step(state, action) → { state, events }` (`step.ts`). Seeded RNG in `s.rng`. Also `rules.ts`, `campfire.ts`, `regions.ts` (map generator), `roles.ts`, `will.ts`, `promises.ts`, `voices.ts`. |
-| `src/engine/encounters/` | One file per danger (`road`, `farm`, `river`, `machines`, `raptor`, `sprayer`, `fence`, `harvest`): zones, edges, plans. |
+| `src/engine/encounters/` | One file per danger (`road`, `farm`, `river`, `machines`, `raptor`, `sprayer`, `fence`, `harvest`, `lamps`): zones, edges, plans. |
 | `src/data/` | Content as data: `animals.ts` (species, names, start group), `skills.ts`, `cards.ts`, `traits.ts`, `verses.ts`, `guides.sv.ts`, `promises.sv.ts`, `voices.sv.ts`, `regions/`, `meetings/` (frames for every meeting). All Swedish text lives here. |
 | `src/ui/` | Plain DOM + SVG, no framework: `app.ts` (screens and input), `screens.ts` (map, fire, meetings, guide), `scene.ts` (backdrops), `status.ts` (chips and forecast). |
 | `DESIGN.md` | The living design document, one section per milestone/step. |
@@ -78,23 +79,18 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: 6.7 – Stadens utkant, the city's edge
-Åkrarna is complete. The third region starts here. From the approved design (Milestone 6 in `DESIGN.md` and the plan file), four dangers and a boss:
-- **Gatlyktorna:** street lights on a timer, and a man walking a dog through the lit zones.
-- **Katterna:** two cats stalking the smallest by scent.
-- **Trafikleden:** four lanes, traffic lights, a noise barrier, an underpass.
-- **Avloppet:** the drains in the dark, rain filling the tunnels, the rats' toll.
-- **The boss, Fyrverkerinatten:** New Year's Eve, where the danger is fear itself.
-- **Also:** story parts, and finally the choice between 2 random regions (6.12).
-- **First:**
-  - a new `RegionDef` (`src/data/regions/`) and adding it to `MIDDLE_REGIONS`, so the interlude after Åkrarna offers it
-  - Åkrarna's own interlude verse
-- **Ask the user first,** in the interview style. Which danger first?
+## Next step: 6.8 – the city's second danger
+Stadens utkant exists with Gatlyktorna. Next, one of the remaining three (from the approved design in `DESIGN.md` and the plan file):
+- **Katterna:** two cats stalk the smallest by scent, quietly. A predator of ours can scare a cat off (◆1); food (a card) draws them away.
+- **Trafikleden:** four lanes at rush hour, traffic lights on a visible cycle (crossing on red is safe), a noise barrier to climb, an underpass whose echo frightens (shock).
+- **Avloppet:** under the city in the dark: zones only heard (fog on the board), rain filling the tunnels hour by hour, rats demanding a toll.
+
+Build it like `lamps.ts`, and add it to `STADEN.dangers` in `src/data/regions/staden.ts`. **Ask the user first** which one, and how.
 
 **After that:**
 - **The rest of Milestone 6:**
   - Åkrarna: the boss Skördetröskan (with the hedgehog, which is now a real species that can already be with us; its story must adapt if so)
-  - Stadens utkant: four dangers, and the boss Fyrverkerinatten (the danger is fear itself)
+  - Stadens utkant: three more dangers, its own story parts, and the boss Fyrverkerinatten (the danger is fear itself)
   - finally, the choice between 2 random regions
 
 ## Open questions and known quirks
@@ -102,6 +98,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 - **The fields** are easier for the bot at night than by day: the eagle owl strikes only one of two marked zones.
 - **Gamla vägar can be taught across kinds** (it's "insight"). A badger can then find the culvert but doesn't fit through it.
 - **The adder starts hungry** (belief 4, hunger 2) and often hunts from hour 1. That's older behaviour, kept on purpose so far.
+- **Gatlyktorna's bot balance (6.7):** 4.9 of 6 safe; normal and hard play alike for a bot that steps out of the walker's light. The dog only injures, so it's the gentlest danger yet. A lever if wanted: the dog chases those it finds *forward* into the next lamp, or kills a small one in the light.
 - **Bot balance, the same reading bot on all three Åkrarna dangers (6.4),** 300 seeds, of 6 safe:
   - the fields: 3.9 by day, 4.4 at night
   - Sprutan: 4.5 / 4.7

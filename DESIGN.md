@@ -717,6 +717,30 @@ The last field of Åkrarna, by day only, 8 hours.
 - **Bot:** 3.58 of 6 safe with the reading bot, about Dalen's machines (3.5–3.9).
 - **Save version 25.**
 
+### Step 7: Stadens utkant, and its first danger – Gatlyktorna (done)
+- **The third region**, *Stadens utkant* (`src/data/regions/staden.ts`):
+  - **Its places:** from *Stadsgränsen* through Gatlyktorna (always first), *Villagatan* (the lamps again), *Infartsvägen* (the asphalt road) and *Ån genom stan* (the river). The fires are *Under bron* and *Skjulet*.
+  - **For now:** story parts borrowed from the glen and the fields, and a plain end at *Stadens bortre kant* until the boss Fyrverkerinatten.
+- **The order:** until the real choice between two (6.12), the city comes after the fields (`RegionDef.after`), so a run goes Dalen → Åkrarna → the city.
+- **Dalen's promise** "Vi går aldrig dit där maskinerna bor" now breaks when we choose the city.
+- **Åkrarna has no verse of its own** (your choice).
+- **Gatlyktorna** (night only, 8 hours, three steps):
+
+  | Row | | | |
+  |---|---|---|---|
+  | goal | **Trädgårdarna** | | |
+  | yards | Framgården, väst | **Soptunnorna** (dark) | Framgården, öst |
+  | street | Gatan, väst | **Busskuren** (dark) | Gatan, öst |
+  | start | **Dikeskanten** | | |
+
+  - **The lamps:** each lamp over the street and the yards comes on at its own hour (2–6) and stays on. Each shows "tänds om N timmar". The bus shelter and the bins are always dark.
+  - **The man with the dog:** he walks his round (gatan väst → gatan öst → framgården öst → framgården väst …), one zone an hour, telegraphed.
+    - **In the light,** the dog finds us where he stands: it bites the smallest (bleeding) and chases the rest back.
+    - **In the dark** he sees no one, and the hidden and the flying are never found.
+  - **Hard** (*två hundägare*): two walkers, going opposite ways.
+- **Bot:** 4.9 of 6 safe, the gentlest so far, as the city's opening.
+- **Save version 26.**
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.
