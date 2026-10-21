@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -330,8 +330,33 @@ function machinesSvg(): string {
 </svg>`;
 }
 
-/** Fältet under himlen: a hedge at the top, the open stubble field and the stone pile, three furrows, the grassy field edge. */
-/** The ditch and the gate: a field bank, a ditch with a plank across, a wire fence on posts, the pasture beyond. */
+/** The harvest: tall golden wheat in six stands, the hedge beyond, the field edge where we start. */
+function harvestSvg(): string {
+  const y = (p: number) => p * 5;
+  const hedge: string[] = [];
+  for (let i = 0; i < 16; i++) hedge.push(`<ellipse cx="${6 + i * 26}" cy="${y(14) - (i % 3) * 3}" rx="${22 + (i % 2) * 6}" ry="${18 + (i % 3) * 4}"/>`);
+  const ears: string[] = [];
+  for (let r = 0; r < 10; r++) for (let i = 0; i < 26; i++) ears.push(`<path d="M${4 + i * 15.5 + (r % 2) * 7} ${y(24) + r * 27} v-14 m0 0 l-3 4 m3 -4 l3 4"/>`);
+  const tufts: string[] = [];
+  for (let i = 0; i < 22; i++) tufts.push(tuft(8 + i * 18.5, y(100) - 2 - (i % 3) * 3, 1.5 + (i % 4) * 0.25));
+  return `
+<svg class="scene-bg harvest" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="harvestsky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9bb2c8"/><stop offset="1" stop-color="#f0dca8"/>
+    </linearGradient>${DEFS}
+  </defs>
+  <rect width="400" height="${y(10)}" fill="url(#harvestsky)"/>
+  <g fill="#3f5a30" filter="url(#cut)">${hedge.join('')}</g>
+  <rect y="${y(22)}" width="400" height="${y(56)}" fill="#d9b45a"/>
+  <g stroke="#b08a34" stroke-width="1.6" fill="none">${ears.join('')}</g>
+  <path d="M136 ${y(22)} V${y(78)} M264 ${y(22)} V${y(78)} M0 ${y(50)} H400" stroke="#a07a2a" stroke-width="2" opacity="0.6"/>
+  <rect y="${y(78)}" width="400" height="${y(22)}" fill="#6e8048" filter="url(#cut)"/>
+  <g fill="#566a36" filter="url(#cut)">${tufts.join('')}</g>
+</svg>`;
+}
+
+/** The ditch and the gate: the field's edge, a ditch with a plank across, a wire fence on posts, the pasture beyond. */
 function fenceSvg(): string {
   const y = (p: number) => p * 5;
   const x = (p: number) => p * 4;
@@ -412,6 +437,7 @@ function sprayerSvg(): string {
 </svg>`;
 }
 
+/** Fältet under himlen: a hedge at the top, the open stubble field and the stone pile, three furrows, the grassy field edge. */
 function fieldSvg(): string {
   const y = (p: number) => p * 5;
   const x = (p: number) => p * 4;

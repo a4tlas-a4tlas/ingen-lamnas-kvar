@@ -5,6 +5,7 @@ import { roarZones } from '../engine/encounters/machines';
 import { sheltered } from '../engine/encounters/raptor';
 import { mistAfter, rowZones, tractorRow } from '../engine/encounters/sprayer';
 import { GATE_PUSH, levelAfter, onTheWire, sweptIn } from '../engine/encounters/fence';
+import { cutting, inWheat, stubblePrey } from '../engine/encounters/harvest';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
@@ -84,6 +85,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'raptor') out.push(...raptorStatuses(s, a));
   if (s.encounterId === 'sprayer') out.push(...sprayerStatuses(s, a));
   if (s.encounterId === 'fence') out.push(...fenceStatuses(s, a));
+  if (s.encounterId === 'harvest') out.push(...harvestStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -237,6 +239,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'raptor') out.push(...raptorForecast(s, zoneOf));
   if (s.encounterId === 'sprayer') out.push(...sprayerForecast(s, zoneOf));
   if (s.encounterId === 'fence') out.push(...fenceForecast(s, zoneOf));
+  if (s.encounterId === 'harvest') out.push(...harvestForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -329,6 +332,36 @@ function riverForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[
     if (left === 1) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: nästa som går ut på den bryter den.`, tone: 'warn' });
     else if (left === 2) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: ett stort djur till bryter den.`, tone: 'warn' });
   }
+  return out;
+}
+
+/** The harvest: in the harvester's way, in the buzzard's shadow, or hidden in the wheat. */
+function harvestStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active') return [];
+  if (!a.flying && cutting(s).includes(a.zone)) return [{ key: 'harvest', icon: '▤', label: 'i skördetröskans väg', tone: 'bad', explain: `Skördetröskan skär här när timmen går. Står ${a.name} kvar blir ${a.name} överkörd.` }];
+  if (s.harvest.shadow === a.zone && stubblePrey(s, a.zone) === a) return [{ key: 'raptor', icon: '◒', label: 'i skuggan', tone: a.size === 'small' ? 'bad' : 'warn', explain: `Vråken slår ner här i stubben när timmen går och tar ${a.name}.` }];
+  if (inWheat(s, a.zone)) return [{ key: 'wheat', icon: '♣', label: 'i vetet', tone: 'good', explain: `${a.name} är gömd i vetet. Vråken ser inte ${a.name} här – men skördetröskan kommer.` }];
+  return [];
+}
+
+/** The harvest: whom the harvester runs over, whom the buzzard takes, where it cuts next. */
+function harvestForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  const names = (xs: Animal[]) => xs.map((a) => a.name).join(' och ');
+  const strip = cutting(s);
+  const run = s.animals.filter((a) => isActive(a) && !a.flying && strip.includes(where(a)));
+  const place = strip.map((z) => zoneDef(s, z).name).join(' och ');
+  if (strip.length) out.push(run.length ? { text: `Skördetröskan skär ${place} och kör över ${names(run)}: dödar!`, tone: 'bad' } : { text: `Skördetröskan skär ${place} – ingen av oss där.`, tone: 'good' });
+  const z = s.harvest.shadow;
+  if (z) {
+    const v = stubblePrey(s, z, where);
+    out.push(v && !run.includes(v)
+      ? { text: `Vråken slår ner i ${zoneDef(s, z).name} och ${v.size === 'small' ? `bär bort ${v.name}: dödar!` : `klöser ${v.name}: skadar (blöder).`}`, tone: v.size === 'small' ? 'bad' : 'warn' }
+      : { text: `Vråken slår ner i ${zoneDef(s, z).name} – ingen av oss där.`, tone: 'good' });
+  }
+  const next = s.harvest.plan[s.turn] ?? [];
+  if (s.turn < s.maxTurn && next.length) out.push({ text: `Nästa timme skär den ${next.map((x) => zoneDef(s, x).name).join(' och ')}.`, tone: 'info' });
   return out;
 }
 

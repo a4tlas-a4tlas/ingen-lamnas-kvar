@@ -12,6 +12,8 @@ export interface RegionDef {
   fogName: string;
   /** Said when we leave the region behind, over its boss. */
   epilogue: string;
+  /** Where we stand once its boss is behind us: the end screen's heading, if the story stops here. */
+  beyond: string;
   /** The promise someone asks of us when we look back on the region. */
   verse?: PromiseRule;
   start: Template;
@@ -39,6 +41,7 @@ export const DALEN: RegionDef = {
   name: 'Dalen',
   fogName: 'Dalen',
   epilogue: 'Vi står på åsen och ser ner. Där dalen låg finns bara lera och stubbar. Bakom oss tystnar maskinerna. Framför oss ligger allt det andra.',
+  beyond: 'Bortom dalen',
   verse: 'noCity',
   start: { key: 'dalen', kind: 'start', name: 'Dalen', fogName: 'Dalen', arrive: 'Dalen, där vi föddes. Maskinerna står still i natt.' },
   first: road('vagen', 'Vägen'),

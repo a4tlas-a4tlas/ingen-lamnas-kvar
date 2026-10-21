@@ -16,6 +16,7 @@ import { planMachines, roarZones } from './encounters/machines';
 import { exposedIn, prey, shadowOptions } from './encounters/raptor';
 import { CROP, drift, nightMist, planSprayer, rowZones, sprayed } from './encounters/sprayer';
 import { DITCH_MAX, FENCE, levelAfter, onTheWire, planFence, sweptIn } from './encounters/fence';
+import { cutting, planHarvest, stubblePrey } from './encounters/harvest';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, buildCast, idFor, makeAnimal, oathVerse, regionJourney } from './setup';
@@ -345,6 +346,9 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
     s.spray = { ...plan, mist: s.time === 'night' ? nightMist(s) : [], shown: [] };
   } else s.spray = { rowPlan: [], windPlan: [], mist: [], shown: [] };
   // The ditch and the gate: the water starts low – or, where the guide's memory was too kind, already high.
+  // The harvest: the wheat stands, and the harvester's rounds are planned.
+  s.harvest = { plan: id === 'harvest' ? planHarvest(s, s.maxTurn) : [], cut: [], shadow: null };
+  if (id === 'harvest' && s.knowledge.includes('faranHjalpt')) narrate(c, 'Någonstans i vetet tänker vi på den vi hjälpte upp ur fåran.');
   s.fence = id === 'fence' ? { ...planFence(s, s.maxTurn), level: hard ? 1 : 0, gateOpen: false } : { level: 0, risePlan: [], pulsePlan: [], gateOpen: false };
   // Someone is trapped here, the first time we come.
   s.rescue = null;
@@ -1055,6 +1059,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'raptor') telegraphRaptors(c);
   if (s.encounterId === 'sprayer') telegraphSprayer(c);
   if (s.encounterId === 'fence') telegraphFence(c);
+  if (s.encounterId === 'harvest') telegraphHarvest(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1528,6 +1533,41 @@ function sprayerHazards(c: Ctx) {
     s.hitQueue.push({ victim: a.id, severity: 'injure', sudden: false, zone: a.zone, source: 'gift' });
   }
   for (const a of s.animals.filter((x) => isActive(x) && s.spray.mist.includes(x.zone) && x.underground)) line(c, a.id, `Dimman drar över ${a.name}, men når inte ner i jorden.`);
+}
+
+// ---------------------------------------------------------------- the harvest
+
+/** Start of the hour: where the harvester cuts, and – over the stubble – where the buzzard's shadow falls. */
+function telegraphHarvest(c: Ctx) {
+  const s = c.s;
+  const strip = cutting(s);
+  narrate(c, strip.length
+    ? `Skördetröskan kommer genom ${strip.map((z) => zoneDef(s, z).name).join(' och ')}.`
+    : s.harvest.cut.length ? 'Skördetröskan har skurit allt. Bara stubben är kvar.' : 'Långt borta startar en motor. Skördetröskan är på väg.');
+  s.harvest.shadow = null;
+  if (!s.harvest.cut.length) return;
+  const exposed = (z: ZoneId) => s.animals.filter((a) => isActive(a) && a.zone === z && a.size !== 'large').length;
+  const best = Math.max(...s.harvest.cut.map(exposed));
+  const top = s.harvest.cut.filter((z) => exposed(z) === best);
+  s.harvest.shadow = top[Math.floor(random(s) * top.length)];
+  narrate(c, `Vråken följer skördetröskan. Skuggan glider över stubben i ${zoneDef(s, s.harvest.shadow).name}.`);
+}
+
+/** End of the hour: the harvester cuts its strip and whoever is in it; the strip is stubble now; the buzzard strikes in the stubble. */
+function harvestHazards(c: Ctx) {
+  const s = c.s;
+  const strip = cutting(s);
+  for (const a of s.animals.filter((x) => isActive(x) && strip.includes(x.zone) && !x.flying)) {
+    s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'skördetröskan' });
+  }
+  if (strip.length) narrate(c, `Vetet i ${strip.map((z) => zoneDef(s, z).name).join(' och ')} faller.`);
+  const z = s.harvest.shadow;
+  if (z) {
+    const v = stubblePrey(s, z);
+    if (v && !s.hitQueue.some((h) => h.victim === v.id)) s.hitQueue.push({ victim: v.id, severity: v.size === 'small' ? 'kill' : 'injure', sudden: false, zone: z, source: 'vråk' });
+    else if (!v) narrate(c, `Vråken slår ner i ${zoneDef(s, z).name}. Ingen av oss var där.`);
+  }
+  s.harvest.cut = [...new Set([...s.harvest.cut, ...strip])];
 }
 
 // ---------------------------------------------------------------- the ditch and the gate
@@ -2073,6 +2113,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'raptor') raptorHazards(c);
   if (s.encounterId === 'sprayer') sprayerHazards(c);
   if (s.encounterId === 'fence') fenceHazards(c);
+  if (s.encounterId === 'harvest') harvestHazards(c);
   processHits(c);
 }
 
@@ -2201,7 +2242,7 @@ const TREE_FALL = ['fällaren', 'schaktaren'];
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'traktor', 'bonde'];
 
-const HIT_BY: Record<string, string> = { diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
+const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {

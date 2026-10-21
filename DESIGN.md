@@ -694,6 +694,29 @@ Design from the milestone 6 interview:
   - nothing unlit, and the next hour is always known, since the tractors are heard long before they come
 - **Save version 24.**
 
+### Step 6: Skördetröskan – Åkrarna's boss (done)
+The last field of Åkrarna, by day only, 8 hours.
+
+| Row | | | |
+|---|---|---|---|
+| goal | **Häcken** | | |
+| back | Bakre vetet, väst | Bakre vetet, mitten | Bakre vetet, öst |
+| front | Vetet, väst | Vetet, mitten | Vetet, öst |
+| start | **Fältkanten** | | |
+
+- **The way across:** three steps up through the wheat, and you can move sideways within a row to get out of the way.
+- **The harvester** starts its engine in the first hour.
+  - **From the second hour** it cuts **two stands an hour**, round the edge from a random corner and either way round, so by the fourth hour the wheat is gone.
+  - **Telegraphed:** this hour's strip and the next.
+  - **Whoever stands in the strip** is run over (last moment). Only those in the air escape.
+- **The stubble:** cut wheat becomes stubble, and standing wheat hides everyone.
+  - **The buzzard follows the harvester.** Its shadow falls on the stubble, toward where most of the small and medium stand.
+  - **When the hour passes** it takes the smallest there: a small one is carried off (last moment), a medium one clawed, the large never.
+- **No hedgehog** in the boss (your choice). The furrow's memory gets one line on arrival.
+- **After it:** the run ends with "Fortsättning följer" (no third region yet), and the end screen reads **Bortom åkrarna** (`RegionDef.beyond`).
+- **Bot:** 3.58 of 6 safe with the reading bot, about Dalen's machines (3.5–3.9).
+- **Save version 25.**
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.
