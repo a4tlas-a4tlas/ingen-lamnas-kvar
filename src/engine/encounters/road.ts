@@ -1,7 +1,7 @@
 // Vägen: two lanes of traffic, a median, and a hidden culvert. By night fewer
 // cars but dark ones and the moon; by day more cars, all of them seen.
 import { random, pick, randInt, type RngHolder } from '../rng';
-import type { LaneId, Strike, TimeOfDay } from '../types';
+import type { LaneId, Strike, TimeOfDay, RoadKind } from '../types';
 import type { EncounterDef } from './types';
 
 export const ROAD: EncounterDef = {
@@ -60,14 +60,23 @@ function rollTraffic(h: RngHolder, turn: number, darkTurn: number, time: TimeOfD
   return strikes;
 }
 
+/** The gravel road between the fields: tractors, slow and wide – they fill both lanes – and the odd car. Nothing comes unlit. */
+function rollGravel(h: RngHolder, turn: number): Strike[] {
+  const tractor = (lane: LaneId): Strike => ({ lane, severity: 'kill', vehicle: 'traktor', dark: false });
+  const r = random(h);
+  if (turn > 1 && r < 0.35) return [tractor('lane1'), tractor('lane2')];
+  if (r < 0.6) return [{ lane: pick(h, LANES), severity: 'injure', vehicle: 'bil', dark: false }];
+  return [];
+}
+
 /** The whole crossing's traffic and moon are decided up front, so they can be telegraphed and peeked. */
-export function planRoad(h: RngHolder, maxTurn: number, time: TimeOfDay): { trafficPlan: Strike[][]; moonPlan: boolean[] } {
+export function planRoad(h: RngHolder, maxTurn: number, time: TimeOfDay, kind: RoadKind = 'asphalt'): { trafficPlan: Strike[][]; moonPlan: boolean[] } {
   // Dark cars only come at night: by day every car is seen.
   const darkTurn = time === 'night' ? 4 + randInt(h, 4) : -1;
   const trafficPlan: Strike[][] = [];
   const moonPlan: boolean[] = [];
   for (let t = 1; t <= maxTurn; t++) {
-    trafficPlan.push(rollTraffic(h, t, darkTurn, time));
+    trafficPlan.push(kind === 'gravel' ? rollGravel(h, t) : rollTraffic(h, t, darkTurn, time));
     moonPlan.push(random(h) < 0.4);
   }
   return { trafficPlan, moonPlan };

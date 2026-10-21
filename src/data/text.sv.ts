@@ -23,6 +23,7 @@ export const DEATH_CAUSE: Record<string, string> = {
 export const LEAVE_CAUSE: Record<string, string> = {
   dawn: 'som blev kvar när gryningen kom',
   doubt: 'som slutade tro på oss',
+  stayed: 'som stannade kvar på åkrarna',
 };
 
 /** What an animal says when hope moves. {name} is the one it's about. */

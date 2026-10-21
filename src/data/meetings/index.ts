@@ -1,6 +1,7 @@
 // Every meeting in frames, by name.
 import { CROW, isHere, type MeetingFrame, type MeetingOption } from './crow.sv';
 import { BARSNAR, FRAMLINGEN, GAMMAL_STIG, GRAVSKOPAN, GRYT, HJORTEN, IHALIGT_TRAD, KOLTRASTEN, KVARNS_TVEKAN, MATEN } from './dalen.sv';
+import { FARAN, HAREN, KRAKFLOCKEN, SKRAMMAN, SPILLSAD, TRAKTORN } from './akrarna.sv';
 import { INTERLUDE } from './interlude.sv';
 import { PROPOSAL } from './proposal.sv';
 import { guideName } from '../../engine/roles';
@@ -15,7 +16,7 @@ export interface MeetingDef {
   taker?: string;
 }
 
-export type SceneArt = 'bird' | 'tree' | 'berries' | 'path' | 'den' | 'deer' | 'basket' | 'fox' | 'tracks' | 'toad' | 'ridge';
+export type SceneArt = 'bird' | 'tree' | 'berries' | 'path' | 'den' | 'deer' | 'basket' | 'fox' | 'tracks' | 'toad' | 'ridge' | 'furrow' | 'scarecrow' | 'crows' | 'grain' | 'tractor' | 'hare';
 
 export const MEETINGS: Record<MeetingId, MeetingDef> = {
   crow: { title: 'Kråkan vid elden', art: 'crow', frames: CROW, taker: 'Kråkan' },
@@ -30,6 +31,12 @@ export const MEETINGS: Record<MeetingId, MeetingDef> = {
   framlingen: { title: 'Den hungriga främlingen', art: 'fox', frames: FRAMLINGEN, taker: 'Räven' },
   gravskopan: { title: 'Grävskopans spår', art: 'tracks', frames: GRAVSKOPAN },
   kvarnsTvekan: { title: (s) => `${guideName(s)}s tvekan`, art: 'toad', frames: KVARNS_TVEKAN },
+  faran: { title: (s) => (s.meeting?.kind && s.meeting.kind !== 'hedgehog' ? 'Någon i fåran' : 'Igelkotten i fåran'), art: 'furrow', frames: FARAN },
+  skramman: { title: 'Fågelskrämman', art: 'scarecrow', frames: SKRAMMAN },
+  krakflocken: { title: 'Kråkflocken', art: 'crows', frames: KRAKFLOCKEN, taker: 'Kråkorna' },
+  spillsad: { title: 'Spillsäd', art: 'grain', frames: SPILLSAD },
+  traktorn: { title: 'Den övergivna traktorn', art: 'tractor', frames: TRAKTORN },
+  haren: { title: 'Haren på åkern', art: 'hare', frames: HAREN },
   interlude: { title: 'Mellan två landskap', art: 'ridge', frames: INTERLUDE },
 };
 

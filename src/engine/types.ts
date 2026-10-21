@@ -3,6 +3,8 @@ export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
 export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence';
 /** Which way the wind carries the mist over the sprayed field. */
+/** Asphalt with cars, or gravel with tractors. */
+export type RoadKind = 'asphalt' | 'gravel';
 export type Wind = 'norr' | 'söder' | 'öster' | 'väster';
 
 /** The river's current in a given hour. */
@@ -237,7 +239,7 @@ export interface Card {
 export interface Strike {
   lane: LaneId;
   severity: Severity;
-  vehicle: 'bil' | 'lastbil' | 'mörk bil';
+  vehicle: 'bil' | 'lastbil' | 'mörk bil' | 'traktor';
   dark: boolean;
 }
 
@@ -301,6 +303,8 @@ export interface MapNode {
   memory?: { normal: string; hard: string };
   /** Shown when choosing the way here. */
   note?: string;
+  /** A road of gravel between the fields: slow tractors instead of cars. */
+  road?: RoadKind;
   /** Position on the map, in percent (x right, y down). */
   x: number;
   y: number;
@@ -337,6 +341,13 @@ export type MeetingId =
   | 'framlingen'
   | 'gravskopan'
   | 'kvarnsTvekan'
+  // Åkrarna's.
+  | 'faran'
+  | 'skramman'
+  | 'krakflocken'
+  | 'spillsad'
+  | 'traktorn'
+  | 'haren'
   | 'interlude';
 
 export interface Meeting {
@@ -353,6 +364,11 @@ export interface Meeting {
   /** In a proposal: those who spoke for it, and against it. */
   backers?: string[];
   objectors?: string[];
+  /** Someone met in the story: their kind and name (the one in the furrow, the hare's kin). */
+  kind?: Species;
+  name?: string;
+  /** Who of us helped them, for the bond. */
+  helper?: string;
 }
 
 /** What a meeting cost us at tonight's fire: fewer places by the embers, someone apart, someone in the dark. */
@@ -390,7 +406,9 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 23;
+  version: 24;
+  /** The road we cross: asphalt, or Åkrarna's gravel. */
+  roadKind: RoadKind;
   /** Which group left the glen. */
   cast: CastId;
   /** The variant of the encounter we're in. */

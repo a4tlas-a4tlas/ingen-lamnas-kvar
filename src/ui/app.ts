@@ -110,7 +110,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 23 && s.phase !== 'over' ? s : null;
+    return s.version === 24 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -699,7 +699,7 @@ export class App {
       <div class="game">
         <header class="topbar"></header>
         <main class="stage">
-          <div class="scene ${enc.id} ${this.state!.time}">
+          <div class="scene ${enc.id} ${this.state!.time}${this.state!.roadKind === 'gravel' && enc.id === 'road' ? ' gravel' : ''}">
             ${sceneSvg(enc.id)}
             <div class="moon"><div class="cloud"></div></div>
             <div class="zones">${zoneDivs}
@@ -767,7 +767,7 @@ export class App {
 
   private topbarHtml(s: GameState): string {
     return `
-      <div class="tb-title">Ingen lämnas kvar <span class="muted">· ${esc(byTime(s, encounterOf(s).title))}${s.variant === 'hard' && place(s, s.journey.at).memory ? ` · ${esc(place(s, s.journey.at).memory!.hard)}` : ''}</span></div>
+      <div class="tb-title">Ingen lämnas kvar <span class="muted">· ${esc(s.encounterId === 'road' && s.roadKind === 'gravel' ? (s.time === 'night' ? 'Grusvägen om natten' : 'Grusvägen') : byTime(s, encounterOf(s).title))}${s.variant === 'hard' && place(s, s.journey.at).memory ? ` · ${esc(place(s, s.journey.at).memory!.hard)}` : ''}</span></div>
       <div class="tb-stats">
         <span class="stat">Timme <b>${s.turn}</b>/${s.maxTurn}</span>
         <button class="btn small" data-act="guide-open">Guide</button>

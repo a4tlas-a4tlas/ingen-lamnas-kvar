@@ -674,6 +674,26 @@ Design from the milestone 6 interview:
   - **A slower pulse:** the wire's chance went from 55 % to 40 %.
 - **Save version 23.**
 
+### Step 5: Åkrarna's story parts, and Grusvägen (done)
+Åkrarna stops borrowing Dalen's story parts: it has six of its own (plus Dalen's *Människorna med maten* and *Den gamla stigen*).
+
+| Part | Kind | What happens |
+|---|---|---|
+| **Igelkotten i fåran** | meeting | A hedgehog stuck in a deep furrow. Help it up (a large one lifts), then it may join us (belief at most 4, its cards to the discard pile) or go in peace (+1 hope). Or leave it (the eldest −1 belief). If a hedgehog is already one of us, the one in the furrow is someone else. Remembered for the boss (`faranHjalpt` / `faranLamnad`, `igelkottHjalpt`). |
+| **Fågelskrämman** | find | Rest in its shade: the hurt heal. The crows remember the crow at our fire: kind crows let us be, cruel ones peck (an injury, or a card taken). |
+| **Kråkflocken** | meeting | The crow's family. To friends they tell the way ahead. At the cruel they scream: an owl or the fox scares them off, or we walk on with our heads low (−1 hope). To strangers they name a price: a card, for the way. |
+| **Spillsäd** | find | Spilled grain: +2 hope, everyone +1 belief. The mice want to stay. Let them, and they leave us (that breaks *Ingen lämnas kvar*). Or the eldest asks them to come (mice −2 belief), or they carry what they can (mice +1, hope −1). |
+| **Den övergivna traktorn** | find | Sleep in the cab: bleeding, shock and poison heal for all. But the most fearful one dreams of the machines (−1 belief). |
+| **Haren på åkern** | meeting | Only with a hare among us; otherwise just tracks (+1 hope). One of its kin can join us, or our hare stays with them (that breaks *Ingen lämnas kvar*; the rest +1 hope), or says goodbye (+2 belief). |
+
+- **The crow's memory:** what we did at the fire is recorded (`krakanBetald`, `krakanLurad`, `krakanSkramd`), and the crows of Åkrarna act on it.
+- **Staying behind** is a new way to leave us: no grief and no lost hope, but *Ingen lämnas kvar* breaks, because we let them go.
+- **Grusvägen** (Åkrarna's first danger) is gravel now:
+  - tractors fill both lanes in about a third of the hours, and kill
+  - a car now and then
+  - nothing unlit, and the next hour is always known, since the tractors are heard long before they come
+- **Save version 24.**
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.
