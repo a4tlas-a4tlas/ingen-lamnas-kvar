@@ -1,3 +1,4 @@
+import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
 // The guide for each area: what we are trying to do, what kills and what
 // shelters. Numbers come from the rules so the guide cannot drift from them.
@@ -53,6 +54,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   fence: {
     day: 'Vi ser när strömmen i stängslet är på – den här timmen och nästa.',
     night: 'Vi hör bara om stängslet surrar just nu, inte vad som kommer. Och vattnet i diket är iskallt: den som står där tappar 1 tro.',
+  },
+  harvest: {
+    day: 'Skördetröskan arbetar i dagsljus. Det går inte att vänta på mörkret.',
+    night: 'Skördetröskan arbetar i dagsljus. Det går inte att vänta på mörkret.',
   },
 };
 
@@ -229,6 +234,22 @@ export const GUIDES: Record<EncounterId, Guide> = {
       'Spången är torr, men smal: gå över medan vattnet står lågt.',
       'Få ett stort djur till grinden tidigt. En öppen grind är vägen för alla som inte flyger.',
       'Låt ingen liten vänta vid stängslet när strömmen är på.',
+    ],
+  },
+  harvest: {
+    title: 'Så tar vi oss genom vetet',
+    goal: `Få alla från Fältkanten till Häcken – ${HARVEST.maxTurn} timmar. Genom vetet: tre steg.`,
+    dangers: [
+      { icon: '▤', name: 'Skördetröskan', effect: 'dödar', text: `Från andra timmen skär den ${STRIPS_PER_HOUR} delar av vetet i timmen, runt kanten – det syns i förväg var. Den som står där när timmen går blir överkörd (sista stunden). Bara de som flyger kommer undan.` },
+      { icon: '◒', name: 'Vråken', effect: 'dödar', text: 'Den följer skördetröskan och jagar i stubben. Skuggan visar var den slår ner: den tar den minsta där – en liten bärs bort (sista stunden), en mellanstor får klorna i sig. De stora tar den inte.' },
+    ],
+    shelter: [
+      { icon: '♣', name: 'Vetet', text: 'Vete som står kvar gömmer alla för vråken – men inte för skördetröskan.' },
+      { icon: '◉', name: 'De stora', text: 'Vråken kan inte lyfta de stora. ”Ta emot” från ett stort djur skyddar en liten.' },
+    ],
+    tips: [
+      'Gå i vetet dit skördetröskan inte ska nästa timme – och sedan ut, innan vetet är borta.',
+      'Stubben är farligast för de små. Korsa den snabbt, eller tillsammans med en stor.',
     ],
   },
 };

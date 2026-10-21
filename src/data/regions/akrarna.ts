@@ -1,6 +1,6 @@
 // Åkrarna: the open fields beyond the ridge. Wide sky, no trees, and nowhere to hide
 // but the furrows. Its own dangers – the birds, the sprayer, the ditch and the gate –
-// and its own story parts; old dangers stand in new places, and the boss comes next.
+// and its own story parts; old dangers in new places; and at the end, the harvester.
 import { DALEN, type RegionDef } from './dalen';
 
 const [, farm, river] = DALEN.dangers;
@@ -11,6 +11,7 @@ export const AKRARNA: RegionDef = {
   name: 'Åkrarna',
   fogName: 'Åkrarna – vida fält, och himmel',
   epilogue: 'Bakom oss ligger åkrarna, gula och tomma. Ingen av oss kommer att glömma hur stor himlen var där.',
+  beyond: 'Bortom åkrarna',
   start: { key: 'akerkanten', kind: 'start', name: 'Åkerkanten', fogName: 'Åkerkanten', arrive: 'Nedanför åsen börjar åkrarna. Så långt vi ser: fält, och himmel.' },
   first: {
     key: 'grusvagen', kind: 'encounter', encounter: 'road', road: 'gravel', name: 'Grusvägen', fogName: 'En väg mellan fälten?',
@@ -66,5 +67,10 @@ export const AKRARNA: RegionDef = {
   ],
   fire: { key: 'halmstacken', kind: 'campfire', name: 'Halmstacken', fogName: 'Ett skydd på fältet?', arrive: 'En gammal halmstack, varm inuti. Här kan vi vila.', note: 'Vila, och värme.' },
   lastFire: { key: 'vindskyddet', kind: 'campfire', name: 'Vindskyddet', fogName: 'Ett skydd vid fältkanten?', arrive: 'Ett vindskydd av sten vid fältkanten. Vinden når inte in.', note: 'Sista vilan på åkrarna.' },
-  end: { key: 'bortomAkrarna', kind: 'end', name: 'Bortom åkrarna', fogName: 'Där åkrarna tar slut', arrive: 'Fälten tar slut vid en häck. Bortom den börjar något annat.' },
+  /** The boss of the fields: the harvester, on Åkrarna's last day. */
+  end: {
+    key: 'skordetroskan', kind: 'encounter', encounter: 'harvest', name: 'Vetefältet', fogName: 'Vetefältet – där skördetröskan går',
+    arrive: 'Det sista fältet står gult och högt. Bortom det, en häck. I andra änden startar en skördetröska.',
+    note: 'Sista fältet. Skördetröskan väntar.',
+  },
 };

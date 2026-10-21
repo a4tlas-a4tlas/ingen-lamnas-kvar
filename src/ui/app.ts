@@ -6,6 +6,7 @@ import { HOPE_LINES, KRAFT_OUT_LINES } from '../data/text.sv';
 import { roarZones } from '../engine/encounters/machines';
 import { tractorRow, visibleMist } from '../engine/encounters/sprayer';
 import { DITCH_MAX, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL, levelAfter } from '../engine/encounters/fence';
+import { cutting } from '../engine/encounters/harvest';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -110,7 +111,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 24 && s.phase !== 'over' ? s : null;
+    return s.version === 25 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -877,6 +878,17 @@ export class App {
     return out.join('');
   }
 
+  /** The harvest: the strip being cut, the next, the stubble, the buzzard's shadow. */
+  private harvestTelegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    for (const z of s.harvest.cut) out.push(`<div class="stubble-mark" style="${box(z)}"><span>stubb</span></div>`);
+    for (const z of cutting(s)) out.push(`<div class="tractor-mark" style="${box(z)}"><span>Skördetröskan · dödar</span></div>`);
+    if (s.turn < s.maxTurn) for (const z of s.harvest.plan[s.turn] ?? []) out.push(`<div class="next-mark" style="${box(z)}"><em>skördetröskan nästa timme</em></div>`);
+    if (s.harvest.shadow) out.push(`<div class="shadow-mark" style="${box(s.harvest.shadow)}"><i></i><span>Vråken · tar de små</span></div>`);
+    return out.join('');
+  }
+
   /** The ditch and the gate: the water's level and who it takes; the wire when it hums; whether the gate stands open. */
   private fenceTelegraphHtml(s: GameState): string {
     const out: string[] = [];
@@ -949,6 +961,7 @@ export class App {
     if (s.encounterId === 'raptor') return s.phase === 'over' ? '' : this.raptorTelegraphHtml(s);
     if (s.encounterId === 'sprayer') return s.phase === 'over' ? '' : this.sprayerTelegraphHtml(s);
     if (s.encounterId === 'fence') return s.phase === 'over' ? '' : this.fenceTelegraphHtml(s);
+    if (s.encounterId === 'harvest') return s.phase === 'over' ? '' : this.harvestTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {
@@ -1487,7 +1500,7 @@ export class App {
     const last = [...s.log].reverse().filter((e) => e.kind === 'narrate').slice(0, 2).reverse();
     this.root.innerHTML = `
       <div class="screen end-screen">
-        <h2>${o.fallen ? 'Eden föll' : esc(place(s, s.journey.at).name)}</h2>
+        <h2>${o.fallen ? 'Eden föll' : esc(place(s, s.journey.at).kind === 'encounter' ? REGIONS[s.journey.region].beyond : place(s, s.journey.at).name)}</h2>
         <p class="muted">${esc(castDef(s.cast).name)}</p>
         ${last.map((e) => `<p class="lead-text">${esc(e.text)}</p>`).join('')}
         ${survivors.length ? `<h3>Vi som gick vidare</h3><ul class="roster">${rosterHtml(s)}</ul>` : ''}
