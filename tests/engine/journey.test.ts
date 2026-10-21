@@ -86,7 +86,8 @@ describe('the journey', () => {
     s.kraft = 99;
     for (const a of s.animals.filter((x) => x.status === 'active')) s = run(s, { type: 'lead', target: a.id, zone: 'stenmuren' });
     expect(s.phase).toBe('map');
-    s.run.regions = ['dalen', 'akrarna'];
+    // Every region already walked: no way on.
+    s.run.regions = ['dalen', 'akrarna', 'staden'];
     s = run(s, { type: 'travel', to: 'akrarna' });
     expect(s.phase).toBe('over');
     expect(s.outcome?.safe).toHaveLength(6);

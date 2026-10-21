@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -327,6 +327,35 @@ function machinesSvg(): string {
     <rect x="${x(72)}" y="${y(92)}" width="8" height="22"/>
     <rect x="${x(76)}" y="${y(98)}" width="56" height="8" rx="4" fill="#2a2420"/>
   </g>
+</svg>`;
+}
+
+/** The street lights: a dark street with lamp posts, a bus shelter, bins, front yards and the gardens' hedges. */
+function lampsSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const hedge: string[] = [];
+  for (let i = 0; i < 16; i++) hedge.push(`<ellipse cx="${6 + i * 26}" cy="${y(14) - (i % 3) * 3}" rx="${22 + (i % 2) * 6}" ry="${16 + (i % 3) * 3}"/>`);
+  const houses = [x(6), x(70)].map((hx) => `<path d="M${hx} ${y(36)} L${hx + 50} ${y(28)} L${hx + 100} ${y(36)} V${y(48)} H${hx} Z" fill="#3a3440"/><rect x="${hx + 38}" y="${y(40)}" width="14" height="16" fill="#e8c86a" opacity="0.8"/>`).join('');
+  const posts = [x(19), x(81)].flatMap((px) => [`<rect x="${px}" y="${y(52)}" width="3" height="${y(24)}" fill="#2a2a30"/>`, `<rect x="${px - 6}" y="${y(51)}" width="15" height="4" fill="#2a2a30"/>`,
+    `<rect x="${px}" y="${y(24)}" width="3" height="${y(24)}" fill="#2a2a30"/>`, `<rect x="${px - 6}" y="${y(23)}" width="15" height="4" fill="#2a2a30"/>`]).join('');
+  const tufts: string[] = [];
+  for (let i = 0; i < 22; i++) tufts.push(tuft(8 + i * 18.5, y(100) - 2 - (i % 3) * 3, 1.5 + (i % 4) * 0.25));
+  return `
+<svg class="scene-bg lamps" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="500" fill="#151a2a"/>
+  <g fill="#24361f" filter="url(#cut)">${hedge.join('')}</g>
+  <rect y="${y(22)}" width="400" height="${y(28)}" fill="#2c3a28"/>
+  ${houses}
+  <rect x="${x(38)}" y="${y(26)}" width="${x(24)}" height="${y(20)}" fill="#1c2020"/>
+  <rect x="${x(42)}" y="${y(32)}" width="22" height="30" rx="3" fill="#2f4a3a"/><rect x="${x(50)}" y="${y(32)}" width="22" height="30" rx="3" fill="#4a3a2a"/>
+  <rect y="${y(50)}" width="400" height="${y(28)}" fill="#2a2a30"/>
+  <path d="M0 ${y(64)} H400" stroke="#cfc6a6" stroke-width="3" stroke-dasharray="22 18" opacity="0.6"/>
+  <rect x="${x(40)}" y="${y(52)}" width="${x(20)}" height="${y(20)}" fill="#3a4450" opacity="0.85"/><rect x="${x(40)}" y="${y(52)}" width="${x(20)}" height="6" fill="#55606c"/>
+  ${posts}
+  <rect y="${y(78)}" width="400" height="${y(22)}" fill="#2e3a24" filter="url(#cut)"/>
+  <g fill="#26321e" filter="url(#cut)">${tufts.join('')}</g>
 </svg>`;
 }
 

@@ -17,6 +17,7 @@ import { exposedIn, prey, shadowOptions } from './encounters/raptor';
 import { CROP, drift, nightMist, planSprayer, rowZones, sprayed } from './encounters/sprayer';
 import { DITCH_MAX, FENCE, levelAfter, onTheWire, planFence, sweptIn } from './encounters/fence';
 import { cutting, planHarvest, stubblePrey } from './encounters/harvest';
+import { bitten, lit, planLamps, planWalkers, walkerZone } from './encounters/lamps';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, buildCast, idFor, makeAnimal, oathVerse, regionJourney } from './setup';
@@ -264,7 +265,8 @@ function travel(c: Ctx, to: string, wait = false) {
 function endRegion(c: Ctx) {
   const s = c.s;
   narrate(c, REGIONS[s.journey.region].epilogue);
-  const left = MIDDLE_REGIONS.filter((r) => !s.run.regions.includes(r));
+  // Until the way forks for real, some regions wait for others: the city comes after the fields.
+  const left = MIDDLE_REGIONS.filter((r) => !s.run.regions.includes(r) && (REGIONS[r].after ?? []).every((x) => s.run.regions.includes(x)));
   s.run.offered = shuffle(s, left).slice(0, OFFERED);
   if (!s.run.offered.length) {
     narrate(c, 'Fortsättning följer.');
@@ -289,6 +291,8 @@ function chooseRegion(c: Ctx, id: RegionId) {
   const s = c.s;
   if (!s.run.offered.includes(id)) fail('Dit leder ingen väg.');
   const def = REGIONS[id];
+  // Into the city: where the machines live.
+  if (id === 'staden') breakPromises(c, 'noCity');
   s.run.regions.push(id);
   s.run.offered = [];
   s.run.between = false;
@@ -346,6 +350,8 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
     s.spray = { ...plan, mist: s.time === 'night' ? nightMist(s) : [], shown: [] };
   } else s.spray = { rowPlan: [], windPlan: [], mist: [], shown: [] };
   // The ditch and the gate: the water starts low – or, where the guide's memory was too kind, already high.
+  // The street: when each lamp comes on, and where the men with dogs begin their round.
+  s.lamps = id === 'lamps' ? { litAt: planLamps(s), walkers: planWalkers(s, hard) } : { litAt: {}, walkers: [] };
   // The harvest: the wheat stands, and the harvester's rounds are planned.
   s.harvest = { plan: id === 'harvest' ? planHarvest(s, s.maxTurn) : [], cut: [], shadow: null };
   if (id === 'harvest' && s.knowledge.includes('faranHjalpt')) narrate(c, 'Någonstans i vetet tänker vi på den vi hjälpte upp ur fåran.');
@@ -1060,6 +1066,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'sprayer') telegraphSprayer(c);
   if (s.encounterId === 'fence') telegraphFence(c);
   if (s.encounterId === 'harvest') telegraphHarvest(c);
+  if (s.encounterId === 'lamps') telegraphLamps(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1533,6 +1540,39 @@ function sprayerHazards(c: Ctx) {
     s.hitQueue.push({ victim: a.id, severity: 'injure', sudden: false, zone: a.zone, source: 'gift' });
   }
   for (const a of s.animals.filter((x) => isActive(x) && s.spray.mist.includes(x.zone) && x.underground)) line(c, a.id, `Dimman drar över ${a.name}, men når inte ner i jorden.`);
+}
+
+// ---------------------------------------------------------------- the street lights
+
+/** Start of the hour: which lamps come on, and where each man with his dog walks. */
+function telegraphLamps(c: Ctx) {
+  const s = c.s;
+  const now = Object.entries(s.lamps.litAt).filter(([, h]) => h === s.turn).map(([z]) => zoneDef(s, z).name);
+  if (now.length) narrate(c, `En gatlykta tänds över ${now.join(' och ')}.`);
+  for (const w of s.lamps.walkers) {
+    const z = walkerZone(w);
+    narrate(c, `En man med hund går genom ${zoneDef(s, z).name}${lit(s, z) ? ', i ljuset' : ', i mörkret'}.`);
+  }
+}
+
+/** End of the hour: where the walker stands in the light, the dog finds us – bites the smallest, chases the rest back. Then he walks on. */
+function lampsHazards(c: Ctx) {
+  const s = c.s;
+  for (const w of s.lamps.walkers) {
+    const z = walkerZone(w);
+    const v = bitten(s, z);
+    if (v) {
+      narrate(c, `Hunden får syn på oss i ljuset över ${zoneDef(s, z).name}.`);
+      s.hitQueue.push({ victim: v.id, severity: 'injure', sudden: false, zone: z, source: 'hund' });
+      for (const a of s.animals.filter((x) => isActive(x) && x !== v && x.zone === z && !x.flying && !x.hidden)) {
+        const back = backZone(s, a);
+        if (!back) continue;
+        line(c, a.id, `${a.name} jagas tillbaka av hunden.`);
+        moveAnimal(c, a, back, false);
+      }
+    }
+    w.at += w.dir;
+  }
 }
 
 // ---------------------------------------------------------------- the harvest
@@ -2114,6 +2154,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'sprayer') sprayerHazards(c);
   if (s.encounterId === 'fence') fenceHazards(c);
   if (s.encounterId === 'harvest') harvestHazards(c);
+  if (s.encounterId === 'lamps') lampsHazards(c);
   processHits(c);
 }
 

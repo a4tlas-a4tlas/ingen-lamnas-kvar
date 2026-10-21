@@ -6,6 +6,7 @@ import { sheltered } from '../engine/encounters/raptor';
 import { mistAfter, rowZones, tractorRow } from '../engine/encounters/sprayer';
 import { GATE_PUSH, levelAfter, onTheWire, sweptIn } from '../engine/encounters/fence';
 import { cutting, inWheat, stubblePrey } from '../engine/encounters/harvest';
+import { bitten, lit, walkerZone } from '../engine/encounters/lamps';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
@@ -86,6 +87,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'sprayer') out.push(...sprayerStatuses(s, a));
   if (s.encounterId === 'fence') out.push(...fenceStatuses(s, a));
   if (s.encounterId === 'harvest') out.push(...harvestStatuses(s, a));
+  if (s.encounterId === 'lamps') out.push(...lampsStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -240,6 +242,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'sprayer') out.push(...sprayerForecast(s, zoneOf));
   if (s.encounterId === 'fence') out.push(...fenceForecast(s, zoneOf));
   if (s.encounterId === 'harvest') out.push(...harvestForecast(s, zoneOf));
+  if (s.encounterId === 'lamps') out.push(...lampsForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -332,6 +335,35 @@ function riverForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[
     if (left === 1) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: nästa som går ut på den bryter den.`, tone: 'warn' });
     else if (left === 2) out.push({ text: `Dammen knakar ${s.damCreak}/${DAM_MAX}: ett stort djur till bryter den.`, tone: 'warn' });
   }
+  return out;
+}
+
+/** The street: in the light where the dog will pass, or in the light at all. */
+function lampsStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active' || a.flying) return [];
+  if (s.lamps.walkers.some((w) => walkerZone(w) === a.zone) && lit(s, a.zone) && !a.hidden) {
+    return [{ key: 'dog', icon: '◣', label: 'hunden ser', tone: 'bad', explain: `Mannen med hunden går här i ljuset när timmen går. Hunden biter den minsta och jagar de andra tillbaka.` }];
+  }
+  if (lit(s, a.zone)) return [{ key: 'light', icon: '☀', label: 'i ljuset', tone: 'warn', explain: `${a.name} står under en tänd lykta. Går mannen med hunden förbi här syns ${a.name}.` }];
+  return [];
+}
+
+/** The street: whom the dog finds, and which lamps come on next. */
+function lampsForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  for (const w of s.lamps.walkers) {
+    const z = walkerZone(w);
+    const place = zoneDef(s, z).name;
+    if (!lit(s, z)) { out.push({ text: `Mannen med hunden går genom ${place} – där är det mörkt.`, tone: 'good' }); continue; }
+    const v = bitten(s, z, where);
+    const rest = s.animals.filter((a) => isActive(a) && a !== v && where(a) === z && !a.flying && !a.hidden);
+    out.push(v
+      ? { text: `Hunden får syn på oss i ${place}: biter ${v.name} (blöder)${rest.length ? ` och jagar ${rest.map((a) => a.name).join(' och ')} tillbaka` : ''}.`, tone: 'warn' }
+      : { text: `Mannen med hunden går genom ljuset i ${place} – ingen av oss syns där.`, tone: 'good' });
+  }
+  const next = Object.entries(s.lamps.litAt).filter(([, h]) => h === s.turn + 1).map(([z]) => zoneDef(s, z).name);
+  if (next.length && s.turn < s.maxTurn) out.push({ text: `Nästa timme tänds lyktan över ${next.join(' och ')}.`, tone: 'info' });
   return out;
 }
 
