@@ -1,6 +1,6 @@
 // Åkrarna: the open fields beyond the ridge. Wide sky, no trees, and nowhere to hide
-// but the furrows. The birds of prey are its own; more dangers and its boss come in
-// the next steps, and old dangers stand in new places meanwhile.
+// but the furrows. Its own dangers – the birds, the sprayer, the ditch and the gate –
+// and its own story parts; old dangers stand in new places, and the boss comes next.
 import { DALEN, type RegionDef } from './dalen';
 
 const [, farm, river] = DALEN.dangers;
@@ -13,10 +13,10 @@ export const AKRARNA: RegionDef = {
   epilogue: 'Bakom oss ligger åkrarna, gula och tomma. Ingen av oss kommer att glömma hur stor himlen var där.',
   start: { key: 'akerkanten', kind: 'start', name: 'Åkerkanten', fogName: 'Åkerkanten', arrive: 'Nedanför åsen börjar åkrarna. Så långt vi ser: fält, och himmel.' },
   first: {
-    key: 'grusvagen', kind: 'encounter', encounter: 'road', name: 'Grusvägen', fogName: 'En väg mellan fälten?',
+    key: 'grusvagen', kind: 'encounter', encounter: 'road', road: 'gravel', name: 'Grusvägen', fogName: 'En väg mellan fälten?',
     arrive: 'En grusväg skär genom fälten. Långt borta hörs en traktor.',
-    arriveDay: 'En grusväg skär genom fälten. Dammet ligger kvar efter bilarna.',
-    note: 'En väg. Färre bilar än hemma – men inget att gömma sig bakom.',
+    arriveDay: 'En grusväg skär genom fälten. Dammet ligger kvar efter traktorerna.',
+    note: 'Grus, och traktorer – långsamma och breda. De hörs långt innan de kommer.',
   },
   dangers: [
     {
@@ -52,8 +52,18 @@ export const AKRARNA: RegionDef = {
       note: 'Rakt vatten, och djupt.',
     },
   ],
-  meetings: ['koltrasten', 'maten', 'framlingen', 'tvekan'].map(story),
-  finds: ['barsnar', 'stigen', 'tradet'].map(story),
+  meetings: [
+    { key: 'faran', kind: 'meeting', meeting: 'faran', name: 'Den djupa fåran', fogName: 'Något i fåran?', arrive: 'En fåra, djupare än de andra.', note: 'Någon är där nere.' },
+    { key: 'krakflocken', kind: 'meeting', meeting: 'krakflocken', name: 'Elledningen', fogName: 'Svarta prickar på en tråd?', arrive: 'En elledning över fältet, och på den sitter kråkor.', note: 'Kråkor. Många.' },
+    { key: 'haren', kind: 'meeting', meeting: 'haren', name: 'Harfältet', fogName: 'Spår i fårorna?', arrive: 'Fårorna är fulla av spår.', note: 'Någon lever här.' },
+    story('maten'),
+  ],
+  finds: [
+    { key: 'skramman', kind: 'find', meeting: 'skramman', name: 'Fågelskrämman', fogName: 'Någon som står still?', arrive: 'Mitt på fältet står någon och står still.', note: 'Skugga, kanske.' },
+    { key: 'spillsad', kind: 'find', meeting: 'spillsad', name: 'Spillsäden', fogName: 'Något gult vid kanten?', arrive: 'Det luktar säd.', note: 'Mat, kanske.' },
+    { key: 'traktorn', kind: 'find', meeting: 'traktorn', name: 'Den rostiga traktorn', fogName: 'Något stort och tyst?', arrive: 'En traktor står vid fältkanten. Den rör sig inte.', note: 'Ett tak, kanske.' },
+    story('stigen'),
+  ],
   fire: { key: 'halmstacken', kind: 'campfire', name: 'Halmstacken', fogName: 'Ett skydd på fältet?', arrive: 'En gammal halmstack, varm inuti. Här kan vi vila.', note: 'Vila, och värme.' },
   lastFire: { key: 'vindskyddet', kind: 'campfire', name: 'Vindskyddet', fogName: 'Ett skydd vid fältkanten?', arrive: 'Ett vindskydd av sten vid fältkanten. Vinden når inte in.', note: 'Sista vilan på åkrarna.' },
   end: { key: 'bortomAkrarna', kind: 'end', name: 'Bortom åkrarna', fogName: 'Där åkrarna tar slut', arrive: 'Fälten tar slut vid en häck. Bortom den börjar något annat.' },

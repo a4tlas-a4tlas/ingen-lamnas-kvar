@@ -893,6 +893,9 @@ button.link { background: none; border: 0; padding: 0 0 0 8px; color: var(--gold
 .scene.machines .zone.closed { background: repeating-linear-gradient(170deg, #5a4026 0 10px, #4a331e 10px 20px); opacity: 0.92; }
 .scene.machines .zone.closed span::after { content: ' · borta'; }
 
+/* Grusvägen: the same road, in gravel and dust. */
+.scene.road.gravel .scene-bg { filter: sepia(0.55) saturate(1.2) brightness(1.18); }
+
 /* The ditch and the gate: the water level, the humming wire, the gate. */
 .ditch-mark, .wire-mark, .gate-mark { position: absolute; pointer-events: none; }
 .ditch-mark span, .wire-mark span { position: absolute; left: 5px; top: 4px; font-size: 0.68em; padding: 1px 6px; border-radius: 2px; }

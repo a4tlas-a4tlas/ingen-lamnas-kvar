@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 6.4)
+## Status (after step 6.5)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 6.4: Diket och grinden (branch `diket`, open, awaiting review). Latest merged: #30, Milestone 6.3: Sprutan. |
-| **Save version** | 23 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 258 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 6.5: Åkrarnas berättelser (branch `akrarna-berattelser`, open, awaiting review). Latest merged: #31, Milestone 6.4: Diket och grinden. |
+| **Save version** | 24 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 272 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -30,7 +30,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 | Region | Dangers | Boss |
 |---|---|---|
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
-| **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden) + old dangers in new places | none yet (ends at "Bortom åkrarna") |
+| **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden), the gravel road (Grusvägen) + old dangers in new places; six story parts of its own (`src/data/meetings/akrarna.sv.ts`) | none yet (ends at "Bortom åkrarna") |
 
 **Animals** are species, not characters: badger, toad, fox, owl, adder, mice, hare, and since 7.6 hedgehog, squirrel, mole, beaver and fawn (`SPECIES` in `src/data/animals.ts`, with Swedish grammar fields `en` / `den` / `definite`). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
 
@@ -78,21 +78,20 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: 6.5 – Åkrarna's story parts and old dangers
+## Next step: 6.6 – Skördetröskan, Åkrarna's boss
 From the approved design (Milestone 6 in `DESIGN.md` and the plan file):
-- **Story parts in frames,** like Dalen's (`src/data/meetings/dalen.sv.ts`), so Åkrarna stops reusing Dalen's meetings (`meetings`/`finds` in `src/data/regions/akrarna.ts`):
-  - **Igelkotten i fåran:** help the curled-up hedgehog out of the furrow, or leave it. This decides whether it trusts us in the boss. The hedgehog is now a real species and may already be with us; the frames must handle that.
-  - **Fågelskrämman:** shelter, but the crows come.
-  - **Spillsäd:** food, and the mice want to stay.
-  - **Kråkflocken:** the crow's family, who remember how we treated the crow.
-  - **Den övergivna traktorn:** rest.
-  - **Haren på åkern:** the hare's kin, if a hare is with us.
-- **Old dangers:** *Gården vid åkern* and *Kanalen* exist; *Grusvägen* (the road with tractors) is still to do.
+- **The field shrinks:** the harvester cuts a strip of wheat from the outside in, each hour, telegraphed.
+- **Cover and danger:** the wheat is cover; the stubble is open, and the birds follow the harvester and strike there.
+- **The hedgehog in the rows:** a rescue whose trust depends on *Igelkotten i fåran*.
+  - `s.knowledge` holds `igelkottHjalpt`, `faranHjalpt` or `faranLamnad`.
+  - A hedgehog may already be with us: it joined from the furrow, or was in the group from the start.
+- **The goal:** the hedge beyond the field, with a hidden gap the hedgehog can show.
+- **After it:** the interlude (`src/data/meetings/interlude.sv.ts`), with Åkrarna's own verse proposed.
 - **Ask the user first,** in the interview style.
 
 **After that:**
 - **The rest of Milestone 6:**
-  - Åkrarna: story parts, and the boss Skördetröskan (with the hedgehog, which is now a real species that can already be with us; its story must adapt if so)
+  - Åkrarna: the boss Skördetröskan (with the hedgehog, which is now a real species that can already be with us; its story must adapt if so)
   - Stadens utkant: four dangers, and the boss Fyrverkerinatten (the danger is fear itself)
   - finally, the choice between 2 random regions
 

@@ -147,7 +147,8 @@ export function createGame(seed: number): GameState {
   const { cast, animals, draw, bonds, nextUid, rng } = buildCast(seed, 'dalensSista');
 
   return {
-    version: 23,
+    version: 24,
+    roadKind: 'asphalt',
     cast,
     journey: firstRegion(seed),
     variant: 'normal',

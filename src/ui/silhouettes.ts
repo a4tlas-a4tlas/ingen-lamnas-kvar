@@ -216,6 +216,46 @@ export function sceneArt(kind: SceneArt): string {
         <circle cx="44" cy="24" r="8" fill="#f0cf96"/>
         <path d="M0 48 L0 32 Q16 22 30 28 Q44 20 64 26 L64 48 Z" fill="#5d6b44"/>
         <path d="M0 48 L0 40 Q20 34 36 38 Q52 34 64 38 L64 48 Z" fill="#3e5032"/>`);
+    case 'furrow':
+      return svg(`
+        <path d="M0 30 Q32 24 64 30 L64 48 L0 48 Z" fill="#7a5c3a"/>
+        <path d="M6 38 Q32 32 58 38 Q32 46 6 38 Z" fill="#3e2c1c"/>
+        <path d="M24 38 Q24 30 32 30 Q40 30 40 38 Z" fill="#8a6d50"/>
+        <path d="M25 33 l-2 -3 M28 31 l-1 -3 M32 30 l0 -3 M36 31 l1 -3 M39 33 l2 -3" stroke="#8a6d50" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="40.5" cy="37" r="0.9" fill="#120c08"/>`);
+    case 'scarecrow':
+      return svg(`
+        <path d="M0 40 Q32 36 64 40 L64 48 L0 48 Z" fill="#b89a52"/>
+        <rect x="31" y="14" width="2.4" height="30" fill="#4a3826"/>
+        <rect x="16" y="20" width="32" height="2.4" fill="#4a3826"/>
+        <path d="M24 21 L40 21 L42 34 L22 34 Z" fill="#6a4a3a"/>
+        <circle cx="32" cy="14" r="4.5" fill="#d8c08a"/>
+        <path d="M25 11 H39 L36 7 H28 Z" fill="#2a1e14"/>
+        <path d="M14 18 q2 -3 4 0 M46 18 q2 -3 4 0" stroke="#0b0d12" stroke-width="2.2" fill="none"/>`);
+    case 'crows':
+      return svg(`
+        <path d="M0 16 Q32 20 64 16" stroke="#2a2a2a" stroke-width="1" fill="none"/>
+        <rect x="4" y="10" width="2" height="38" fill="#4a3826"/><rect x="58" y="10" width="2" height="38" fill="#4a3826"/>
+        ${[12, 20, 28, 36, 44, 52].map((x, i) => `<path d="M${x} ${18 + (i % 2)} q2 -6 5 -4 l2 -1 l-1 2 q0 4 -4 4 Z" fill="#0b0d12"/>`).join('')}
+        <path d="M18 34 q3 -3 6 0 M36 30 q3 -3 6 0 M28 40 q3 -3 6 0" stroke="#0b0d12" stroke-width="1.6" fill="none"/>`);
+    case 'grain':
+      return svg(`
+        <path d="M0 38 Q32 34 64 38 L64 48 L0 48 Z" fill="#9a8a5a"/>
+        <ellipse cx="22" cy="40" rx="12" ry="5" fill="#e0c070"/><ellipse cx="42" cy="41" rx="10" ry="4" fill="#d8b860"/>
+        ${[12, 18, 24, 30, 36, 42, 48, 54].map((x) => `<path d="M${x} 36 L${x} 18 M${x} 20 l-2 -2 M${x} 23 l2 -2 M${x} 26 l-2 -2" stroke="#c9a84a" stroke-width="1.2"/>`).join('')}`);
+    case 'tractor':
+      return svg(`
+        <path d="M0 42 L64 42 L64 48 L0 48 Z" fill="#6e6a52"/>
+        <rect x="14" y="22" width="26" height="12" fill="#7a3a26"/>
+        <rect x="30" y="12" width="12" height="12" fill="#5a2e20"/><rect x="32" y="14" width="8" height="7" fill="#2a2a30"/>
+        <rect x="20" y="16" width="2.4" height="6" fill="#3a3a3a"/>
+        <circle cx="40" cy="36" r="8" fill="#1e1e1e"/><circle cx="40" cy="36" r="3" fill="#5a5a5a"/>
+        <circle cx="18" cy="38" r="5" fill="#1e1e1e"/><circle cx="18" cy="38" r="2" fill="#5a5a5a"/>
+        <path d="M44 22 l6 -2 M14 26 l-4 0" stroke="#8a5a3a" stroke-width="1.4"/>`);
+    case 'hare':
+      return svg(`
+        <path d="M0 40 Q32 34 64 40 L64 48 L0 48 Z" fill="#7a5c3a"/>
+        ${[[16, 0], [34, 2], [50, -1]].map(([x, d]) => `<ellipse cx="${x}" cy="${36 + d}" rx="6" ry="4" fill="#b8a07e"/><ellipse cx="${x + 5}" cy="${32 + d}" rx="3" ry="2.6" fill="#b8a07e"/><path d="M${x + 4} ${30 + d} q-1 -8 1 -10 q2 3 1 10 Z" fill="#b8a07e"/>`).join('')}`);
   }
 }
 

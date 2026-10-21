@@ -41,6 +41,26 @@ export type MeetingEffect =
   | 'comfortKvarn'
   | 'doubtKvarn'
   | 'guessWay'
+  // Åkrarna's finds and meetings.
+  | 'crowFled'
+  | 'helpFurrow'
+  | 'joinFurrow'
+  | 'peaceFurrow'
+  | 'leaveFurrow'
+  | 'scarecrow'
+  | 'crowFlock'
+  | 'crowFlockScare'
+  | 'crowFlockMob'
+  | 'crowFlockPay'
+  | 'grain'
+  | 'miceStay'
+  | 'miceNeeded'
+  | 'miceCarry'
+  | 'restTractor'
+  | 'hareKinJoins'
+  | 'hareStays'
+  | 'hareGoodbye'
+  | 'hareTracks'
   // Between two regions.
   | 'lookBack'
   | 'chooseRegion';
@@ -89,7 +109,7 @@ export const CROW: Record<string, MeetingFrame> = {
       { id: 'fox', by: kinId('fox'), label: '”Vi kanske kan hjälpa varandra…”', next: 'fox' },
       { id: 'owl', by: flierId, label: (s) => `${nameOf(s, flierId(s))} lyfter vingarna.`, next: 'owl' },
       { id: 'lonely', by: elderId, label: '”Varför sitter du här ensam, kråka?”', next: 'lonely' },
-      { id: 'snake', by: hungryId, label: '”Kom lite närmare, fågel.”', next: 'fled' },
+      { id: 'snake', by: hungryId, label: '”Kom lite närmare, fågel.”', effect: 'crowFled', next: 'fled' },
       { id: 'no', label: '”Nej tack. Flyg vidare.”', next: 'refused' },
     ],
   },
