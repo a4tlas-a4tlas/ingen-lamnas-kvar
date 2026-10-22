@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -392,6 +392,38 @@ function catsSvg(): string {
   <g fill="#6c6258">${[0, 1, 2, 3].map((i) => `<rect x="${x(30) + i * 10}" y="${y(80) + i * 14}" width="${x(40) - i * 20}" height="10"/>`).join('')}</g>
   <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.6"/>
   <g class="night-stars">${windows.filter((w) => w.includes('#e8c86a')).join('')}</g>
+</svg>`;
+}
+
+/** The shopping street: shop fronts with awnings on both sides, a doorway, a bench, painted bike lanes, tram rails under their wire, the park beyond. */
+function streetSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const trees: string[] = [];
+  for (let i = 0; i < 12; i++) trees.push(`<ellipse cx="${10 + i * 34}" cy="${y(14) - (i % 3) * 4}" rx="${24 + (i % 2) * 6}" ry="${20 + (i % 3) * 4}"/>`);
+  const awnings = (top: number) => [0, 1, 2, 3, 4].map((i) => `<path d="M${i * 80 + 6} ${top} h68 l-6 10 h-56 Z" fill="${['#b03a48', '#2f5a6a', '#c9692e', '#4a6434', '#8a5a8a'][i]}"/>`).join('');
+  const pavers = (top: number, h: number) => { const out: string[] = []; for (let r = 0; r < h / 12; r++) out.push(`<path d="M0 ${top + r * 12} H400" stroke="#9a9488" stroke-width="0.8" opacity="0.5"/>`); return out.join(''); };
+  return `
+<svg class="scene-bg street" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="${y(26)}" fill="#4a6434"/>
+  <g fill="#3e5a2c" filter="url(#cut)">${trees.join('')}</g>
+  <rect y="${y(26)}" width="400" height="${y(20)}" fill="#b0a898"/>${pavers(y(26), y(20))}
+  <rect x="0" y="${y(26)}" width="${x(30)}" height="${y(20)}" fill="#a04a3a" opacity="0.55"/>
+  <path d="M${x(14)} ${y(30)} v${y(12)} M${x(4)} ${y(36)} h${x(20)}" stroke="#f0ead8" stroke-width="2" opacity="0.6"/>
+  <g fill="#5a4630" filter="url(#cut)"><rect x="${x(74)}" y="${y(34)}" width="${x(22)}" height="6"/><rect x="${x(76)}" y="${y(36)}" width="4" height="${y(6)}"/><rect x="${x(90)}" y="${y(36)}" width="4" height="${y(6)}"/></g>
+  <rect y="${y(46)}" width="400" height="${y(18)}" fill="#5a5650"/>
+  <path d="M0 ${y(51)} H400 M0 ${y(59)} H400" stroke="#c8c4bc" stroke-width="3"/>
+  ${[...Array(20)].map((_, i) => `<rect x="${i * 21}" y="${y(50)}" width="6" height="${y(10)}" fill="#3a3632"/>`).join('')}
+  <path d="M0 ${y(47.5)} H400" stroke="#2a2a30" stroke-width="1.2"/>
+  <rect y="${y(64)}" width="400" height="${y(20)}" fill="#b0a898"/>${pavers(y(64), y(20))}
+  <rect x="${x(70)}" y="${y(64)}" width="${x(30)}" height="${y(20)}" fill="#a04a3a" opacity="0.55"/>
+  <path d="M${x(84)} ${y(68)} v${y(12)} M${x(74)} ${y(74)} h${x(20)}" stroke="#f0ead8" stroke-width="2" opacity="0.6"/>
+  <rect y="${y(84)}" width="400" height="${y(16)}" fill="#4a4440"/>
+  <g filter="url(#cut)">${awnings(y(84))}</g>
+  <rect x="${x(8)}" y="${y(64)}" width="${x(14)}" height="${y(20)}" fill="#2a2420"/><rect x="${x(10)}" y="${y(66)}" width="${x(10)}" height="${y(16)}" fill="#e8c86a" opacity="0.35"/>
+  <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.6"/>
+  <g class="night-stars"><rect x="${x(10)}" y="${y(66)}" width="${x(10)}" height="${y(16)}" fill="#e8c86a" opacity="0.5"/></g>
 </svg>`;
 }
 

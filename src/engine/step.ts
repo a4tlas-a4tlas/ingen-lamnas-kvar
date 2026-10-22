@@ -19,6 +19,7 @@ import { DITCH_MAX, FENCE, levelAfter, onTheWire, planFence, sweptIn } from './e
 import { cutting, planHarvest, stubblePrey } from './encounters/harvest';
 import { bitten, lit, planLamps, planWalkers, walkerZone } from './encounters/lamps';
 import { eyesFor, guard, nextHide, placeCats, pounced, scarer } from './encounters/cats';
+import { STAGGER, bikesAt, feetAt, planBikes, planCrowd, planTram, sideOf, tramIn, tramNow, underfoot } from './encounters/street';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, buildCast, idFor, makeAnimal, oathVerse, regionJourney } from './setup';
@@ -65,6 +66,7 @@ import {
   swarmLoss,
   verseStatus,
   zoneDistance,
+  canEnter,
 } from './rules';
 import type {
   Action,
@@ -357,6 +359,10 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   // The courtyard: two cats lie in wait – three, where the guide's memory was too kind.
   const cats = id === 'cats' ? placeCats(s, hard ? 3 : 2) : [];
   s.cats = { at: cats, eyes: [], scared: cats.map(() => false), fed: false, foodUsed: false };
+  // The shopping street: the crowd, the bikes and the tram's timetable – thicker on a Saturday.
+  s.street = id === 'street'
+    ? { crowdPlan: planCrowd(s, s.maxTurn, s.time, hard), bikePlan: planBikes(s, s.maxTurn, s.time), tramAt: planTram(s, s.maxTurn, s.time, hard), drunks: [] }
+    : { crowdPlan: [], bikePlan: [], tramAt: [], drunks: [] };
   // The harvest: the wheat stands, and the harvester's rounds are planned.
   s.harvest = { plan: id === 'harvest' ? planHarvest(s, s.maxTurn) : [], cut: [], shadow: null };
   if (id === 'harvest' && s.knowledge.includes('faranHjalpt')) narrate(c, 'Någonstans i vetet tänker vi på den vi hjälpte upp ur fåran.');
@@ -1073,6 +1079,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'harvest') telegraphHarvest(c);
   if (s.encounterId === 'lamps') telegraphLamps(c);
   if (s.encounterId === 'cats') telegraphCats(c);
+  if (s.encounterId === 'street') telegraphStreet(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1641,6 +1648,62 @@ function throwFood(c: Ctx) {
   s.cats.fed = true;
   s.cats.foodUsed = true;
   narrate(c, 'Vi drar ut en fiskbit ur soporna och kastar den över gården. Katterna vänder på huvudet.');
+}
+
+// ---------------------------------------------------------------- the shopping street
+
+/** Start of the hour: the tram's bell, the busy bike lane, where the crowd surges – or, at night, which side the drunks stagger on. */
+function telegraphStreet(c: Ctx) {
+  const s = c.s;
+  const st = s.street;
+  const n = tramIn(s);
+  if (n === 0) narrate(c, 'Spårvagnen kommer. Rälsen sjunger under den.');
+  else if (n === 1) narrate(c, 'En klocka plingar längre bort. Spårvagnen kommer nästa timme.');
+  else if (n !== null && s.time === 'day') narrate(c, `Spårvagnen går om ${n} timmar.`);
+  const bike = bikesAt(s);
+  if (bike) narrate(c, s.time === 'night' ? `En ensam cykellampa närmar sig i ${zoneDef(s, bike).name}.` : `Cyklarna susar fram i ${zoneDef(s, bike).name}.`);
+  if (s.time === 'night') {
+    st.drunks = Array.from({ length: s.variant === 'hard' ? 2 : 1 }, () => STAGGER[Math.floor(random(s) * STAGGER.length)]);
+    for (const z of st.drunks) narrate(c, `Någon vinglar fram och sjunger, ${sideOf(z) === 'near' ? 'på vår sida spåret' : 'på andra sidan spåret'}.`);
+  } else {
+    st.drunks = [];
+    for (const z of st.crowdPlan[s.turn - 1] ?? []) narrate(c, `Folkmassan väller fram över ${zoneDef(s, z).name}.`);
+  }
+}
+
+/** End of the hour: the tram passes over the tracks, the bikes down their lane – and feet come down on the small, kick the medium aside, and see the large. */
+function streetHazards(c: Ctx) {
+  const s = c.s;
+  if (tramNow(s)) {
+    const on = s.animals.filter((a) => isActive(a) && a.zone === 'sparet');
+    narrate(c, on.length ? 'Spårvagnen dånar fram över spåret.' : 'Spårvagnen dånar förbi. Ingen av oss var på spåret.');
+    for (const a of on) s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: 'sparet', source: 'spårvagn' });
+  }
+  const bike = bikesAt(s);
+  if (bike) for (const a of s.animals.filter((x) => isActive(x) && x.zone === bike)) s.hitQueue.push({ victim: a.id, severity: 'injure', sudden: false, zone: bike, source: 'cykel' });
+  for (const z of feetAt(s)) {
+    const here = s.animals.filter((a) => isActive(a) && a.zone === z && !a.flying);
+    for (const a of here) {
+      const what = underfoot(a);
+      if (what === 'stepped') s.hitQueue.push({ victim: a.id, severity: 'injure', sudden: false, zone: z, source: 'fötter' });
+      else if (what === 'kicked') {
+        const aside = encounterOf(s).edges
+          .filter(([f, t]) => (f === z || t === z) && sideOf(f) === sideOf(z) && sideOf(t) === sideOf(z))
+          .map(([f, t]) => (f === z ? t : f))
+          .filter((x) => canEnter(s, a, x));
+        if (!aside.length) continue;
+        const to = aside[Math.floor(random(s) * aside.length)];
+        line(c, a.id, `En fot träffar ${a.name}, som tumlar åt sidan in i ${zoneDef(s, to).name}.`);
+        moveAnimal(c, a, to, false);
+      } else {
+        narrate(c, `Någon får syn på ${a.name} och skriker. Folk stannar och pekar.`);
+        for (const o of s.animals.filter((x) => isActive(x) && x !== a && zoneDistance(s, x.zone, z) <= 1)) {
+          changeBelief(c, o, -1);
+          line(c, o.id, `${o.name} kryper ihop av skriket.`);
+        }
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------- the harvest
@@ -2224,6 +2287,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'harvest') harvestHazards(c);
   if (s.encounterId === 'lamps') lampsHazards(c);
   if (s.encounterId === 'cats') catsHazards(c);
+  if (s.encounterId === 'street') streetHazards(c);
   processHits(c);
 }
 
@@ -2339,6 +2403,7 @@ const LAST_MOMENT: Record<string, string> = {
   vråk: 'Vråken slår ner. Klorna har redan {name}. Ett ögonblick kvar.',
   berguv: 'Något stort och tyst faller ur mörkret över {name}. Ett ögonblick kvar.',
   katt: 'Katten har {name} mellan tassarna. Ett ögonblick kvar.',
+  spårvagn: 'Rälsen skakar. Spårvagnens ljus fyller allt omkring {name}. Ett ögonblick kvar.',
 };
 
 /** The birds of prey over the fields: in the air there is no escaping them. */
@@ -2353,7 +2418,7 @@ const TREE_FALL = ['fällaren', 'schaktaren'];
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'traktor', 'bonde'];
 
-const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern', katt: 'Katten' };
+const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern', katt: 'Katten', fötter: 'Fötterna', cykel: 'Cykeln', spårvagn: 'Spårvagnen' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
