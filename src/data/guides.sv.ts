@@ -1,5 +1,6 @@
 import { LAMPS } from '../engine/encounters/lamps';
 import { CATS } from '../engine/encounters/cats';
+import { STREET } from '../engine/encounters/street';
 import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
 // The guide for each area: what we are trying to do, what kills and what
@@ -68,6 +69,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   cats: {
     day: 'Vi ser var katterna ligger på lur.',
     night: 'Vi ser bara ögon: två par för varje katt, och bara det ena är på riktigt.',
+  },
+  street: {
+    day: 'Folkmassan syns komma, och spårvagnen går efter tidtabell.',
+    night: 'Nästan ingen är ute – men de som är det vinglar dit ingen kan veta. Spårvagnen hörs bara på klockan, timmen innan.',
   },
 };
 
@@ -298,6 +303,26 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Låt en stor eller ett rovdjur gå före de små, och stå där katten ligger.',
       'Spara maten till timmen då du inte hinner flytta alla.',
+    ],
+  },
+  street: {
+    title: 'Så tar vi oss över affärsgatan',
+    hard: 'Ibland är det lördag: folkmassan fyller båda trottoarerna, och spårvagnen går varannan timme.',
+    goal: `Få alla från Gränden till Parken – ${STREET.maxTurn} timmar. Trottoaren, spåret, trottoaren: fyra steg.`,
+    dangers: [
+      { icon: '⁂', name: 'Folkmassan', effect: 'skadar', text: 'Varje timme väller folk fram över en trottoar – det syns var, och var nästa timme. De små trampas på (haltar eller bryter något). De mellanstora sparkas åt sidan. En stor syns, och folk skriker: alla av oss nära tappar 1 tro.' },
+      { icon: '⇉', name: 'Cyklarna', effect: 'skadar', text: 'En av de två cykelbanorna är full av cyklar varje timme – det syns vilken. Den som står där blir påkörd.' },
+      { icon: '▭', name: 'Spårvagnen', effect: 'dödar', text: 'Den går efter tidtabell, och klockan plingar timmen innan. Den som står på spåret när den kommer dör – om ingen hinner emellan.' },
+      { icon: '?', name: 'På natten', text: 'Folkmassan är borta, men några vinglar hem. Vi hör bara på vilken sida spåret de går. Spårvagnen går mer sällan, och hörs bara på klockan.' },
+    ],
+    shelter: [
+      { icon: '▯', name: 'Butiksdörren', text: 'I dörröppningen går ingen folkmassa och inga cyklar.' },
+      { icon: '▬', name: 'Under bänken', text: 'Bara de små får plats, och det tar en timme att krypa ut. Där når varken fötter eller cyklar.' },
+      { icon: '⇡', name: 'Luften', text: 'Den som flyger når varken fötter, cyklar eller spårvagn.' },
+    ],
+    tips: [
+      'Läs tidtabellen: gå över spåret mellan två spårvagnar, och stå aldrig kvar där när klockan plingat.',
+      'Ställ de små i dörren eller under bänken när folkmassan kommer.',
     ],
   },
 };
