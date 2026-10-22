@@ -1,7 +1,7 @@
 /** Zones are defined per encounter (see encounters/); ids are plain strings. */
 export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
-export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps';
+export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps' | 'cats';
 /** Which way the wind carries the mist over the sprayed field. */
 /** Asphalt with cars, or gravel with tractors. */
 export type RoadKind = 'asphalt' | 'gravel';
@@ -406,7 +406,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 26;
+  version: 27;
   /** The road we cross: asphalt, or Åkrarna's gravel. */
   roadKind: RoadKind;
   /** Which group left the glen. */
@@ -478,6 +478,8 @@ export interface GameState {
   harvest: { plan: ZoneId[][]; cut: ZoneId[]; shadow: ZoneId | null };
   /** The street lights: the hour each lamp comes on, and the men walking their dogs round the block. */
   lamps: { litAt: Record<ZoneId, number>; walkers: { at: number; dir: 1 | -1 }[] };
+  /** The courtyard: where each cat lies in wait, the eyes we see of it at night, which were scared off, and the food thrown to them. */
+  cats: { at: ZoneId[]; eyes: ZoneId[][]; scared: boolean[]; fed: boolean; foodUsed: boolean };
   /** Someone trapped in this encounter, not yet one of us: they must come to trust us before we can free them. */
   rescue: Rescue | null;
   /** Newcomers we have met this run – rescued or left behind. Each is met only once. */
@@ -511,6 +513,8 @@ export type Action =
   | { type: 'endTurn' }
   | { type: 'travel'; to: string; wait?: boolean }
   | { type: 'rescue'; by: string }
+  /** Throw the cats something to eat: this hour they pounce on no one. Once in each danger. */
+  | { type: 'throwFood' }
   | { type: 'restAtFire'; watch?: string; scout?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice>; teach?: Teaching }
   /** Learn one of the skills a danger lived through has offered. */
   | { type: 'learn'; animal: string; skill: CardKind }

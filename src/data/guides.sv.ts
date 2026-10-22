@@ -1,4 +1,5 @@
 import { LAMPS } from '../engine/encounters/lamps';
+import { CATS } from '../engine/encounters/cats';
 import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
 // The guide for each area: what we are trying to do, what kills and what
@@ -63,6 +64,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   lamps: {
     day: 'Lyktorna tänds i skymningen. Det går inte att vänta på dagen.',
     night: 'Lyktorna tänds i skymningen. Det går inte att vänta på dagen.',
+  },
+  cats: {
+    day: 'Vi ser var katterna ligger på lur.',
+    night: 'Vi ser bara ögon: två par för varje katt, och bara det ena är på riktigt.',
   },
 };
 
@@ -273,6 +278,26 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Läs lyktorna: gå där det är mörkt, och där det blir mörkt längst.',
       'Mannen följer alltid samma runda. Var inte där han ska vara när ljuset är tänt.',
+    ],
+  },
+  cats: {
+    title: 'Så tar vi oss över bakgården',
+    hard: 'Ibland är katterna tre.',
+    goal: `Få alla från Källartrappan ut genom Porten – ${CATS.maxTurn} timmar. Över gården: tre steg.`,
+    dangers: [
+      { icon: '◆', name: 'Katterna', effect: 'dödar', text: 'Var och en ligger på lur någonstans på gården, och smyger till ett nytt gömställe varje timme – alltid granne med det förra. När timmen går slår den till mot den minsta där den ligger: en liten tas, en mellanstor rivs (ett sår som blöder). De stora rör den aldrig.' },
+      { icon: '◉', name: 'Ögon i mörkret', text: 'På natten ser vi bara ögon, på två ställen för varje katt. Bara det ena är katten.' },
+      { icon: '↟', name: 'Lönnen', text: 'Katter klättrar också. Den som klättrat upp i lönnen är inte säker.' },
+    ],
+    shelter: [
+      { icon: '!', name: 'Våra rovdjur', text: 'Står ett av våra rovdjur där katten ligger, fräser den och backar – och gömmer sig nästa timme två steg bort.' },
+      { icon: '■', name: 'De stora vaktar', text: 'Där en stor av oss står vågar ingen katt slå till.' },
+      { icon: '◇', name: 'Kasta mat (◆1)', text: 'Ett kort bredvid handen, en gång på gården: den här timmen slåss katterna om maten och ser inte åt vårt håll.' },
+      { icon: '⇡', name: 'Luften, och den gömda', text: 'Den som flyger når katten inte. Den som gömt sig hittar den inte, och den som rullat ihop sig sticker den sig på.' },
+    ],
+    tips: [
+      'Låt en stor eller ett rovdjur gå före de små, och stå där katten ligger.',
+      'Spara maten till timmen då du inte hinner flytta alla.',
     ],
   },
 };

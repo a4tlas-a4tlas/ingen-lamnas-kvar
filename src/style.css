@@ -903,6 +903,16 @@ button.link { background: none; border: 0; padding: 0 0 0 8px; color: var(--gold
 .walker-mark span { top: auto; bottom: 4px; }
 .walker-mark.seen span { background: #c9692e; }
 
+/* The courtyard: where a cat lies in wait, or – at night – where eyes glint. */
+.cat-mark { position: absolute; pointer-events: none; box-shadow: inset 0 0 0 2px rgba(239,227,200,0.55); }
+.cat-mark.strikes { box-shadow: inset 0 0 0 3px rgba(178,52,40,0.95); }
+.cat-mark i { position: absolute; right: 10%; top: 38%; width: 22px; height: 8px; background: radial-gradient(circle at 25% 50%, #d8f070 0 2.5px, transparent 3px), radial-gradient(circle at 75% 50%, #d8f070 0 2.5px, transparent 3px); filter: drop-shadow(0 0 3px rgba(216,240,112,0.8)); }
+.cat-mark span { position: absolute; left: 5px; bottom: 4px; font-size: 0.66em; padding: 1px 6px; border-radius: 2px; background: rgba(20,26,36,0.75); color: var(--paper); }
+.cat-mark.strikes span { background: var(--blood); }
+.cat-mark.eyes { box-shadow: inset 0 0 0 2px rgba(216,240,112,0.35); }
+.cat-mark.eyes i { animation: blink 4s infinite; }
+@keyframes blink { 0%, 92%, 100% { opacity: 1; } 95% { opacity: 0; } }
+
 /* The harvest: stubble where the wheat was. */
 .stubble-mark { position: absolute; pointer-events: none; background: repeating-linear-gradient(80deg, #b8a070 0 3px, #a08a5a 3px 7px); opacity: 0.92; }
 .stubble-mark span { position: absolute; right: 5px; bottom: 4px; font-size: 0.64em; color: var(--paper); background: rgba(20,26,36,0.6); padding: 0 5px; border-radius: 2px; }

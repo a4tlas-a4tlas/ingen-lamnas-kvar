@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -356,6 +356,42 @@ function lampsSvg(): string {
   ${posts}
   <rect y="${y(78)}" width="400" height="${y(22)}" fill="#2e3a24" filter="url(#cut)"/>
   <g fill="#26321e" filter="url(#cut)">${tufts.join('')}</g>
+</svg>`;
+}
+
+/** The courtyard: brick walls with lit windows, the gate beyond, bike racks, a sandbox, a bin shed, a flowerbed, a lawn, a maple. */
+function catsSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const windows: string[] = [];
+  for (let i = 0; i < 9; i++) for (let r = 0; r < 2; r++) if (i !== 4) windows.push(`<rect x="${10 + i * 44}" y="${4 + r * 18}" width="14" height="11" fill="${(i + r) % 3 ? '#e8c86a' : '#3a3036'}" opacity="0.85"/>`);
+  const bikes = [0, 1, 2].map((i) => `<g transform="translate(${x(5) + i * 38} ${y(66)})"><circle cx="0" cy="10" r="9"/><circle cx="24" cy="10" r="9"/><path d="M0 10 L10 -2 L24 10 M10 -2 H20 M6 -6 H12" fill="none"/></g>`).join('');
+  const flowers: string[] = [];
+  for (let i = 0; i < 12; i++) flowers.push(`<circle cx="${x(3) + i * 10}" cy="${y(36) + (i % 3) * 9}" r="3.2" fill="${['#c9692e', '#e8c86a', '#b03a48'][i % 3]}"/>`);
+  const leaves: string[] = [];
+  for (let i = 0; i < 9; i++) leaves.push(`<ellipse cx="${x(76) + (i % 3) * 24 - 10}" cy="${y(26) + Math.floor(i / 3) * 18}" rx="22" ry="14"/>`);
+  const tufts: string[] = [];
+  for (let i = 0; i < 12; i++) tufts.push(tuft(x(36) + i * 10.5, y(48) - (i % 3) * 3, 1.2 + (i % 4) * 0.2));
+  return `
+<svg class="scene-bg cats" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="${y(22)}" fill="#6a3a2c"/>
+  <g>${windows.join('')}</g>
+  <rect x="${x(42)}" y="${y(6)}" width="${x(16)}" height="${y(16)}" fill="#1e1a1a"/><path d="M${x(42)} ${y(6)} Q${x(50)} ${y(1)} ${x(58)} ${y(6)}" fill="#1e1a1a"/>
+  <rect y="${y(22)}" width="400" height="${y(56)}" fill="#7d7a70"/>
+  <rect x="0" y="${y(22)}" width="${x(34)}" height="${y(28)}" fill="#4a3a26" filter="url(#cut)"/>
+  <g filter="url(#cut)">${flowers.join('')}</g>
+  <rect x="${x(34)}" y="${y(22)}" width="${x(32)}" height="${y(28)}" fill="#5e7a42" filter="url(#cut)"/>
+  <g fill="#4a6434" filter="url(#cut)">${tufts.join('')}</g>
+  <rect x="${x(80)}" y="${y(32)}" width="10" height="${y(16)}" fill="#3a2a1e"/>
+  <g fill="#3e5a2c" filter="url(#cut)">${leaves.join('')}</g>
+  <g stroke="#2a2a30" stroke-width="3" fill="none">${bikes}</g>
+  <rect x="${x(40)}" y="${y(56)}" width="${x(20)}" height="${y(16)}" fill="#8a6a40"/><rect x="${x(42)}" y="${y(58)}" width="${x(16)}" height="${y(12)}" fill="#d9c08a"/>
+  <rect x="${x(70)}" y="${y(52)}" width="${x(26)}" height="${y(22)}" fill="#4a4a46" filter="url(#cut)"/><rect x="${x(72)}" y="${y(60)}" width="${x(10)}" height="${y(14)}" fill="#2f4a3a"/><rect x="${x(84)}" y="${y(60)}" width="${x(10)}" height="${y(14)}" fill="#4a3a2a"/>
+  <rect y="${y(78)}" width="400" height="${y(22)}" fill="#5a5048"/>
+  <g fill="#6c6258">${[0, 1, 2, 3].map((i) => `<rect x="${x(30) + i * 10}" y="${y(80) + i * 14}" width="${x(40) - i * 20}" height="10"/>`).join('')}</g>
+  <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.6"/>
+  <g class="night-stars">${windows.filter((w) => w.includes('#e8c86a')).join('')}</g>
 </svg>`;
 }
 

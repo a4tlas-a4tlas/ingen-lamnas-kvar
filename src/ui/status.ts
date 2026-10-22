@@ -7,6 +7,7 @@ import { mistAfter, rowZones, tractorRow } from '../engine/encounters/sprayer';
 import { GATE_PUSH, levelAfter, onTheWire, sweptIn } from '../engine/encounters/fence';
 import { cutting, inWheat, stubblePrey } from '../engine/encounters/harvest';
 import { bitten, lit, walkerZone } from '../engine/encounters/lamps';
+import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
@@ -88,6 +89,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'fence') out.push(...fenceStatuses(s, a));
   if (s.encounterId === 'harvest') out.push(...harvestStatuses(s, a));
   if (s.encounterId === 'lamps') out.push(...lampsStatuses(s, a));
+  if (s.encounterId === 'cats') out.push(...catsStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -243,6 +245,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'fence') out.push(...fenceForecast(s, zoneOf));
   if (s.encounterId === 'harvest') out.push(...harvestForecast(s, zoneOf));
   if (s.encounterId === 'lamps') out.push(...lampsForecast(s, zoneOf));
+  if (s.encounterId === 'cats') out.push(...catsForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -364,6 +367,56 @@ function lampsForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[
   }
   const next = Object.entries(s.lamps.litAt).filter(([, h]) => h === s.turn + 1).map(([z]) => zoneDef(s, z).name);
   if (next.length && s.turn < s.maxTurn) out.push({ text: `Nästa timme tänds lyktan över ${next.join(' och ')}.`, tone: 'info' });
+  return out;
+}
+
+/** The courtyard: where a cat lies in wait – or might – and who keeps it off. */
+function catsStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active' || (a.flying && !a.climbing)) return [];
+  const signs = catSigns(s).filter((zs) => zs.includes(a.zone));
+  if (!signs.length) return [];
+  if (scarer(s, a.zone) === a) return [{ key: 'cat', icon: '!', label: 'skrämmer katten', tone: 'good', explain: `Katten här vågar inte möta ${a.name}. Den backar när timmen går.` }];
+  if (guard(s, a.zone) === a) return [{ key: 'cat', icon: '■', label: 'vaktar', tone: 'good', explain: `${a.name} är stor. Ingen katt slår till här medan ${a.name} står kvar.` }];
+  if (guard(s, a.zone)) return [{ key: 'cat', icon: '■', label: 'en stor vaktar', tone: 'good', explain: `${guard(s, a.zone)!.name} står här. Katten vågar inte slå till.` }];
+  if (scarer(s, a.zone) || s.cats.fed) return [];
+  const sure = signs.some((zs) => zs.length === 1);
+  if (pounced(s, a.zone) === a) {
+    return [{ key: 'cat', icon: '◆', label: sure ? 'katten lurar här' : 'ögon i mörkret', tone: 'bad',
+      explain: sure
+        ? `En katt ligger på lur här. När timmen går slår den till mot ${a.name}${a.size === 'small' ? ' – en liten tas' : ' och river'}.`
+        : `Här glimmar ögon. Är det katten, slår den till mot ${a.name} när timmen går.` }];
+  }
+  return [{ key: 'cat', icon: '◆', label: sure ? 'katten lurar här' : 'ögon i mörkret', tone: 'warn', explain: `En katt kan ligga här, men den tar en mindre än ${a.name} först.` }];
+}
+
+/** The courtyard: whom each cat would take – and what keeps it off. */
+function catsForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  if (s.cats.fed) return [{ text: 'Katterna slåss om maten den här timmen. Ingen av dem slår till.', tone: 'good' }];
+  /** What the cat does where it lies, and whether it hurts. */
+  const outcome = (z: ZoneId): { text: string; bad: boolean } => {
+    const p = scarer(s, z, where);
+    if (p) return { text: `${p.name} skrämmer bort den`, bad: false };
+    const g = guard(s, z, where);
+    if (g) return { text: `${g.name} vaktar, den vågar inte`, bad: false };
+    const v = pounced(s, z, where);
+    return v ? { text: `slår till mot ${v.name}: ${v.size === 'small' ? 'dödar' : 'river (blöder)'}`, bad: true } : { text: 'väntar – ingen av oss är där', bad: false };
+  };
+  for (const zs of catSigns(s)) {
+    if (zs.length === 1) {
+      const o = outcome(zs[0]);
+      out.push({ text: `Katten i ${zoneDef(s, zs[0]).name} ${o.bad || o.text.startsWith('väntar') ? o.text : `– ${o.text}`}.`, tone: o.bad ? 'bad' : 'good' });
+      continue;
+    }
+    const os = zs.map((z) => ({ z, ...outcome(z) }));
+    const hurt = os.filter((o) => o.bad);
+    out.push({
+      text: `Ögon i mörkret vid ${zs.map((z) => zoneDef(s, z).name).join(' eller ')}.${hurt.map((o) => ` Är det katten i ${zoneDef(s, o.z).name} ${o.text}.`).join('')}`,
+      tone: hurt.length ? 'warn' : 'info',
+    });
+  }
+  if (!s.cats.foodUsed) out.push({ text: 'Kasta mat (◆1): en gång på gården slår katterna inte till mot någon den timmen.', tone: 'info' });
   return out;
 }
 

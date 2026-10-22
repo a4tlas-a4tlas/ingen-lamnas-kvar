@@ -19,8 +19,13 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     sprayer: { pull: -1, line: 'Den söta lukten. Våra kusiner åt av det fältet och vaknade aldrig.' },
     fence: { pull: -1, line: 'Tråden som surrar. Vi rörde vid en sådan en gång. Bara en gång.' },
     lamps: { pull: -1, line: 'Hundar på gatan. Vi hör dem härifrån.' },
+    cats: { pull: -1, line: 'Katter. Det finns inget värre än katter. Inte gårdarna, snälla.' },
   },
-  fox: { farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' } },
+  fox: {
+    farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' },
+    cats: { pull: 1, line: 'Katter? De backar för en räv. Låt mig gå först över gården.' },
+  },
+  adder: { cats: { pull: 1, line: 'Katterna vet vad en huggorm är. De håller sig undan.' } },
   badger: { river: { pull: 1, line: 'Strömmen rubbar inte mig. Håll er i mig, så går vi över.' } },
   owl: {
     farm: { pull: -1, line: 'Jag har sett gården från ovan. Hundarna sover inte så djupt som ni tror.' },
@@ -30,6 +35,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
   hare: {
     fence: { pull: -1, line: 'Stängsel. Jag har sett en hare fastna i ett. Den skrek länge.' },
     lamps: { pull: -1, line: 'Hundar i koppel är fortfarande hundar.' },
+    cats: { pull: -1, line: 'En katt hoppar längre än jag tror. Inte bakgårdarna.' },
   },
   hedgehog: { farm: { pull: 1, line: 'Gårdar har sniglar och mjölk. Hundarna biter inte i taggar.' } },
   squirrel: { raptor: { pull: -1, line: 'Inga träd på fälten. Ingenstans att klättra. Inte där.' } },

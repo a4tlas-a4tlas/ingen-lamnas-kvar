@@ -741,6 +741,22 @@ The last field of Åkrarna, by day only, 8 hours.
 - **Bot:** 4.9 of 6 safe, the gentlest so far, as the city's opening.
 - **Save version 26.**
 
+### Step 8: Katterna – Bakgården (done)
+The city's second danger of its own (`src/engine/encounters/cats.ts`, id `cats`, 8 hours, by day or night). On the city's maps it is *Bakgården* (memory "en katt" / "katterna är tre").
+- **The board:** an inner courtyard, three steps. Källartrappan (start) → Cykelstället · Sandlådan · Soprummet → Rabatten · Gräsmattan · Lönnen → Porten (goal). Forward, and sideways within each row.
+- **The cats lie in wait:** two (three when hard), each in its own place in the yard. At the start of every hour from the second, each slips to a neighbouring place (seeded, never onto another cat).
+  - **By day** we see where each one lies.
+  - **At night** only eyes: two places for each cat, one of them real. Insight that reveals the dark (`darkRevealed`) shows the real one.
+- **The pounce:** when the hour passes, each cat strikes the smallest of us where it lies. A small one is killed (last moment, source `katt`), a medium one scratched (bleeding). The large are never taken.
+- **Our answers:**
+  - **Our predators:** one of ours on the ground where the cat lies makes it hiss and back off. No pounce, and next hour it hides two places away.
+  - **The large stand guard:** no cat strikes where one of the large stands.
+  - **Kasta mat (◆1):** a special card beside the hand, once in the courtyard (`{ type: 'throwFood' }`). That hour the cats fight over the food and strike no one.
+  - **The air:** fliers are safe. **Up the maple is not:** cats climb, so the climbing squirrel is taken.
+  - **Hidden and curled:** `katt` is among the hunters (the hidden aren't found, a threatened zone is avoided) and the claws (the spines stop it).
+- **State:** `s.cats = { at, eyes, scared, fed, foodUsed }`, with save version 27.
+- **Bot balance:** the reading bot over 300 seeds keeps 4.9 of 6 (4.94 day, 4.94 night, 4.91 hard day, 4.82 hard night). Gatlyktorna scores 5.0 under the same bot.
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.
