@@ -1,7 +1,7 @@
 // Stadens utkant: where the fields end and the town begins. Street lights, dogs on
-// leads, roads that never sleep. Its first own danger is the lamps; the others, its
-// story parts and its boss – Fyrverkerinatten – come in the next steps, and old
-// dangers stand in new places meanwhile.
+// leads, roads that never sleep. Its own dangers so far are the lamps and the cats in
+// the courtyard; the rest, its story parts and its boss – Fyrverkerinatten – come in
+// the next steps, and old dangers stand in new places meanwhile.
 import type { Template } from './dalen';
 import { AKRARNA } from './akrarna';
 import { DALEN, type RegionDef } from './dalen';
@@ -18,6 +18,14 @@ const lamps: Template = {
   note: 'Gatlyktor, och en man med hund.',
 };
 
+const cats: Template = {
+  key: 'bakgarden', kind: 'encounter', encounter: 'cats', name: 'Bakgården', fogName: 'Något som väntar mellan husen?',
+  memory: { normal: 'en katt', hard: 'katterna är tre' },
+  arrive: 'En bakgård mellan höga hus. Cyklar, en sandlåda, en lönn. Det är tyst – för tyst. Något rör sig under cyklarna.',
+  arriveNight: 'En bakgård mellan höga hus. Fönstren lyser gult. Under cyklarna glimmar något grönt.',
+  note: 'En bakgård. Katter.',
+};
+
 export const STADEN: RegionDef = {
   id: 'staden',
   name: 'Stadens utkant',
@@ -28,6 +36,7 @@ export const STADEN: RegionDef = {
   start: { key: 'stadsgransen', kind: 'start', name: 'Stadsgränsen', fogName: 'Stadsgränsen', arrive: 'Åkrarna tar slut vid en skylt. Bortom den börjar staden: asfalt, ljus, och ett ljud som aldrig tystnar.' },
   first: lamps,
   dangers: [
+    cats,
     { ...lamps, key: 'gatlyktorna2', name: 'Villagatan', fogName: 'Fler lyktor?', arrive: 'En gata till, med hus på båda sidor. Lyktorna står tätare här.' },
     {
       key: 'infarten', kind: 'encounter', encounter: 'road', name: 'Infartsvägen', fogName: 'Ett brus som aldrig slutar?',

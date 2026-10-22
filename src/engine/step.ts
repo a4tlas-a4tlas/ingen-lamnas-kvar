@@ -18,6 +18,7 @@ import { CROP, drift, nightMist, planSprayer, rowZones, sprayed } from './encoun
 import { DITCH_MAX, FENCE, levelAfter, onTheWire, planFence, sweptIn } from './encounters/fence';
 import { cutting, planHarvest, stubblePrey } from './encounters/harvest';
 import { bitten, lit, planLamps, planWalkers, walkerZone } from './encounters/lamps';
+import { eyesFor, guard, nextHide, placeCats, pounced, scarer } from './encounters/cats';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, buildCast, idFor, makeAnimal, oathVerse, regionJourney } from './setup';
@@ -115,6 +116,7 @@ export function step(prev: GameState, action: Action): { state: GameState; event
       case 'lead': lead(c, action.target, action.zone); endIfAllAcross(c); break;
       case 'lure': lure(c, action.target, action.zone); endIfAllAcross(c); break;
       case 'rescue': rescue(c, action.by); break;
+      case 'throwFood': throwFood(c); break;
       case 'respond': respond(c, action.option, action.uid); break;
       case 'equip': equip(c, action.animal, action.skills); break;
       case 'learn': learn(c, action.animal, action.skill); break;
@@ -352,6 +354,9 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   // The ditch and the gate: the water starts low – or, where the guide's memory was too kind, already high.
   // The street: when each lamp comes on, and where the men with dogs begin their round.
   s.lamps = id === 'lamps' ? { litAt: planLamps(s), walkers: planWalkers(s, hard) } : { litAt: {}, walkers: [] };
+  // The courtyard: two cats lie in wait – three, where the guide's memory was too kind.
+  const cats = id === 'cats' ? placeCats(s, hard ? 3 : 2) : [];
+  s.cats = { at: cats, eyes: [], scared: cats.map(() => false), fed: false, foodUsed: false };
   // The harvest: the wheat stands, and the harvester's rounds are planned.
   s.harvest = { plan: id === 'harvest' ? planHarvest(s, s.maxTurn) : [], cut: [], shadow: null };
   if (id === 'harvest' && s.knowledge.includes('faranHjalpt')) narrate(c, 'Någonstans i vetet tänker vi på den vi hjälpte upp ur fåran.');
@@ -1067,6 +1072,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'fence') telegraphFence(c);
   if (s.encounterId === 'harvest') telegraphHarvest(c);
   if (s.encounterId === 'lamps') telegraphLamps(c);
+  if (s.encounterId === 'cats') telegraphCats(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1573,6 +1579,68 @@ function lampsHazards(c: Ctx) {
     }
     w.at += w.dir;
   }
+}
+
+// ---------------------------------------------------------------- the cats
+
+/** Start of the hour: each cat slips to a new hiding place – two away, if it was scared off. By day we see it; at night only eyes. */
+function telegraphCats(c: Ctx) {
+  const s = c.s;
+  const k = s.cats;
+  k.fed = false;
+  if (s.turn > 1) {
+    const taken: ZoneId[] = [];
+    k.at = k.at.map((z, i) => {
+      const to = nextHide(s, z, k.scared[i], [...taken, ...k.at.slice(i + 1)]);
+      taken.push(to);
+      return to;
+    });
+  }
+  k.scared = k.at.map(() => false);
+  if (s.time === 'night') {
+    k.eyes = k.at.map((z) => eyesFor(s, z));
+    for (const e of k.eyes) narrate(c, `Två gröna ögon i mörkret – vid ${zoneDef(s, e[0]).name} eller vid ${zoneDef(s, e[1]).name}.`);
+  } else {
+    k.eyes = [];
+    for (const z of k.at) narrate(c, `En katt ligger på lur i ${zoneDef(s, z).name}.`);
+  }
+}
+
+/** End of the hour: each cat pounces on the smallest one where it lies – unless fed, faced by one of our predators, or kept off by the large. */
+function catsHazards(c: Ctx) {
+  const s = c.s;
+  const k = s.cats;
+  k.at.forEach((z, i) => {
+    if (k.fed) return;
+    const g = guard(s, z);
+    const p = scarer(s, z);
+    if (p) {
+      narrate(c, `Katten i ${zoneDef(s, z).name} möter ${p.name}s blick, fräser och backar.`);
+      k.scared[i] = true;
+      return;
+    }
+    if (g) {
+      if (s.animals.some((a) => isActive(a) && a.zone === z && a !== g)) line(c, g.id, `${g.name} står kvar, stor och lugn. Katten vågar inte.`);
+      return;
+    }
+    const v = pounced(s, z);
+    if (!v) return;
+    narrate(c, `Katten i ${zoneDef(s, z).name} kryper ihop – och slår till.`);
+    s.hitQueue.push({ victim: v.id, severity: v.size === 'small' ? 'kill' : 'injure', sudden: false, zone: z, source: 'katt' });
+  });
+  if (k.fed) narrate(c, 'Katterna slåss om maten. Ingen av dem ser åt vårt håll.');
+}
+
+/** Throw the cats something to eat: this hour they go for the food, not for us. Once in each danger. */
+function throwFood(c: Ctx) {
+  const s = c.s;
+  if (s.phase !== 'play' || s.encounterId !== 'cats') fail('Det finns inga katter här.');
+  if (s.cats.foodUsed) fail('Maten är redan slut.');
+  if (s.kraft < 1) fail('Ingen kraft kvar.');
+  s.kraft -= 1;
+  s.cats.fed = true;
+  s.cats.foodUsed = true;
+  narrate(c, 'Vi drar ut en fiskbit ur soporna och kastar den över gården. Katterna vänder på huvudet.');
 }
 
 // ---------------------------------------------------------------- the harvest
@@ -2155,6 +2223,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'fence') fenceHazards(c);
   if (s.encounterId === 'harvest') harvestHazards(c);
   if (s.encounterId === 'lamps') lampsHazards(c);
+  if (s.encounterId === 'cats') catsHazards(c);
   processHits(c);
 }
 
@@ -2222,7 +2291,7 @@ function processHits(c: Ctx) {
       continue;
     }
     // Over the fields the air is the bird's: lifting off is no escape. A tree that falls takes the climber with it.
-    if (v.flying && !BIRDS.includes(h.source) && h.source !== 'gift' && !(v.climbing && TREE_FALL.includes(h.source))) {
+    if (v.flying && !BIRDS.includes(h.source) && h.source !== 'gift' && !(v.climbing && (TREE_FALL.includes(h.source) || h.source === 'katt'))) {
       line(c, v.id, v.climbing ? `${v.name} sitter kvar uppe i trädet, utom räckhåll.` : `${v.name} lyfter i sista stund.`);
       continue;
     }
@@ -2269,25 +2338,26 @@ const LAST_MOMENT: Record<string, string> = {
   schaktaren: 'Schaktaren rullar in, och jorden rör sig under {name}. Ett ögonblick kvar.',
   vråk: 'Vråken slår ner. Klorna har redan {name}. Ett ögonblick kvar.',
   berguv: 'Något stort och tyst faller ur mörkret över {name}. Ett ögonblick kvar.',
+  katt: 'Katten har {name} mellan tassarna. Ett ögonblick kvar.',
 };
 
 /** The birds of prey over the fields: in the air there is no escaping them. */
 const BIRDS = ['vråk', 'berguv'];
 /** What hunts by sight or scent: the hidden are not found, and a threat makes it back off. */
-const HUNTERS = ['hund', 'bonde', 'häger', ...BIRDS];
+const HUNTERS = ['hund', 'bonde', 'häger', 'katt', ...BIRDS];
 /** What bites, pecks or grabs – the spines stop it. */
-const CLAWS = ['hund', 'häger', ...BIRDS];
+const CLAWS = ['hund', 'häger', 'katt', ...BIRDS];
 /** What brings the trees down. */
 const TREE_FALL = ['fällaren', 'schaktaren'];
 
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'traktor', 'bonde'];
 
-const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern' };
+const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern', katt: 'Katten' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
-  const pool: InjuryKind[] = h.source === 'stängslet' ? ['shock'] : ['hund', 'bett', 'häger', ...BIRDS].includes(h.source) ? ['bleeding'] : ['halt', 'broken'];
+  const pool: InjuryKind[] = h.source === 'stängslet' ? ['shock'] : ['hund', 'bett', 'häger', 'katt', ...BIRDS].includes(h.source) ? ['bleeding'] : ['halt', 'broken'];
   const fresh = pool.filter((k) => !hasInjury(v, k));
   if (fresh.length) return fresh[Math.floor(random(c.s) * fresh.length)];
   return hasInjury(v, 'bleeding') ? null : 'bleeding';

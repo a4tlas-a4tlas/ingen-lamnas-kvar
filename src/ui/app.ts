@@ -8,6 +8,7 @@ import { tractorRow, visibleMist } from '../engine/encounters/sprayer';
 import { DITCH_MAX, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL, levelAfter } from '../engine/encounters/fence';
 import { cutting } from '../engine/encounters/harvest';
 import { LAMPED, lit, walkerZone } from '../engine/encounters/lamps';
+import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -112,7 +113,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 26 && s.phase !== 'over' ? s : null;
+    return s.version === 27 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -356,6 +357,8 @@ export class App {
       case 'meet-back':
         this.meetingPick = null;
         return this.render();
+      case 'food-card':
+        return this.dispatch({ type: 'throwFood' });
       case 'rescue-card':
         if (this.sel.mode === 'rescue') return this.cancel();
         this.sel = { mode: 'rescue' };
@@ -894,6 +897,23 @@ export class App {
     return out.join('');
   }
 
+  /** The courtyard: where the cats lie in wait – or, at night, where eyes glint – and whom they would take. */
+  private catsTelegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const seen = new Set<string>();
+    for (const signs of catSigns(s)) {
+      for (const z of signs) {
+        if (seen.has(z)) continue;
+        seen.add(z);
+        const sure = signs.length === 1;
+        const why = s.cats.fed ? 'äter' : scarer(s, z) ? 'rädd för rovdjuret' : guard(s, z) ? 'en stor vaktar' : pounced(s, z) ? 'slår till' : 'väntar';
+        out.push(`<div class="cat-mark ${sure ? '' : 'eyes'} ${why === 'slår till' ? 'strikes' : ''}" style="${box(z)}"><i></i><span>${sure ? `Katten · ${why}` : 'ögon?'}</span></div>`);
+      }
+    }
+    return out.join('');
+  }
+
   /** The harvest: the strip being cut, the next, the stubble, the buzzard's shadow. */
   private harvestTelegraphHtml(s: GameState): string {
     const out: string[] = [];
@@ -979,6 +999,7 @@ export class App {
     if (s.encounterId === 'fence') return s.phase === 'over' ? '' : this.fenceTelegraphHtml(s);
     if (s.encounterId === 'harvest') return s.phase === 'over' ? '' : this.harvestTelegraphHtml(s);
     if (s.encounterId === 'lamps') return s.phase === 'over' ? '' : this.lampsTelegraphHtml(s);
+    if (s.encounterId === 'cats') return s.phase === 'over' ? '' : this.catsTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {
@@ -1127,7 +1148,7 @@ export class App {
         });
       })
       .join('');
-    return cards + this.rescueCardHtml(s);
+    return cards + this.rescueCardHtml(s) + this.foodCardHtml(s);
   }
 
   /** While someone is trapped, a card of its own lies beside the hand: reach out, then free. */
@@ -1146,6 +1167,20 @@ export class App {
         ? `Ett djur bredvid ${who} befriar ${who}. Sedan är ${who} en av oss.`
         : `Ett djur inom ett steg från ${who} kryper närmare: +1 tillit. Rovdjur skrämmer bara.`)}</span>
       ${helpers.length ? '' : `<span class="creason">${esc(free ? `Ingen står bredvid ${who}.` : `Ingen av oss är nära nog.`)}</span>`}
+    </button>`;
+  }
+
+  /** In the courtyard, a card of its own lies beside the hand: food for the cats, once. */
+  private foodCardHtml(s: GameState): string {
+    if (s.encounterId !== 'cats' || s.phase !== 'play') return '';
+    const k = s.cats;
+    const why = k.fed ? 'Katterna äter redan.' : k.foodUsed ? 'Maten är slut.' : s.kraft < 1 ? 'Ingen kraft kvar.' : '';
+    return `<button class="card special ${why ? 'unplayable' : ''}" data-act="food-card" style="--owner:#e9dfc6" ${why ? 'disabled' : ''}>
+      <span class="cband"><span class="cowner">Soprummet</span><span class="ccost" title="Kraft">1</span></span>
+      <span class="cname">Kasta mat</span>
+      <span class="ctag">En gång på gården</span>
+      <span class="ctext">Den här timmen slåss katterna om maten och slår inte till mot någon av oss.</span>
+      ${why ? `<span class="creason">${esc(why)}</span>` : ''}
     </button>`;
   }
 
