@@ -811,6 +811,31 @@ The city's fourth danger of its own (`src/engine/encounters/sewer.ts`, id `sewer
 
   Tuned from a daytime rise of 0.6 (which gave 3.80) down to 0.5. It is about as hard as the fields; by day it's the city's hardest.
 
+### Step 11: Fyrverkerinatten – the city's boss (done)
+New Year's Eve in the city park (`src/engine/encounters/fireworks.ts`, id `fireworks`, always at night, 8 hours). It is now the city's `end` node, *Stadsparken*, instead of the plain *Stadens bortre kant*. Memory: "några raketer" / "hela stan skjuter".
+- **The board:** three steps. Parkgrinden (start, cover) → Buskarna (cover) · Gången · Dammen → Musikpaviljongen (cover) · Gräsplanen · Lekplatsen → Banvallen (goal). Forward, and sideways in each row.
+- **The danger is fear:** nothing here kills by itself. Each hour's bursts are telegraphed, with a zone and a strength.
+  - **Strength 1** reaches its own zone; **strength 2** also reaches the zones next to it.
+  - **The build-up:**
+
+    | Hours | Bursts |
+    |---|---|
+    | 1–4 | one (strength 1 in the first hour, then 1 or 2) |
+    | 5–7 | two |
+    | 8, midnight | three, all strength 2 |
+
+    When the whole city fires (hard), there is one more each hour from the fourth.
+  - **A bang pushes:** whoever it reaches is driven one zone away from it (seeded, never onto the embankment or into the crowd) and loses 1 belief. Fliers too.
+  - **The real threat** is the clock: whoever is still in the park at midnight is left behind.
+- **The crowd:** people with sparklers fill one zone of the park each hour (never the same twice running), shown this hour and the next. No one can walk in, but those already there can walk out (`s.closed` for the hour).
+- **What helps:**
+  - **Bonds hold:** two of us with bond ≥ 2 in the same zone hold each other, and neither is pushed.
+  - **Comfort reaches the zone:** Trösta and Tålamod give their belief to everyone in the target's zone.
+  - **Cover dampens:** in the bushes, the bandstand and at the gate, only a burst right overhead reaches.
+- **State:** `s.fireworks = { plan, crowdPlan }`, with save version 30.
+- **After the boss:** the city ends. The end screen says "Bortom staden", and as no regions are left the run ends with "fortsättning följer".
+- **Bot balance:** the reading bot over 300 seeds keeps 4.16 of 6 on the normal night, 3.49 when the whole city fires. Skördetröskan scores 4.46 with the same bot. The hard version first added a rocket every hour, which gave 2.83; from the fourth hour on it gives 3.49.
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

@@ -46,6 +46,7 @@ function icon(p: Place): string {
       if (p.encounter === 'sewer') return '<circle r="2.4" fill="none" stroke="currentColor" stroke-width="0.7" /><path d="M-1.6 -0.8 H1.6 M-2 0.4 H2 M-1.6 1.6 H1.6" stroke="currentColor" stroke-width="0.5" fill="none" />';
       if (p.encounter === 'street') return '<path d="M-2.6 -1.2 H2.6 M-2.6 1.2 H2.6" stroke="currentColor" stroke-width="0.6" fill="none" /><rect x="-1.6" y="-2.2" width="3.2" height="2.6" rx="0.6" /><circle cx="-0.9" cy="0.8" r="0.5" /><circle cx="0.9" cy="0.8" r="0.5" />';
       if (p.encounter === 'cats') return '<path d="M-2 2 V-1 L-1.4 -2.4 L-0.6 -1 H0.6 L1.4 -2.4 L2 -1 V2 Z" /><circle cx="-0.8" cy="0" r="0.35" fill="var(--map-paper)" /><circle cx="0.8" cy="0" r="0.35" fill="var(--map-paper)" />';
+      if (p.encounter === 'fireworks') return '<path d="M0 -2.8 V2.8 M-2.8 0 H2.8 M-2 -2 L2 2 M-2 2 L2 -2" stroke="currentColor" stroke-width="0.6" fill="none" /><circle r="0.8" />';
       if (p.encounter === 'harvest') return '<path d="M-2.8 1.4 H2.8 V-0.6 H0.6 V-2 H-1.6 V-0.6 H-2.8 Z" /><circle cx="-1.6" cy="1.8" r="0.9" /><circle cx="1.8" cy="1.8" r="0.9" />';
       if (p.encounter === 'fence') return '<path d="M-2.6 -2 V2 M0 -2 V2 M2.6 -2 V2 M-2.6 -1 H2.6 M-2.6 0.8 H2.6" stroke="currentColor" stroke-width="0.7" fill="none" />';
       if (p.encounter === 'sprayer') return '<path d="M-2 -1.6 Q-2 -0.2 -1.2 0.4 Q-0.4 -0.2 -0.4 -1.6 L-1.2 -2.8 Z M0.6 -0.4 Q0.6 1 1.4 1.6 Q2.2 1 2.2 -0.4 L1.4 -1.6 Z M-1.4 1.2 Q-1.4 2.2 -0.8 2.6 Q-0.2 2.2 -0.2 1.2 L-0.8 0.4 Z" />';

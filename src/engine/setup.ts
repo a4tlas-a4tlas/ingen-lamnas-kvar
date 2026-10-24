@@ -147,7 +147,7 @@ export function createGame(seed: number): GameState {
   const { cast, animals, draw, bonds, nextUid, rng } = buildCast(seed, 'dalensSista');
 
   return {
-    version: 29,
+    version: 30,
     roadKind: 'asphalt',
     cast,
     journey: firstRegion(seed),
@@ -195,6 +195,7 @@ export function createGame(seed: number): GameState {
     cats: { at: [], eyes: [], scared: [], fed: false, foodUsed: false },
     street: { crowdPlan: [], bikePlan: [], tramAt: [], drunks: [] },
     sewer: { kinds: {}, rats: [], found: [], heard: [], level: 0, risePlan: [], paid: false },
+    fireworks: { plan: [], crowdPlan: [] },
     warded: [],
     rescue: null,
     met: [],

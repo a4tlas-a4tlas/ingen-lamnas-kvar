@@ -1,7 +1,7 @@
 // Stadens utkant: where the fields end and the town begins. Street lights, dogs on
 // leads, roads that never sleep. Its own dangers are the lamps, the cats in the courtyard,
-// the shopping street and the sewer; its story parts and its boss – Fyrverkerinatten –
-// come in the next steps, and old dangers stand in new places meanwhile.
+// the shopping street and the sewer, and its boss is Fyrverkerinatten. Its story parts
+// come in the next step; old dangers stand in new places, and borrowed stories, meanwhile.
 import type { Template } from './dalen';
 import { AKRARNA } from './akrarna';
 import { DALEN, type RegionDef } from './dalen';
@@ -68,5 +68,11 @@ export const STADEN: RegionDef = {
   finds: ['barsnar', 'tradet', 'spillsad'].map(story),
   fire: { key: 'underBron', kind: 'campfire', name: 'Under bron', fogName: 'En bro?', arrive: 'Under en bro är det torrt och mörkt. Ovanför oss dånar bilarna.', note: 'Vila, under bron.' },
   lastFire: { key: 'skjulet', kind: 'campfire', name: 'Skjulet', fogName: 'Ett skjul?', arrive: 'Ett gammalt skjul längst bak i en trädgård. Dörren står på glänt.', note: 'Sista vilan i staden.' },
-  end: { key: 'bortreKant', kind: 'end', name: 'Stadens bortre kant', fogName: 'Där staden tar slut', arrive: 'Husen tar slut. Bortom dem: en mörk skog.' },
+  /** The boss of the city: New Year's Eve in the city park. */
+  end: {
+    key: 'fyrverkerinatten', kind: 'encounter', encounter: 'fireworks', name: 'Stadsparken', fogName: 'Stadsparken – där fyrverkerierna börjar',
+    memory: { normal: 'några raketer', hard: 'hela stan skjuter' },
+    arrive: 'Den sista parken i staden. Bortom den går banvallen, och bortom den mörkret. Det är nyårsafton, och himlen börjar smälla.',
+    note: 'Sista natten i staden. Nyår.',
+  },
 };

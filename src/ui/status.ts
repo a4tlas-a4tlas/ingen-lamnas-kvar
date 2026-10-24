@@ -10,6 +10,7 @@ import { bitten, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown, underfoot } from '../engine/encounters/street';
 import { TUNNELS, bittenByRats, depthIn, isFound, sweptHere } from '../engine/encounters/sewer';
+import { FIREWORKS, burstsNow, holdsWith, reaches } from '../engine/encounters/fireworks';
 import { SWEEPS_SMALL } from '../engine/encounters/fence';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
@@ -95,6 +96,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'cats') out.push(...catsStatuses(s, a));
   if (s.encounterId === 'street') out.push(...streetStatuses(s, a));
   if (s.encounterId === 'sewer') out.push(...sewerStatuses(s, a));
+  if (s.encounterId === 'fireworks') out.push(...fireworksStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -253,6 +255,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'cats') out.push(...catsForecast(s, zoneOf));
   if (s.encounterId === 'street') out.push(...streetForecast(s, zoneOf));
   if (s.encounterId === 'sewer') out.push(...sewerForecast(s, zoneOf));
+  if (s.encounterId === 'fireworks') out.push(...fireworksForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -471,6 +474,37 @@ function streetForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine
       out.push(parts.length ? { text: `Fötterna i ${zoneDef(s, z).name} ${parts.join(', ')}.`, tone: stepped.length ? 'bad' : 'warn' } : { text: `Fötterna går över ${zoneDef(s, z).name} – ingen av oss är där.`, tone: 'good' });
     }
   } else if (s.street.drunks.length) out.push({ text: 'Någon vinglar i mörkret – vi hör bara på vilken sida spåret.', tone: 'warn' });
+  return out;
+}
+
+/** New Year's Eve: in the bang's way, holding on to one we're close to, or under cover. */
+function fireworksStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active') return [];
+  const hit = burstsNow(s).some((b) => reaches(b, a.zone));
+  const friend = holdsWith(s, a);
+  if (hit && friend) return [{ key: 'hold', icon: '♥', label: 'håller i varandra', tone: 'good', explain: `${a.name} och ${friend.name} står varandra nära. När det smäller står de kvar.` }];
+  if (hit) return [{ key: 'burst', icon: '✸', label: 'i smällens väg', tone: 'bad', explain: `En raket smäller här när timmen går. ${a.name} far iväg en zon bort från smällen och tappar 1 tro.` }];
+  if (FIREWORKS.zones.find((z) => z.id === a.zone)?.cover && burstsNow(s).some((b) => b.strength === 2)) return [{ key: 'cover', icon: '♣', label: 'i skydd', tone: 'good', explain: `Här dämpas smällarna. Bara en raket rakt ovanför når ${a.name}.` }];
+  return [];
+}
+
+/** New Year's Eve: who each bang drives off, who holds on, and whether midnight is near. */
+function fireworksForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  if (s.turn === s.maxTurn) out.push({ text: 'Midnatt: tre stora smällar på en gång.', tone: 'bad' });
+  else if (s.turn === s.maxTurn - 1) out.push({ text: 'Nästa timme är det midnatt – tre stora smällar på en gång.', tone: 'warn' });
+  for (const b of burstsNow(s)) {
+    const here = s.animals.filter((a) => isActive(a) && reaches(b, where(a)));
+    const held = here.filter((a) => holdsWith(s, a, where));
+    const driven = here.filter((a) => !held.includes(a));
+    const place = zoneDef(s, b.zone).name;
+    out.push(driven.length
+      ? { text: `${b.strength === 2 ? 'En stor smäll' : 'En smäll'} över ${place} driver iväg ${driven.map((a) => a.name).join(' och ')} (−1 tro)${held.length ? `; ${held.map((a) => a.name).join(' och ')} håller i varandra` : ''}.`, tone: 'warn' }
+      : { text: `${b.strength === 2 ? 'En stor smäll' : 'En smäll'} över ${place}${held.length ? ` – ${held.map((a) => a.name).join(' och ')} håller i varandra` : ' – ingen av oss är där'}.`, tone: 'good' });
+  }
+  const crowd = s.fireworks.crowdPlan[s.turn - 1];
+  if (crowd) out.push({ text: `Folkmassan fyller ${zoneDef(s, crowd).name}. Dit kan vi inte gå den här timmen.`, tone: 'info' });
   return out;
 }
 

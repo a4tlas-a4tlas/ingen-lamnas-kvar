@@ -11,6 +11,7 @@ import { LAMPED, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown } from '../engine/encounters/street';
 import { SOUND, TUNNELS, bittenByRats, depthIn, isFound } from '../engine/encounters/sewer';
+import { burstsNow, reaches } from '../engine/encounters/fireworks';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -115,7 +116,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 29 && s.phase !== 'over' ? s : null;
+    return s.version === 30 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -944,6 +945,24 @@ export class App {
     return out.join('');
   }
 
+  /** New Year's Eve: where the rockets burst and how far the bang reaches, where the people walk now and next. */
+  private fireworksTelegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const crowd = s.fireworks.crowdPlan[s.turn - 1];
+    if (crowd) out.push(`<div class="crowd-mark" style="${box(crowd)}"><span>Folkmassan · stängt</span></div>`);
+    const next = s.turn < s.maxTurn ? s.fireworks.crowdPlan[s.turn] : undefined;
+    if (next) out.push(`<div class="next-mark" style="${box(next)}"><em>folkmassan nästa timme</em></div>`);
+    const midnight = s.turn === s.maxTurn;
+    const reached = new Set<string>();
+    for (const b of burstsNow(s)) {
+      out.push(`<div class="burst-mark s${b.strength}" style="${box(b.zone)}"><i></i><span>${midnight ? 'Midnatt · ' : ''}${b.strength === 2 ? 'stor smäll' : 'smäll'} · knuffar</span></div>`);
+      for (const d of encounterOf(s).zones) if (!d.goal && d.id !== b.zone && reaches(b, d.id)) reached.add(d.id);
+    }
+    for (const z of reached) out.push(`<div class="burst-reach" style="${box(z)}"><em>smällen hörs hit</em></div>`);
+    return out.join('');
+  }
+
   /** The sewer: fog over the tunnels we have not found, and what we hear from them; the depth in those we have; the rats. */
   private sewerTelegraphHtml(s: GameState): string {
     const out: string[] = [];
@@ -1051,6 +1070,7 @@ export class App {
     if (s.encounterId === 'cats') return s.phase === 'over' ? '' : this.catsTelegraphHtml(s);
     if (s.encounterId === 'street') return s.phase === 'over' ? '' : this.streetTelegraphHtml(s);
     if (s.encounterId === 'sewer') return s.phase === 'over' ? '' : this.sewerTelegraphHtml(s);
+    if (s.encounterId === 'fireworks') return s.phase === 'over' ? '' : this.fireworksTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {
