@@ -20,6 +20,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     fence: { pull: -1, line: 'Tråden som surrar. Vi rörde vid en sådan en gång. Bara en gång.' },
     lamps: { pull: -1, line: 'Hundar på gatan. Vi hör dem härifrån.' },
     cats: { pull: -1, line: 'Katter. Det finns inget värre än katter. Inte gårdarna, snälla.' },
+    street: { pull: -1, line: 'Alla de där fötterna. Vi är för små för en sådan gata.' },
   },
   fox: {
     farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' },
@@ -31,11 +32,13 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     farm: { pull: -1, line: 'Jag har sett gården från ovan. Hundarna sover inte så djupt som ni tror.' },
     raptor: { pull: -1, line: 'Där ute är det jag som är bytet. Inte fälten.' },
     lamps: { pull: 1, line: 'Mellan lyktorna är natten min. Jag ser var ljuset inte når.' },
+    street: { pull: 1, line: 'Över gatan flyger jag på ett ögonblick. Jag kan se vagnen komma.' },
   },
   hare: {
     fence: { pull: -1, line: 'Stängsel. Jag har sett en hare fastna i ett. Den skrek länge.' },
     lamps: { pull: -1, line: 'Hundar i koppel är fortfarande hundar.' },
     cats: { pull: -1, line: 'En katt hoppar längre än jag tror. Inte bakgårdarna.' },
+    street: { pull: -1, line: 'Så mycket folk. Jag vet inte åt vilket håll jag ska springa.' },
   },
   hedgehog: { farm: { pull: 1, line: 'Gårdar har sniglar och mjölk. Hundarna biter inte i taggar.' } },
   squirrel: { raptor: { pull: -1, line: 'Inga träd på fälten. Ingenstans att klättra. Inte där.' } },
@@ -43,6 +46,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     river: { pull: -1, line: 'Jag ser inte vattnet. Jag hör det bara. Inte ån.' },
     sprayer: { pull: 1, line: 'Dimman ligger ovanpå jorden. Under den är det rent.' },
     fence: { pull: 1, line: 'Ett stängsel? Jag gräver under det. Följ mig.' },
+    street: { pull: -1, line: 'Jag känner fötterna i marken härifrån. Så många fötter.' },
   },
   beaver: {
     river: { pull: 1, line: 'Ån är min. Jag vet var dammen håller.' },

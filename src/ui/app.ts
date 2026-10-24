@@ -9,6 +9,7 @@ import { DITCH_MAX, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL, levelAfter } from '.
 import { cutting } from '../engine/encounters/harvest';
 import { LAMPED, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
+import { bikesAt, feetAt, tramIn, tramKnown } from '../engine/encounters/street';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -113,7 +114,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 27 && s.phase !== 'over' ? s : null;
+    return s.version === 28 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -914,6 +915,23 @@ export class App {
     return out.join('');
   }
 
+  /** The shopping street: the crowd and where it goes next, the busy bike lane, the tram's clock – or, at night, steps in the dark. */
+  private streetTelegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const shown = s.time === 'day' || s.darkRevealed;
+    if (shown) for (const z of feetAt(s)) out.push(`<div class="crowd-mark" style="${box(z)}"><span>${s.time === 'day' ? 'Folkmassan' : 'Någon vinglar'} · trampar de små</span></div>`);
+    else for (const side of new Set(s.street.drunks.map((z) => (['trottoarenS', 'cykelS'].includes(z) ? 'S' : 'N')))) {
+      out.push(`<div class="crowd-mark dark" style="${box(side === 'S' ? 'trottoarenS' : 'trottoarenN')}"><span>steg i mörkret · någonstans på den här sidan</span></div>`);
+    }
+    if (s.time === 'day' && s.turn < s.maxTurn) for (const z of s.street.crowdPlan[s.turn] ?? []) out.push(`<div class="next-mark" style="${box(z)}"><em>folkmassan nästa timme</em></div>`);
+    const bike = bikesAt(s);
+    if (bike) out.push(`<div class="bike-mark" style="${box(bike)}"><span>Cyklar · skadar</span></div>`);
+    const n = tramIn(s);
+    if (n !== null && tramKnown(s)) out.push(`<div class="tram-mark ${n === 0 ? 'now' : ''}" style="${box('sparet')}"><span>${n === 0 ? 'Spårvagnen · dödar' : n === 1 ? 'klockan plingar · spårvagnen nästa timme' : `spårvagnen om ${n} timmar`}</span></div>`);
+    return out.join('');
+  }
+
   /** The harvest: the strip being cut, the next, the stubble, the buzzard's shadow. */
   private harvestTelegraphHtml(s: GameState): string {
     const out: string[] = [];
@@ -1000,6 +1018,7 @@ export class App {
     if (s.encounterId === 'harvest') return s.phase === 'over' ? '' : this.harvestTelegraphHtml(s);
     if (s.encounterId === 'lamps') return s.phase === 'over' ? '' : this.lampsTelegraphHtml(s);
     if (s.encounterId === 'cats') return s.phase === 'over' ? '' : this.catsTelegraphHtml(s);
+    if (s.encounterId === 'street') return s.phase === 'over' ? '' : this.streetTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {

@@ -757,6 +757,32 @@ The city's second danger of its own (`src/engine/encounters/cats.ts`, id `cats`,
 - **State:** `s.cats = { at, eyes, scared, fed, foodUsed }`, with save version 27.
 - **Bot balance:** the reading bot over 300 seeds keeps 4.9 of 6 (4.94 day, 4.94 night, 4.91 hard day, 4.82 hard night). Gatlyktorna scores 5.0 under the same bot.
 
+### Step 9: Affärsgatan – the shopping street (done)
+The city's third danger of its own (`src/engine/encounters/street.ts`, id `street`, 10 hours, by day or night). On the city's maps it is *Affärsgatan* (memory "en vanlig vardag" / "lördag, rusning").
+- **The board:** we cross the street, four steps. Gränden (start) → Butiksdörren · Trottoaren · Cykelbanan → Spåret → Cykelbanan · Trottoaren · Bänken → Parken (goal). Forward, and sideways along each sidewalk. It runs 10 hours rather than 8, because four steps for six animals need 24 of the 30 Kraft.
+- **The crowd (by day):** each hour it surges along one sidewalk (both on a Saturday), shown this hour and the next.
+  - **The small** are stepped on: halt or a broken limb (source `fötter`).
+  - **The medium** are kicked aside into a neighbouring zone on the same side, perhaps into the bike lane.
+  - **A large one** is seen: people scream, and everyone of ours within one step loses 1 belief.
+- **The bikes:** each hour one of the two bike lanes is busy, and it is shown. Whoever stands there is run down (halt or broken, source `cykel`). At night only some hours bring a bike.
+- **The tram:**
+  - **The timetable:** by day every 2–3 hours, read in advance ("spårvagnen om N timmar"). At night every 3–4 hours, and heard only by its bell, the hour before. On a Saturday every 2 hours.
+  - **Whoever is on Spåret when it passes** is killed, with a last moment (source `spårvagn`).
+- **At night:** no crowd, but one drunk (two on a Saturday) staggers each hour in one of the open zones. We hear only which side of the tracks; insight that reveals the dark shows where.
+- **Shelter:**
+  - **Butiksdörren:** neither the crowd nor the bikes pass there.
+  - **Bänken:** small only, an hour to crawl out, and safe from feet and bikes.
+  - **The air:** fliers are safe from all of it, by the usual rule.
+- **State:** `s.street = { crowdPlan, bikePlan, tramAt, drunks }`, with save version 28.
+- **Bot balance:** the reading bot over 300 seeds keeps, of 6:
+
+  | | Normal | Saturday (hard) |
+  |---|---|---|
+  | Day | 4.12 | 3.99 |
+  | Night | 4.24 | 3.95 |
+
+  That's close to the fields, and the hardest of the city's dangers. Most losses are animals still on the street when time runs out (about 1.1 a run); the tram and the rest kill about 0.75.
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

@@ -8,6 +8,7 @@ import { GATE_PUSH, levelAfter, onTheWire, sweptIn } from '../engine/encounters/
 import { cutting, inWheat, stubblePrey } from '../engine/encounters/harvest';
 import { bitten, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
+import { bikesAt, feetAt, tramIn, tramKnown, underfoot } from '../engine/encounters/street';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
@@ -90,6 +91,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'harvest') out.push(...harvestStatuses(s, a));
   if (s.encounterId === 'lamps') out.push(...lampsStatuses(s, a));
   if (s.encounterId === 'cats') out.push(...catsStatuses(s, a));
+  if (s.encounterId === 'street') out.push(...streetStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -246,6 +248,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'harvest') out.push(...harvestForecast(s, zoneOf));
   if (s.encounterId === 'lamps') out.push(...lampsForecast(s, zoneOf));
   if (s.encounterId === 'cats') out.push(...catsForecast(s, zoneOf));
+  if (s.encounterId === 'street') out.push(...streetForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -417,6 +420,53 @@ function catsForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[]
     });
   }
   if (!s.cats.foodUsed) out.push({ text: 'Kasta mat (◆1): en gång på gården slår katterna inte till mot någon den timmen.', tone: 'info' });
+  return out;
+}
+
+/** The shopping street: on the tracks, in the bike lane, in the crowd's way – or safe in the doorway, under the bench. */
+function streetStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active' || a.flying) return [];
+  const n = tramIn(s);
+  if (a.zone === 'sparet' && n === 0) return [{ key: 'tram', icon: '▭', label: 'på spåret', tone: 'bad', explain: `Spårvagnen kommer när timmen går. Står ${a.name} kvar på spåret dör ${a.name}.` }];
+  if (a.zone === 'sparet' && n === 1 && tramKnown(s)) return [{ key: 'tram', icon: '▭', label: 'klockan plingar', tone: 'warn', explain: `Spårvagnen kommer nästa timme. ${a.name} måste av spåret innan dess.` }];
+  if (bikesAt(s) === a.zone) return [{ key: 'bike', icon: '⇉', label: 'i cykelbanan', tone: 'bad', explain: `Cyklarna susar fram här när timmen går. ${a.name} blir påkörd.` }];
+  if ((s.time === 'day' || s.darkRevealed) && feetAt(s).includes(a.zone)) {
+    const what = underfoot(a);
+    return [{ key: 'crowd', icon: '⁂', label: 'i folkmassans väg', tone: what === 'stepped' ? 'bad' : 'warn',
+      explain: what === 'stepped' ? `Fötterna kommer här när timmen går. ${a.name} är liten och blir trampad på.` : what === 'kicked' ? `Fötterna kommer här. ${a.name} sparkas åt sidan.` : `${a.name} syns i folkmassan. Folk skriker, och alla av oss nära tappar 1 tro.` }];
+  }
+  if (a.zone === 'banken') return [{ key: 'bench', icon: '▬', label: 'under bänken', tone: 'good', explain: `Här når varken fötter eller cyklar ${a.name}.` }];
+  if (a.zone === 'butiksdorren') return [{ key: 'door', icon: '▯', label: 'i dörren', tone: 'good', explain: `I dörröppningen går ingen folkmassa och inga cyklar.` }];
+  return [];
+}
+
+/** The shopping street: the tram, the bikes, the crowd – who each of them reaches. */
+function streetForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  const at = (z: ZoneId) => s.animals.filter((a) => isActive(a) && where(a) === z && !a.flying);
+  const names = (as: Animal[]) => as.map((a) => a.name).join(' och ');
+  const n = tramIn(s);
+  if (n === 0) {
+    const on = at('sparet');
+    out.push(on.length ? { text: `Spårvagnen kommer och kör över ${names(on)}: dödar.`, tone: 'bad' } : { text: 'Spårvagnen kommer – ingen av oss står på spåret.', tone: 'good' });
+  } else if (n !== null && tramKnown(s)) out.push({ text: n === 1 ? 'Klockan har plingat: spårvagnen kommer nästa timme.' : `Spårvagnen kommer om ${n} timmar.`, tone: n === 1 ? 'warn' : 'info' });
+  else if (s.time === 'night') out.push({ text: 'Ingen klocka än. Spårvagnen kommer inte nästa timme.', tone: 'info' });
+  const bike = bikesAt(s);
+  if (bike) {
+    const hit = at(bike);
+    out.push(hit.length ? { text: `Cyklarna i ${zoneDef(s, bike).name} kör på ${names(hit)} (skadar).`, tone: 'bad' } : { text: `Cyklarna susar fram i ${zoneDef(s, bike).name} – ingen av oss är där.`, tone: 'good' });
+  }
+  if (s.time === 'day' || s.darkRevealed) {
+    for (const z of feetAt(s)) {
+      const here = at(z);
+      const stepped = here.filter((a) => underfoot(a) === 'stepped');
+      const kicked = here.filter((a) => underfoot(a) === 'kicked');
+      const seen = here.filter((a) => underfoot(a) === 'seen');
+      const parts = [stepped.length ? `trampar på ${names(stepped)} (skadar)` : '', kicked.length ? `sparkar ${names(kicked)} åt sidan` : '', seen.length ? `får syn på ${names(seen)} och skriker` : ''].filter(Boolean);
+      out.push(parts.length ? { text: `Fötterna i ${zoneDef(s, z).name} ${parts.join(', ')}.`, tone: stepped.length ? 'bad' : 'warn' } : { text: `Fötterna går över ${zoneDef(s, z).name} – ingen av oss är där.`, tone: 'good' });
+    }
+  } else if (s.street.drunks.length) out.push({ text: 'Någon vinglar i mörkret – vi hör bara på vilken sida spåret.', tone: 'warn' });
   return out;
 }
 
