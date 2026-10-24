@@ -1,6 +1,7 @@
 import { LAMPS } from '../engine/encounters/lamps';
 import { CATS } from '../engine/encounters/cats';
 import { STREET } from '../engine/encounters/street';
+import { SEWER } from '../engine/encounters/sewer';
 import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
 // The guide for each area: what we are trying to do, what kills and what
@@ -73,6 +74,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   street: {
     day: 'Folkmassan syns komma, och spårvagnen går efter tidtabell.',
     night: 'Nästan ingen är ute – men de som är det vinglar dit ingen kan veta. Spårvagnen hörs bara på klockan, timmen innan.',
+  },
+  sewer: {
+    day: 'Därnere är det lika mörkt. Men ovanför ösregnar det: vattnet stiger ofta.',
+    night: 'Därnere är det lika mörkt. Det regnar sakta, och vattnet stiger sällan – men i natt är råttorna ute, i två korsningar.',
   },
 };
 
@@ -323,6 +328,26 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Läs tidtabellen: gå över spåret mellan två spårvagnar, och stå aldrig kvar där när klockan plingat.',
       'Ställ de små i dörren eller under bänken när folkmassan kommer.',
+    ],
+  },
+  sewer: {
+    title: 'Så tar vi oss genom avloppet',
+    hard: 'Ibland har det varit skyfall: vattnet står redan högt när vi klättrar ner.',
+    goal: `Få alla från Brunnen ut genom Utloppet – ${SEWER.maxTurn} timmar. Genom två rader tunnlar: tre steg.`,
+    dangers: [
+      { icon: '?', name: 'Mörkret', text: 'Vi ser inte vad en tunnel är förrän någon av oss står i den eller bredvid. Varje timme hör vi två tunnlar vi inte hittat: ”det porlar” är ett lågt rör, ”steg som ekar” en gång, ”torrt eko” en kant – och ”det piper” betyder råttor.' },
+      { icon: '≈', name: 'Regnet', effect: 'dödar', text: `Vattnet stiger när det regnar ovanför. I ett lågt rör står det ett steg djupare, på en kant ett grundare. Vid djup ${SWEEPS_SMALL} drar det med sig de små, vid ${SWEEPS_MEDIUM} de mellanstora.` },
+      { icon: '⌇', name: 'Råttorna', effect: 'skadar', text: 'De håller en korsning – två på natten. Den minsta av oss där blir biten när timmen går (ett sår som blöder), om ingen har betalat tull.' },
+    ],
+    shelter: [
+      { icon: '◇', name: 'Betala tull (◆0)', text: 'Ett kort bredvid handen: välj det och sedan ett kort ur handen att lämna åt råttorna. Den timmen biter de ingen.' },
+      { icon: '■', name: 'Håll i en stor', text: 'Den som står i samma tunnel som en av de stora håller sig fast och dras inte med. Simmare och stora står emot vattnet.' },
+      { icon: '◌', name: 'Gömd, och taggar', text: 'Den som gömt sig hittar råttorna inte. Den som rullat ihop sig sticker de sig på.' },
+      { icon: '◎', name: 'Lyssna', text: 'Kort som ser i mörkret – Känna skakningar, Lyssna i marken, Vittring – visar alla tunnlarna.' },
+    ],
+    tips: [
+      'Gå på kanterna när vattnet stiger, och aldrig in i ett lågt rör med de små.',
+      'Betala tull bara de timmar någon av oss står där råttorna är.',
     ],
   },
 };

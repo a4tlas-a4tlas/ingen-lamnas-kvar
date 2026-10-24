@@ -783,6 +783,34 @@ The city's third danger of its own (`src/engine/encounters/street.ts`, id `stree
 
   That's close to the fields, and the hardest of the city's dangers. Most losses are animals still on the street when time runs out (about 1.1 a run); the tram and the rest kill about 0.75.
 
+### Step 10: Avloppet – under the city (done)
+The city's fourth danger of its own (`src/engine/encounters/sewer.ts`, id `sewer`, 8 hours, by day or night). On the city's maps it is *Avloppet* (memory "det har regnat lite" / "skyfall").
+- **The board:** three steps. Brunnen (start) → Tunnel 1 · 2 · 3 → Tunnel 4 · 5 · 6 → Utloppet (goal). Forward, and sideways through the side passages.
+- **Each tunnel has a hidden kind,** seeded, two of each:
+  - **lågt rör:** the water stands one deeper
+  - **gång:** as deep as the level
+  - **kant:** one shallower
+- **The dark:** a tunnel we haven't found shows only fog and "?".
+  - **Found:** a tunnel is found for good once one of us stands in it or beside it. From the shaft the front row is found at once.
+  - **Heard:** each hour we hear two tunnels not yet found, and what we hear is true: "det porlar" (low), "steg som ekar" (walkway), "torrt eko" (ledge), "det piper" (rats).
+  - **Insight:** cards that show the dark (`darkRevealed`: Känna skakningar, Lyssna i marken, Vittring) show all.
+- **The rain:**
+  - **The level** starts at 0 (1 after a cloudburst) and rises on a seeded plan: by day half the hours (the storm), at night a third (soft rain), never the first hour.
+  - **Swept away:** at depth 2 the small, at depth 3 the medium. It's a killing hit with a last moment (source `avloppet`), reusing `sweptAt` from the ditch.
+  - **Who stands:** swimmers and the large, and anyone beside a large one in the same tunnel holds on.
+- **The rats** hold one junction (two at night) in any tunnel.
+  - **The bite:** when the hour passes they bite the smallest there (bleeding, source `råttor`), unless the toll is paid. The hidden aren't found, and the curled are let go.
+  - **Betala tull (◆0):** a special card beside the hand. Choose it, then a card in the hand; that card goes to the rats, and that hour they bite no one. It can be paid every hour.
+- **State:** `s.sewer = { kinds, rats, found, heard, level, risePlan, paid }`, the action `{ type: 'payToll', uid }`, and save version 29.
+- **Bot balance:** the reading bot over 300 seeds keeps, of 6:
+
+  | | Normal | Cloudburst (hard) |
+  |---|---|---|
+  | Day | 3.96 | 3.43 |
+  | Night | 4.37 | 3.87 |
+
+  Tuned from a daytime rise of 0.6 (which gave 3.80) down to 0.5. It is about as hard as the fields; by day it's the city's hardest.
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

@@ -1,7 +1,7 @@
 /** Zones are defined per encounter (see encounters/); ids are plain strings. */
 export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
-export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps' | 'cats' | 'street';
+export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps' | 'cats' | 'street' | 'sewer';
 /** Which way the wind carries the mist over the sprayed field. */
 /** Asphalt with cars, or gravel with tractors. */
 export type RoadKind = 'asphalt' | 'gravel';
@@ -406,7 +406,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 28;
+  version: 29;
   /** The road we cross: asphalt, or Åkrarna's gravel. */
   roadKind: RoadKind;
   /** Which group left the glen. */
@@ -482,6 +482,8 @@ export interface GameState {
   cats: { at: ZoneId[]; eyes: ZoneId[][]; scared: boolean[]; fed: boolean; foodUsed: boolean };
   /** The shopping street: where the crowd surges and which bike lane is busy, hour by hour; the hours the tram passes; where the drunks stagger this hour. */
   street: { crowdPlan: ZoneId[][]; bikePlan: (ZoneId | null)[]; tramAt: number[]; drunks: ZoneId[] };
+  /** The sewer: what each tunnel is, where the rats hold, which tunnels we have found, what we hear this hour, the water's level and when it rises, and whether the toll is paid this hour. */
+  sewer: { kinds: Record<ZoneId, 'low' | 'walk' | 'ledge'>; rats: ZoneId[]; found: ZoneId[]; heard: ZoneId[]; level: number; risePlan: boolean[]; paid: boolean };
   /** Someone trapped in this encounter, not yet one of us: they must come to trust us before we can free them. */
   rescue: Rescue | null;
   /** Newcomers we have met this run – rescued or left behind. Each is met only once. */
@@ -517,6 +519,8 @@ export type Action =
   | { type: 'rescue'; by: string }
   /** Throw the cats something to eat: this hour they pounce on no one. Once in each danger. */
   | { type: 'throwFood' }
+  /** Give the rats a card from the hand: this hour they bite no one. */
+  | { type: 'payToll'; uid: number }
   | { type: 'restAtFire'; watch?: string; scout?: string; pairs: [string, string][]; mourning: Record<string, MourningChoice>; teach?: Teaching }
   /** Learn one of the skills a danger lived through has offered. */
   | { type: 'learn'; animal: string; skill: CardKind }
