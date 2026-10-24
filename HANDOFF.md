@@ -7,7 +7,7 @@ This file is updated with every step (every PR). It is enough, together with `DE
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 6.11: Fyrverkerinatten (branch `fyrverkerinatten`, open, awaiting review). Latest merged: #37, Milestone 6.10: Avloppet. |
+| **Latest PR** | #38, Milestone 6.11: Fyrverkerinatten – merged. Everything through 6.11 is in `main` and live; no PR is open. |
 | **Save version** | 30 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
 | **Tests** | 345 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
@@ -111,5 +111,5 @@ Stadens utkant now has all four dangers of its own and its boss. Its story parts
   - **Rovdjurens pakt is the hardest,** as intended.
   - De små's hardness (much to carry, only one large) doesn't bite a bot that just leads. It may need a lever, e.g. one less hope at the start. That's the user's call.
 - **Bot balance after 7.4:** the machines boss is 3.53 of 6 safe (was 3.88). Random bad traits hurt a lead-only bot that never comforts or plays insight. It was measured just before Tvivlande was limited to animals starting at 5+, so the real number is the same or a little higher.
-- **Old branches:** 25 merged branches (and `drag`) are still on GitHub. This session's GitHub proxy refuses branch deletion (both the API and `git push --delete`), so they have to be removed in GitHub's branch list.
+- **Old branches:** the merged step branches (`katterna`, `affarsgatan`, `avloppet`, `fyrverkerinatten`, and the 25 older ones, plus `drag`) are still on GitHub. This session's GitHub proxy refuses branch deletion (both the API and `git push --delete`), so they have to be removed in GitHub's branch list.
 - **Tests and random traits:** `createGame` rolls traits. A test that builds its own game and checks belief, injuries or hunting should call `plain(s)` from `tests/engine/helpers.ts`, as `raptor.test.ts` does.
