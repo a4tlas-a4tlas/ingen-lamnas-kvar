@@ -9,6 +9,8 @@ import { cutting, inWheat, stubblePrey } from '../engine/encounters/harvest';
 import { bitten, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown, underfoot } from '../engine/encounters/street';
+import { TUNNELS, bittenByRats, depthIn, isFound, sweptHere } from '../engine/encounters/sewer';
+import { SWEEPS_SMALL } from '../engine/encounters/fence';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
@@ -92,6 +94,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'lamps') out.push(...lampsStatuses(s, a));
   if (s.encounterId === 'cats') out.push(...catsStatuses(s, a));
   if (s.encounterId === 'street') out.push(...streetStatuses(s, a));
+  if (s.encounterId === 'sewer') out.push(...sewerStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -249,6 +252,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'lamps') out.push(...lampsForecast(s, zoneOf));
   if (s.encounterId === 'cats') out.push(...catsForecast(s, zoneOf));
   if (s.encounterId === 'street') out.push(...streetForecast(s, zoneOf));
+  if (s.encounterId === 'sewer') out.push(...sewerForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -467,6 +471,34 @@ function streetForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine
       out.push(parts.length ? { text: `Fötterna i ${zoneDef(s, z).name} ${parts.join(', ')}.`, tone: stepped.length ? 'bad' : 'warn' } : { text: `Fötterna går över ${zoneDef(s, z).name} – ingen av oss är där.`, tone: 'good' });
     }
   } else if (s.street.drunks.length) out.push({ text: 'Någon vinglar i mörkret – vi hör bara på vilken sida spåret.', tone: 'warn' });
+  return out;
+}
+
+/** The sewer: in water that takes us, holding on to a large one, among the rats. */
+function sewerStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active' || a.flying || !TUNNELS.includes(a.zone)) return [];
+  const out: Status[] = [];
+  const d = depthIn(s, a.zone);
+  if (sweptHere(s).includes(a)) out.push({ key: 'water', icon: '≈', label: 'vattnet drar', tone: 'bad', explain: `Vattnet står ${d} djupt här när timmen går. Det drar med sig ${a.name}, om ingen stor står bredvid.` });
+  else if (d >= SWEEPS_SMALL && a.size !== 'large' && !a.swimmer) out.push({ key: 'water', icon: '■', label: 'håller sig fast', tone: 'good', explain: `Vattnet är djupt, men ${a.name} håller sig i en av de stora.` });
+  if (bittenByRats(s, a.zone) === a) out.push({ key: 'rats', icon: '⌇', label: 'bland råttorna', tone: 'bad', explain: `Råttorna håller den här korsningen. Betalar vi ingen tull biter de ${a.name} när timmen går.` });
+  return out;
+}
+
+/** The sewer: the rain, whom the water takes, whom the rats bite – in the tunnels we have found. */
+function sewerForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  out.push(s.sewer.risePlan[s.turn - 1] ? { text: 'Regnet ovanför: vattnet stiger när timmen går.', tone: 'warn' } : { text: 'Vattnet står still den här timmen.', tone: 'info' });
+  const swept = sweptHere(s, where);
+  if (swept.length) out.push({ text: `Vattnet drar med sig ${swept.map((a) => `${a.name} (${zoneDef(s, where(a)).name})`).join(' och ')}: dödar.`, tone: 'bad' });
+  const blind = s.animals.filter((a) => isActive(a) && TUNNELS.includes(where(a)) && !isFound(s, where(a)));
+  if (blind.length) out.push({ text: `Vi vet inte vad som väntar där ${blind.map((a) => a.name).join(' och ')} går.`, tone: 'warn' });
+  if (s.sewer.paid) out.push({ text: 'Tullen är betald: råttorna biter ingen den här timmen.', tone: 'good' });
+  else for (const z of s.sewer.rats.filter((r) => isFound(s, r))) {
+    const v = bittenByRats(s, z, where);
+    if (v) out.push({ text: `Råttorna i ${zoneDef(s, z).name} biter ${v.name} (blöder) – om vi inte betalar tull.`, tone: 'bad' });
+  }
   return out;
 }
 

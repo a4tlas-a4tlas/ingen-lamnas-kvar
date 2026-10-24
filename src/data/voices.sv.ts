@@ -12,6 +12,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
   toad: {
     river: { pull: 1, line: 'Vattnet är mitt hem. Ta ån – jag visar er stenarna.' },
     sprayer: { pull: 1, line: 'Det går en bäck längs det fältet. I vattnet når dimman oss inte.' },
+    sewer: { pull: 1, line: 'Vatten och mörker. Där nere hittar jag vägen.' },
   },
   mice: {
     river: { pull: -1, line: 'Vi kan inte simma. Inte ån, snälla.' },
@@ -21,6 +22,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     lamps: { pull: -1, line: 'Hundar på gatan. Vi hör dem härifrån.' },
     cats: { pull: -1, line: 'Katter. Det finns inget värre än katter. Inte gårdarna, snälla.' },
     street: { pull: -1, line: 'Alla de där fötterna. Vi är för små för en sådan gata.' },
+    sewer: { pull: -1, line: 'Råttor. Våra stora, elaka kusiner. Inte under jorden.' },
   },
   fox: {
     farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' },
@@ -39,6 +41,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     lamps: { pull: -1, line: 'Hundar i koppel är fortfarande hundar.' },
     cats: { pull: -1, line: 'En katt hoppar längre än jag tror. Inte bakgårdarna.' },
     street: { pull: -1, line: 'Så mycket folk. Jag vet inte åt vilket håll jag ska springa.' },
+    sewer: { pull: -1, line: 'Under jorden kan jag inte springa. Jag vill se himlen.' },
   },
   hedgehog: { farm: { pull: 1, line: 'Gårdar har sniglar och mjölk. Hundarna biter inte i taggar.' } },
   squirrel: { raptor: { pull: -1, line: 'Inga träd på fälten. Ingenstans att klättra. Inte där.' } },
@@ -47,11 +50,13 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     sprayer: { pull: 1, line: 'Dimman ligger ovanpå jorden. Under den är det rent.' },
     fence: { pull: 1, line: 'Ett stängsel? Jag gräver under det. Följ mig.' },
     street: { pull: -1, line: 'Jag känner fötterna i marken härifrån. Så många fötter.' },
+    sewer: { pull: 1, line: 'Tunnlar. Jag hör vart de leder.' },
   },
   beaver: {
     river: { pull: 1, line: 'Ån är min. Jag vet var dammen håller.' },
     sprayer: { pull: 1, line: 'Bäcken där borta tvättar bort vad som helst.' },
     fence: { pull: 1, line: 'Ett dike som stiger? Jag har dämt större än så.' },
+    sewer: { pull: 1, line: 'Strömmande vatten under staden. Håll er i mig.' },
   },
   fawn: {
     farm: { pull: -1, line: 'Där bor människor. Mamma sa: aldrig nära människorna.' },

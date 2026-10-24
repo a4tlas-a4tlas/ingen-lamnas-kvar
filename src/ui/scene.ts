@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -424,6 +424,31 @@ function streetSvg(): string {
   <rect x="${x(8)}" y="${y(64)}" width="${x(14)}" height="${y(20)}" fill="#2a2420"/><rect x="${x(10)}" y="${y(66)}" width="${x(10)}" height="${y(16)}" fill="#e8c86a" opacity="0.35"/>
   <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.6"/>
   <g class="night-stars"><rect x="${x(10)}" y="${y(66)}" width="${x(10)}" height="${y(16)}" fill="#e8c86a" opacity="0.5"/></g>
+</svg>`;
+}
+
+/** The sewer: brick vaults, the manhole shaft with its ladder, dark water in the channels, the outlet's arch with grey light beyond. */
+function sewerSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const bricks: string[] = [];
+  for (let r = 0; r < 26; r++) for (let i = 0; i < 9; i++) bricks.push(`<rect x="${i * 46 + (r % 2) * 23 - 10}" y="${y(24) + r * 11}" width="42" height="9" fill="${(i + r) % 4 ? '#3a302a' : '#433630'}"/>`);
+  const arches = [x(17), x(50), x(83)].map((cx) => `<path d="M${cx - 50} ${y(52)} V${y(34)} Q${cx} ${y(22)} ${cx + 50} ${y(34)} V${y(52)} Z" fill="#1a1614"/><path d="M${cx - 50} ${y(80)} V${y(62)} Q${cx} ${y(50)} ${cx + 50} ${y(62)} V${y(80)} Z" fill="#1a1614"/>`).join('');
+  const water = [y(48), y(76)].map((wy) => `<rect x="0" y="${wy}" width="400" height="${y(4)}" fill="#2a3a40" opacity="0.9"/>`).join('');
+  const rungs = [0, 1, 2, 3, 4].map((i) => `<rect x="${x(46)}" y="${y(82) + i * 18}" width="${x(8)}" height="3" fill="#6a6058"/>`).join('');
+  return `
+<svg class="scene-bg sewer" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="500" fill="#2a2420"/>
+  <rect width="400" height="${y(24)}" fill="#22201c"/>
+  <path d="M${x(30)} ${y(24)} V${y(10)} Q${x(50)} ${y(-2)} ${x(70)} ${y(10)} V${y(24)} Z" fill="#8a9aa8" opacity="0.55"/>
+  <path d="M${x(30)} ${y(24)} V${y(10)} Q${x(50)} ${y(-2)} ${x(70)} ${y(10)} V${y(24)}" fill="none" stroke="#4a3e36" stroke-width="8"/>
+  <g>${bricks.join('')}</g>
+  <g filter="url(#cut)">${arches}</g>
+  ${water}
+  <rect y="${y(80)}" width="400" height="${y(20)}" fill="#3a3430"/>
+  <rect x="${x(44)}" y="${y(80)}" width="4" height="${y(20)}" fill="#6a6058"/><rect x="${x(54)}" y="${y(80)}" width="4" height="${y(20)}" fill="#6a6058"/>${rungs}
+  <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.4"/>
 </svg>`;
 }
 

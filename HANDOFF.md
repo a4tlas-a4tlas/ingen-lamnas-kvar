@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 6.9)
+## Status (after step 6.10)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 6.9: Affärsgatan (branch `affarsgatan`, open, awaiting review). Latest merged: #35, Milestone 6.8: Katterna. |
-| **Save version** | 28 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 320 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 6.10: Avloppet (branch `avloppet`, open, awaiting review). Latest merged: #36, Milestone 6.9: Affärsgatan. |
+| **Save version** | 29 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 333 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -31,7 +31,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 |---|---|---|
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
 | **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden), the gravel road (Grusvägen) + old dangers in new places; six story parts of its own (`src/data/meetings/akrarna.sv.ts`) | Skördetröskan |
-| **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan) + old dangers; story parts borrowed for now; comes after Åkrarna (`RegionDef.after`) | none yet (ends at "Stadens bortre kant") |
+| **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan), the sewer (Avloppet) + old dangers; story parts borrowed for now; comes after Åkrarna (`RegionDef.after`) | none yet (ends at "Stadens bortre kant") |
 
 **Animals** are species, not characters: badger, toad, fox, owl, adder, mice, hare, and since 7.6 hedgehog, squirrel, mole, beaver and fawn (`SPECIES` in `src/data/animals.ts`, with Swedish grammar fields `en` / `den` / `definite`). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
 
@@ -52,7 +52,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 | Path | What |
 |---|---|
 | `src/engine/` | The pure, deterministic rules. `step(state, action) → { state, events }` (`step.ts`). Seeded RNG in `s.rng`. Also `rules.ts`, `campfire.ts`, `regions.ts` (map generator), `roles.ts`, `will.ts`, `promises.ts`, `voices.ts`. |
-| `src/engine/encounters/` | One file per danger (`road`, `farm`, `river`, `machines`, `raptor`, `sprayer`, `fence`, `harvest`, `lamps`, `cats`, `street`): zones, edges, plans. |
+| `src/engine/encounters/` | One file per danger (`road`, `farm`, `river`, `machines`, `raptor`, `sprayer`, `fence`, `harvest`, `lamps`, `cats`, `street`, `sewer`): zones, edges, plans. |
 | `src/data/` | Content as data: `animals.ts` (species, names, start group), `skills.ts`, `cards.ts`, `traits.ts`, `verses.ts`, `guides.sv.ts`, `promises.sv.ts`, `voices.sv.ts`, `regions/`, `meetings/` (frames for every meeting). All Swedish text lives here. |
 | `src/ui/` | Plain DOM + SVG, no framework: `app.ts` (screens and input), `screens.ts` (map, fire, meetings, guide), `scene.ts` (backdrops), `status.ts` (chips and forecast). |
 | `DESIGN.md` | The living design document, one section per milestone/step. |
@@ -79,23 +79,25 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: 6.10 – Avloppet
-The user's order for the rest of the city: Katterna (done), Affärsgatan (done), then **Avloppet**, then the boss **Fyrverkerinatten**. One PR each.
-- **The approved idea for Avloppet:** under the city, in the dark.
-  - **The zones are only heard:** fog on the board.
-  - **The rain fills the tunnels** hour by hour.
-  - **The rats demand a toll.**
-- **Ask the design questions first** (board, how the fog works, what rising water does, what the rats want, day and night), then build it like `cats.ts` / `street.ts` and add it to `STADEN.dangers` in `src/data/regions/staden.ts`.
+## Next step: 6.11 – Fyrverkerinatten, the city's boss
+The user's order for the rest of the city: Katterna, Affärsgatan, Avloppet (all done), then the boss **Fyrverkerinatten**.
+- **The approved idea** (Milestone 6 in `DESIGN.md` and the plan file): New Year's Eve in the city park. We have to get from the park to the railway embankment beyond it. **The danger is fear itself.**
+  - **Each hour** the rockets' bursts over the park are telegraphed (zone and strength).
+  - **Every bang raises panic:** the chance of freezing or bolting goes up for everyone within reach, and the small most of all.
+  - **Rockets that land** set the bushes on fire. They are cover until they burn.
+  - **Dogs** run loose in the panic, and **the crowd** blocks a zone each hour.
+  - **Comfort counts double** *(my proposal)*: Trösta reaches everyone in the zone, and those with bond ≥ 2 in the same zone don't panic.
+  - **At midnight** three bursts come at once.
+- **Ask the design questions first,** then build it as the region's `end` (like `harvest` for Åkrarna and `machines` for Dalen) instead of the plain *Stadens bortre kant*.
 
-**After that:**
-- **Fyrverkerinatten,** the city's boss: the danger is fear itself (see the Milestone 6 design in `DESIGN.md`).
-- **Then:** the city's own story parts, and finally (6.12) the choice between 2 random regions.
+**After that:** the city's own story parts (instead of the borrowed ones), and finally (6.12) the choice between 2 random regions.
 
 ## Open questions and known quirks
 - **Hope** only affects the hand size (and waiting). It may deserve more weight; it isn't tied to traits yet.
 - **The fields** are easier for the bot at night than by day: the eagle owl strikes only one of two marked zones.
 - **Gamla vägar can be taught across kinds** (it's "insight"). A badger can then find the culvert but doesn't fit through it.
 - **The adder starts hungry** (belief 4, hunger 2) and often hunts from hour 1. That's older behaviour, kept on purpose so far.
+- **Avloppet's bot balance (6.10):** 4.0 of 6 safe by day, 4.4 at night (3.4 / 3.9 after a cloudburst). It's about as hard as the fields and is the city's hardest by day. Most deaths are the small swept away in tunnels the bot couldn't see. Levers: the daytime rise chance (`planRise`, now 0.5), or hearing three tunnels an hour instead of two.
 - **Affärsgatan's bot balance (6.9):** 4.1 of 6 safe by day, 4.2 at night (4.0 / 4.0 on a Saturday). That's the hardest danger in the city, near the fields. It is four steps over 10 hours; most losses are animals still on the street at the end. If it is too hard, give it 11 hours, or add a second doorway on the far side.
 - **Katterna's bot balance (6.8):** 4.9 of 6 safe, about the same as Gatlyktorna (5.0) under the same reading bot. Night and hard barely differ for a bot that avoids every pair of eyes. Levers if wanted: a cat that sometimes stays put (harder to read at night), or one that moves toward the smallest of us.
 - **Gatlyktorna's bot balance (6.7):** 4.9 of 6 safe; normal and hard play alike for a bot that steps out of the walker's light. The dog only injures, so it's the gentlest danger yet. A lever if wanted: the dog chases those it finds *forward* into the next lamp, or kills a small one in the light.

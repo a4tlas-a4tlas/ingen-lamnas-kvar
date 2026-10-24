@@ -10,6 +10,7 @@ import { cutting } from '../engine/encounters/harvest';
 import { LAMPED, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown } from '../engine/encounters/street';
+import { SOUND, TUNNELS, bittenByRats, depthIn, isFound } from '../engine/encounters/sewer';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -71,7 +72,7 @@ function firstVisit(id: string): boolean {
   return true;
 }
 
-type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | { mode: 'lead' | 'lure'; animal?: string } | { mode: 'rescue'; animal?: string };
+type Sel = { mode: 'idle' } | { mode: 'card'; uid: number; animal?: string } | { mode: 'lead' | 'lure'; animal?: string } | { mode: 'rescue'; animal?: string } | { mode: 'toll' };
 
 const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
 type DeckView = 'draw' | 'discard' | 'all';
@@ -114,7 +115,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 28 && s.phase !== 'over' ? s : null;
+    return s.version === 29 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -251,6 +252,12 @@ export class App {
       case 'card': {
         const card = s.hand.find((c) => c.uid === Number(el.dataset.uid));
         if (!card) return;
+        // Paying the rats: the card chosen goes to them.
+        if (this.sel.mode === 'toll') {
+          this.sel = { mode: 'idle' };
+          this.hint = '';
+          return this.dispatch({ type: 'payToll', uid: card.uid });
+        }
         if (this.sel.mode === 'card' && this.sel.uid === card.uid) return this.cancel();
         const blocked = cardBlockReason(s, card);
         if (blocked) {
@@ -360,6 +367,11 @@ export class App {
         return this.render();
       case 'food-card':
         return this.dispatch({ type: 'throwFood' });
+      case 'toll-card':
+        if (this.sel.mode === 'toll') return this.cancel();
+        this.sel = { mode: 'toll' };
+        this.hint = 'Välj ett kort ur handen att lämna åt råttorna.';
+        return this.render();
       case 'rescue-card':
         if (this.sel.mode === 'rescue') return this.cancel();
         this.sel = { mode: 'rescue' };
@@ -932,6 +944,25 @@ export class App {
     return out.join('');
   }
 
+  /** The sewer: fog over the tunnels we have not found, and what we hear from them; the depth in those we have; the rats. */
+  private sewerTelegraphHtml(s: GameState): string {
+    const out: string[] = [];
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const KIND = { low: 'lågt rör', walk: 'gång', ledge: 'kant' } as const;
+    for (const z of TUNNELS) {
+      if (!isFound(s, z)) {
+        const heard = s.sewer.heard.includes(z) ? (s.sewer.rats.includes(z) ? SOUND.rats : SOUND[s.sewer.kinds[z]]) : '';
+        out.push(`<div class="sewer-fog" style="${box(z)}"><b>?</b>${heard ? `<span>hörs: ${heard}</span>` : ''}</div>`);
+        continue;
+      }
+      const d = depthIn(s, z);
+      const takes = d >= SWEEPS_MEDIUM ? 'drar med små och mellanstora' : d >= SWEEPS_SMALL ? 'drar med de små' : 'går att vada';
+      out.push(`<div class="sewer-mark lvl-${Math.min(d, 3)}" style="${box(z)}"><em>${KIND[s.sewer.kinds[z]]}</em><span>djup ${d} · ${takes}</span></div>`);
+      if (s.sewer.rats.includes(z)) out.push(`<div class="rat-mark ${bittenByRats(s, z) ? 'bites' : ''}" style="${box(z)}"><span>Råttorna${s.sewer.paid ? ' · betalda' : ' · vill ha tull'}</span></div>`);
+    }
+    return out.join('');
+  }
+
   /** The harvest: the strip being cut, the next, the stubble, the buzzard's shadow. */
   private harvestTelegraphHtml(s: GameState): string {
     const out: string[] = [];
@@ -1019,6 +1050,7 @@ export class App {
     if (s.encounterId === 'lamps') return s.phase === 'over' ? '' : this.lampsTelegraphHtml(s);
     if (s.encounterId === 'cats') return s.phase === 'over' ? '' : this.catsTelegraphHtml(s);
     if (s.encounterId === 'street') return s.phase === 'over' ? '' : this.streetTelegraphHtml(s);
+    if (s.encounterId === 'sewer') return s.phase === 'over' ? '' : this.sewerTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
     if (s.phase !== 'over') {
@@ -1045,7 +1077,7 @@ export class App {
     const byZone = new Map<ZoneId, Animal[]>();
     for (const a of s.animals) if (isPresent(a)) byZone.set(a.zone, [...(byZone.get(a.zone) ?? []), a]);
     layer.classList.toggle('crowded', Math.max(0, ...[...byZone.values()].map((g) => g.length)) > 6);
-    const selAnimal = this.sel.mode !== 'idle' ? this.sel.animal : undefined;
+    const selAnimal = this.sel.mode !== 'idle' && this.sel.mode !== 'toll' ? this.sel.animal : undefined;
     const selCard = this.selectedCard();
     const movable = new Set(s.phase === 'play' && !this.busy && this.sel.mode !== 'card' ? leadTargets(s) : []);
 
@@ -1167,7 +1199,7 @@ export class App {
         });
       })
       .join('');
-    return cards + this.rescueCardHtml(s) + this.foodCardHtml(s);
+    return cards + this.rescueCardHtml(s) + this.foodCardHtml(s) + this.tollCardHtml(s);
   }
 
   /** While someone is trapped, a card of its own lies beside the hand: reach out, then free. */
@@ -1199,6 +1231,20 @@ export class App {
       <span class="cname">Kasta mat</span>
       <span class="ctag">En gång på gården</span>
       <span class="ctext">Den här timmen slåss katterna om maten och slår inte till mot någon av oss.</span>
+      ${why ? `<span class="creason">${esc(why)}</span>` : ''}
+    </button>`;
+  }
+
+  /** In the sewer, a card of its own lies beside the hand: the rats' toll, paid with a card from the hand. */
+  private tollCardHtml(s: GameState): string {
+    if (s.encounterId !== 'sewer' || s.phase !== 'play') return '';
+    const why = s.sewer.paid ? 'Tullen är betald den här timmen.' : s.hand.length ? '' : 'Inga kort att ge.';
+    const selected = this.sel.mode === 'toll';
+    return `<button class="card special ${why ? 'unplayable' : ''} ${selected ? 'selected' : ''}" data-act="toll-card" style="--owner:#e9dfc6" ${why ? 'disabled' : ''}>
+      <span class="cband"><span class="cowner">Råttorna</span><span class="ccost" title="Kraft">0</span></span>
+      <span class="cname">Betala tull</span>
+      <span class="ctag">Ett kort ur handen</span>
+      <span class="ctext">${selected ? 'Välj vilket kort råttorna får.' : 'Lämna ett kort ur handen åt råttorna. Den här timmen biter de ingen.'}</span>
       ${why ? `<span class="creason">${esc(why)}</span>` : ''}
     </button>`;
   }
