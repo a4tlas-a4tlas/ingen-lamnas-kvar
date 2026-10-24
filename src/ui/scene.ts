@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -424,6 +424,37 @@ function streetSvg(): string {
   <rect x="${x(8)}" y="${y(64)}" width="${x(14)}" height="${y(20)}" fill="#2a2420"/><rect x="${x(10)}" y="${y(66)}" width="${x(10)}" height="${y(16)}" fill="#e8c86a" opacity="0.35"/>
   <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.6"/>
   <g class="night-stars"><rect x="${x(10)}" y="${y(66)}" width="${x(10)}" height="${y(16)}" fill="#e8c86a" opacity="0.5"/></g>
+</svg>`;
+}
+
+/** New Year's Eve in the city park: bare trees, the bandstand, the pond, the embankment with its rails, rockets in the sky. */
+function fireworksSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const sparks = (cx: number, cy: number, r: number, col: string) => [...Array(14)].map((_, i) => {
+    const a = (i / 14) * Math.PI * 2;
+    return `<path d="M${cx + Math.cos(a) * r * 0.3} ${cy + Math.sin(a) * r * 0.3} L${cx + Math.cos(a) * r} ${cy + Math.sin(a) * r}" stroke="${col}" stroke-width="1.6" stroke-linecap="round"/>`;
+  }).join('');
+  const trees = [x(8), x(28), x(62), x(92)].map((tx, i) => `<path d="M${tx} ${y(52)} V${y(38)} M${tx} ${y(42)} l-14 -12 M${tx} ${y(40)} l12 -14 M${tx} ${y(46)} l10 -8" stroke="#2a2420" stroke-width="${i % 2 ? 3 : 4}" fill="none"/>`).join('');
+  return `
+<svg class="scene-bg fireworks" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="500" fill="#121828"/>
+  <g opacity="0.9">${sparks(x(20), y(8), 34, '#e8c86a')}${sparks(x(62), y(5), 26, '#d86a5a')}${sparks(x(86), y(13), 22, '#8ac0e0')}</g>
+  <rect y="${y(15)}" width="400" height="${y(9)}" fill="#3a3430"/>
+  <path d="M0 ${y(18)} H400 M0 ${y(21)} H400" stroke="#8a8478" stroke-width="2"/>
+  ${[...Array(20)].map((_, i) => `<rect x="${i * 21}" y="${y(17.5)}" width="5" height="${y(4)}" fill="#2a2420"/>`).join('')}
+  <rect x="${x(90)}" y="${y(6)}" width="3" height="${y(10)}" fill="#2a2a30"/><circle cx="${x(90) + 1.5}" cy="${y(7)}" r="4" fill="#d84a3a"/>
+  <rect y="${y(24)}" width="400" height="${y(56)}" fill="#24321f"/>
+  <path d="M${x(4)} ${y(46)} h${x(26)} l-${x(3)} -${y(8)} h-${x(20)} Z" fill="#3a3430"/><path d="M${x(2)} ${y(38)} Q${x(17)} ${y(28)} ${x(32)} ${y(38)} Z" fill="#4a3e36"/>
+  <rect x="${x(36)}" y="${y(26)}" width="${x(28)}" height="${y(24)}" fill="#2c3c26"/>
+  <g stroke="#5a5048" stroke-width="3" fill="none"><path d="M${x(72)} ${y(48)} V${y(32)} H${x(84)} M${x(78)} ${y(32)} l${x(10)} ${y(14)}"/></g>
+  <ellipse cx="${x(83)}" cy="${y(67)}" rx="${x(14)}" ry="${y(9)}" fill="#1c2a3a"/><path d="M${x(74)} ${y(66)} h${x(6)} M${x(84)} ${y(69)} h${x(8)}" stroke="#e8c86a" stroke-width="1.4" opacity="0.6"/>
+  <path d="M${x(50)} ${y(80)} C${x(48)} ${y(70)} ${x(52)} ${y(60)} ${x(50)} ${y(52)}" stroke="#6a6058" stroke-width="${x(10)}" fill="none" opacity="0.7"/>
+  <g fill="#1e2c1a" filter="url(#cut)">${[...Array(7)].map((_, i) => `<ellipse cx="${x(4) + i * 18}" cy="${y(64) + (i % 2) * 8}" rx="16" ry="12"/>`).join('')}</g>
+  ${trees}
+  <rect y="${y(80)}" width="400" height="${y(20)}" fill="#2e2a26"/>
+  <g stroke="#1a1614" stroke-width="3">${[...Array(16)].map((_, i) => `<path d="M${i * 26 + 6} ${y(80)} V${y(92)}"/>`).join('')}<path d="M0 ${y(83)} H400 M0 ${y(89)} H400"/></g>
 </svg>`;
 }
 

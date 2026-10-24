@@ -190,7 +190,7 @@ for (const route of [
     if (await end.isEnabled({ timeout: 2_000 }).catch(() => false)) await end.click();
   }
   await expect(page.locator('.end-screen')).toBeVisible({ timeout: 10_000 });
-  await expect(page.locator('.end-screen h2')).toHaveText(/Bortom åkrarna|Stadens bortre kant|Eden föll/);
+  await expect(page.locator('.end-screen h2')).toHaveText(/Bortom åkrarna|Bortom staden|Eden föll/);
   if ((await page.locator('.end-screen h2').textContent()) !== 'Eden föll') expect([...seen]).toEqual(expect.arrayContaining(['fire', 'map', 'story', 'machines', 'interlude']));
   expect(errors).toEqual([]);
 });

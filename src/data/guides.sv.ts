@@ -2,6 +2,7 @@ import { LAMPS } from '../engine/encounters/lamps';
 import { CATS } from '../engine/encounters/cats';
 import { STREET } from '../engine/encounters/street';
 import { SEWER } from '../engine/encounters/sewer';
+import { FIREWORKS } from '../engine/encounters/fireworks';
 import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
 // The guide for each area: what we are trying to do, what kills and what
@@ -78,6 +79,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   sewer: {
     day: 'Därnere är det lika mörkt. Men ovanför ösregnar det: vattnet stiger ofta.',
     night: 'Därnere är det lika mörkt. Det regnar sakta, och vattnet stiger sällan – men i natt är råttorna ute, i två korsningar.',
+  },
+  fireworks: {
+    day: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
+    night: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
   },
 };
 
@@ -348,6 +353,25 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Gå på kanterna när vattnet stiger, och aldrig in i ett lågt rör med de små.',
       'Betala tull bara de timmar någon av oss står där råttorna är.',
+    ],
+  },
+  fireworks: {
+    title: 'Så tar vi oss genom fyrverkerinatten',
+    hard: 'Ibland skjuter hela stan: från fjärde timmen en raket till varje timme.',
+    goal: `Få alla från Parkgrinden till Banvallen – ${FIREWORKS.maxTurn} timmar, och den sista är midnatt. Genom parken: tre steg.`,
+    dangers: [
+      { icon: '✸', name: 'Smällarna', text: 'Varje timme syns var raketerna ska smälla. En liten smäll når bara sin egen zon, en stor även zonerna bredvid. Den som nås när timmen går far iväg en zon bort från smällen – aldrig upp på banvallen – och tappar 1 tro. Ingen dör av smällarna, men tiden går.' },
+      { icon: '⁂', name: 'Folkmassan', text: 'Folk med tomtebloss fyller en zon varje timme – det syns var, och var nästa timme. Dit kan ingen gå, men den som redan är där kan gå därifrån.' },
+      { icon: '☾', name: 'Midnatt', text: 'Den sista timmen smäller tre stora raketer på en gång. Var över, eller i skydd, innan dess.' },
+    ],
+    shelter: [
+      { icon: '♥', name: 'Håll i varandra', text: 'Två av oss med band 2 eller mer i samma zon trycker sig mot varandra. Ingen av dem far iväg.' },
+      { icon: '♡', name: 'Tröst når alla', text: 'Här når Trösta och Tålamod alla i samma zon som den man tröstar, inte bara en.' },
+      { icon: '♣', name: 'Skydd dämpar', text: 'I buskarna, i musikpaviljongen och vid grinden når bara en smäll rakt ovanför.' },
+    ],
+    tips: [
+      'Gå två och två – de som står varandra nära står kvar när det smäller.',
+      'Spara tröst till timmen efter en stor smäll, när rädslan sitter i.',
     ],
   },
 };

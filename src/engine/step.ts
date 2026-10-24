@@ -19,6 +19,7 @@ import { DITCH_MAX, FENCE, levelAfter, onTheWire, planFence, sweptIn } from './e
 import { cutting, planHarvest, stubblePrey } from './encounters/harvest';
 import { bitten, lit, planLamps, planWalkers, walkerZone } from './encounters/lamps';
 import { eyesFor, guard, nextHide, placeCats, pounced, scarer } from './encounters/cats';
+import { burstsNow, crowdNow, holdsWith, planBursts, planCrowd as planParkCrowd, pushOptions, reaches } from './encounters/fireworks';
 import { SOUND, TUNNELS, bittenByRats, foundBy, isFound, levelNow, planKinds, planRats, planRise, sweptHere } from './encounters/sewer';
 import { STAGGER, bikesAt, feetAt, planBikes, planCrowd, planTram, sideOf, tramIn, tramNow, underfoot } from './encounters/street';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
@@ -370,6 +371,8 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
     ? { kinds: planKinds(s), rats: planRats(s, s.time), found: [], heard: [], level: hard ? 1 : 0, risePlan: planRise(s, s.maxTurn, s.time), paid: false }
     : { kinds: {}, rats: [], found: [], heard: [], level: 0, risePlan: [], paid: false };
   if (id === 'sewer') findTunnels(s);
+  // New Year's Eve: the night's bursts and the people on the paths – more of both when the whole city fires.
+  s.fireworks = id === 'fireworks' ? { plan: planBursts(s, s.maxTurn, hard), crowdPlan: planParkCrowd(s, s.maxTurn) } : { plan: [], crowdPlan: [] };
   // The harvest: the wheat stands, and the harvester's rounds are planned.
   s.harvest = { plan: id === 'harvest' ? planHarvest(s, s.maxTurn) : [], cut: [], shadow: null };
   if (id === 'harvest' && s.knowledge.includes('faranHjalpt')) narrate(c, 'Någonstans i vetet tänker vi på den vi hjälpte upp ur fåran.');
@@ -1088,6 +1091,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'cats') telegraphCats(c);
   if (s.encounterId === 'street') telegraphStreet(c);
   if (s.encounterId === 'sewer') telegraphSewer(c);
+  if (s.encounterId === 'fireworks') telegraphFireworks(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1715,6 +1719,43 @@ function streetHazards(c: Ctx) {
   }
 }
 
+// ---------------------------------------------------------------- New Year's Eve
+
+/** Start of the hour: where the people walk (that zone is closed this hour), and where the rockets will burst. */
+function telegraphFireworks(c: Ctx) {
+  const s = c.s;
+  const crowd = crowdNow(s);
+  s.closed = crowd ? [crowd] : [];
+  if (crowd) narrate(c, `Folk med tomtebloss trängs i ${zoneDef(s, crowd).name}. Dit kommer ingen.`);
+  if (s.turn === s.maxTurn) narrate(c, 'Tio, nio, åtta … Hela parken räknar ner. Snart brinner himlen.');
+  for (const b of burstsNow(s)) narrate(c, `En raket stiger mot ${zoneDef(s, b.zone).name}${b.strength === 2 ? ' – en stor, den hörs vida omkring' : ''}.`);
+  if (s.turn === s.maxTurn - 1) narrate(c, 'Nästa timme är det midnatt.');
+}
+
+/** End of the hour: the rockets burst, and whoever they reach is driven away from the bang – unless they hold on to one they are close to. */
+function fireworksHazards(c: Ctx) {
+  const s = c.s;
+  for (const b of burstsNow(s)) {
+    narrate(c, `Det smäller över ${zoneDef(s, b.zone).name}${b.strength === 2 ? ', så att marken skakar' : ''}.`);
+    for (const a of s.animals.filter((x) => isActive(x) && reaches(b, x.zone))) {
+      const friend = holdsWith(s, a);
+      if (friend) {
+        line(c, a.id, `${a.name} trycker sig mot ${friend.name}. De står kvar.`);
+        continue;
+      }
+      const to = pushOptions(s, b, a.zone, neighbors(s, { ...a, slowTime: 1 }));
+      changeBelief(c, a, -1);
+      if (!to.length) {
+        line(c, a.id, `${a.name} kryper ihop där ${a.name} står. Det finns ingenstans att fly.`);
+        continue;
+      }
+      const z = to[Math.floor(random(s) * to.length)];
+      line(c, a.id, `${a.name} far iväg av smällen, bort mot ${zoneDef(s, z).name}.`);
+      moveAnimal(c, a, z, false);
+    }
+  }
+}
+
 // ---------------------------------------------------------------- the sewer
 
 /** Every tunnel one of us stands in or beside is found, for good. */
@@ -1919,6 +1960,18 @@ function rescue(c: Ctx, by: string) {
   narrate(c, `${a.name} ${encounterOf(s).rescue!.freed}. ${def.name} är fri – och stannar hos oss.`);
 }
 
+/** In the park on New Year's Eve, comfort given to one reaches all who stand with it. */
+function comfortAround(c: Ctx, tgt: Animal, amount: number) {
+  const s = c.s;
+  if (s.encounterId !== 'fireworks') return;
+  const near = s.animals.filter((a) => isActive(a) && a !== tgt && a.zone === tgt.zone);
+  for (const a of near) {
+    changeBelief(c, a, amount);
+    a.intent = { kind: 'follow' };
+  }
+  if (near.length) line(c, tgt.id, `De andra hos ${tgt.name} hör det också, och lugnar sig.`);
+}
+
 // ---------------------------------------------------------------- cards
 
 function playCard(c: Ctx, uid: number, target?: string, zone?: ZoneId) {
@@ -2005,6 +2058,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       changeBelief(c, tgt!, has(o, 'omtanksam') ? 3 : 2);
       tgt!.intent = { kind: 'follow' };
       line(c, o.id, `${o.name} tröstar ${tgt!.name}.`);
+      comfortAround(c, tgt!, has(o, 'omtanksam') ? 3 : 2);
       break;
     case 'lasaNatten':
       s.peekNext = true;
@@ -2054,6 +2108,7 @@ function applyCard(c: Ctx, card: Card, o: Animal, tgt: Animal | undefined, zone:
       changeBelief(c, tgt!, has(o, 'omtanksam') ? 3 : 2);
       tgt!.intent = { kind: 'follow' };
       line(c, o.id, `${o.name} sitter stilla hos ${tgt!.name} tills rädslan går över.`);
+      comfortAround(c, tgt!, has(o, 'omtanksam') ? 3 : 2);
       break;
     case 'gravaNer':
     case 'gommaSig':
@@ -2351,6 +2406,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'cats') catsHazards(c);
   if (s.encounterId === 'street') streetHazards(c);
   if (s.encounterId === 'sewer') sewerHazards(c);
+  if (s.encounterId === 'fireworks') fireworksHazards(c);
   processHits(c);
 }
 
