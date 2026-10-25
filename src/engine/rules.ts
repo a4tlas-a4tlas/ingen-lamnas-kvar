@@ -1,4 +1,5 @@
 // Read-only rule helpers shared by the engine (validation) and the UI (targeting).
+import { isStuck, puller } from './encounters/bog';
 import { SPECIES } from '../data/animals';
 import { CARDS, type TargetSpec } from '../data/cards';
 import { encounterOf, zoneDef } from './encounters';
@@ -158,7 +159,7 @@ export function leadZones(s: GameState, a: Animal): ZoneId[] {
   const zones = new Set(neighbors(s, a));
   if ((canFly(a) || isFast(a)) && !hasInjury(a, 'halt')) for (const z of forwardReach(s, a, 2)) if (!zoneDef(s, z).slow) zones.add(z);
   // The gate is only a way for one with the strength left to push it.
-  return [...zones].filter((z) => !gatePush(s, a, z) || leadCost(a) + gatePush(s, a, z) <= s.kraft);
+  return [...zones].filter((z) => !gatePush(s, a, z) || leadCost(a, s) + gatePush(s, a, z) <= s.kraft);
 }
 
 /** Where an animal that flees on its own goes: one step back along the main way. */
@@ -213,8 +214,9 @@ export function cardCost(s: GameState, card: Card): number {
 }
 
 /** Leading a limping animal is slow, heavy work. */
-export function leadCost(a: Animal): number {
-  const base = hasInjury(a, 'halt') ? 2 : 1;
+export function leadCost(a: Animal, s?: GameState): number {
+  // Stuck in the bog: a large one beside it pulls, and that costs one more.
+  const base = (hasInjury(a, 'halt') ? 2 : 1) + (s && isStuck(s, a) ? 1 : 0);
   // The first step in a danger: free for the quick, dear for the clumsy.
   if (!a.steps) {
     if (a.traits.includes('snabbfotad')) return 0;
@@ -335,7 +337,7 @@ export function canPlay(s: GameState, card: Card): boolean {
 
 export function leadTargets(s: GameState): string[] {
   return s.animals
-    .filter((a) => canMove(a) && leadZones(s, a).length > 0 && leadCost(a) <= s.kraft)
+    .filter((a) => canMove(a) && (!isStuck(s, a) || !!puller(s, a)) && leadZones(s, a).length > 0 && leadCost(a, s) <= s.kraft)
     .map((a) => a.id);
 }
 
@@ -396,7 +398,8 @@ export function leadBlockReason(s: GameState, a: Animal): string | null {
   if (a.status !== 'active') return `${a.name} är inte längre med oss.`;
   if (isFrozen(a)) return `${a.name} fryser och kan inte flyttas. Trösta för att bryta det.`;
   if (leadZones(s, a).length === 0) return zoneDef(s, a.zone).slow ? `${a.name} kryper genom ${zoneDef(s, a.zone).name} – ute om en timme.` : `${a.name} kan inte gå någonstans.`;
-  if (leadCost(a) > s.kraft) return `Att leda ${a.name} kostar ◆${leadCost(a)}.`;
+  if (isStuck(s, a) && !puller(s, a)) return `${a.name} sitter fast i mossan. Bara en stor bredvid kan dra loss ${a.name}.`;
+  if (leadCost(a, s) > s.kraft) return `Att leda ${a.name} kostar ◆${leadCost(a, s)}.`;
   return null;
 }
 

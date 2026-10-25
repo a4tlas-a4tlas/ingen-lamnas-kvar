@@ -138,7 +138,7 @@ describe('Stadens utkant', () => {
     }
   });
 
-  it('past the machines of the glen, both ways are offered: the fields and the city', () => {
+  it('past the machines of the glen, two of the three ways are offered', () => {
     let s = run(createGame(4), { type: 'swear', verses: ['manen'] });
     s.journey.at = 'granbacken';
     s.journey.visited.push('granbacken');
@@ -148,7 +148,9 @@ describe('Stadens utkant', () => {
     // Everyone over the ridge at once.
     for (const a of s.animals) if (a.status === 'active') a.status = 'safe';
     s = run(s, { type: 'endTurn' });
-    expect([...s.run.offered].sort()).toEqual(['akrarna', 'staden']);
+    expect(s.run.offered).toHaveLength(2);
+    expect(new Set(s.run.offered).size).toBe(2);
+    for (const r of s.run.offered) expect(['akrarna', 'staden', 'mossen']).toContain(r);
   });
 
   it('choosing the city breaks the promise never to go where the machines live', () => {

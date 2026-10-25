@@ -1017,3 +1017,9 @@ h2 .skills-btn { margin: 0 0 0 8px; vertical-align: middle; }
 /* The group's mood, in the hope meter. */
 .meter.hope.mood-tillit .mlabel { color: #f0cf96; }
 .meter.hope.mood-fortvivlan .mlabel { color: #9aa4b8; font-style: italic; }
+
+/* The quaking bog: soft moss, and what holds. */
+.bog-mark { position: absolute; pointer-events: none; }
+.bog-mark.soft { background: repeating-linear-gradient(170deg, rgba(20,40,40,0.18) 0 6px, transparent 6px 14px); }
+.bog-mark span { position: absolute; right: 5px; bottom: 4px; font-size: 0.62em; padding: 0 5px; border-radius: 2px; background: rgba(20,26,36,0.6); color: var(--paper); }
+.bog-mark.firm span { background: rgba(60,80,40,0.75); }

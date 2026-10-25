@@ -4,11 +4,12 @@ import type { RegionId } from '../../engine/types';
 import { AKRARNA } from './akrarna';
 import { DALEN, type RegionDef } from './dalen';
 import { STADEN } from './staden';
+import { MOSSEN } from './mossen';
 
-export const REGIONS: Record<RegionId, RegionDef> = { dalen: DALEN, akrarna: AKRARNA, staden: STADEN };
+export const REGIONS: Record<RegionId, RegionDef> = { dalen: DALEN, akrarna: AKRARNA, staden: STADEN, mossen: MOSSEN };
 
 /** The regions that may come after the glen, in any order. */
-export const MIDDLE_REGIONS: RegionId[] = ['akrarna', 'staden'];
+export const MIDDLE_REGIONS: RegionId[] = ['akrarna', 'staden', 'mossen'];
 
 /** How many regions we are offered to choose between after each boss. */
 export const OFFERED = 2;

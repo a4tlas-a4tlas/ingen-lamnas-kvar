@@ -49,7 +49,9 @@ describe('the journey', () => {
     s = run(s, { type: 'travel', to: 'akrarna' });
     expect(s.phase).toBe('map');
     expect(s.run).toMatchObject({ between: true });
-    expect([...s.run.offered].sort()).toEqual(['akrarna', 'staden']);
+    // Two of the three middle regions; on this seed, the fields among them.
+    expect(s.run.offered).toHaveLength(2);
+    expect(s.run.offered).toContain('akrarna');
     expect(s.meeting).toMatchObject({ id: 'interlude', frame: 'start' });
     // Gamla Ljung grieves the glen; saying it aloud lets it go a little.
     get(s, 'badger').grief = ['dalen'];
@@ -88,7 +90,7 @@ describe('the journey', () => {
     for (const a of s.animals.filter((x) => x.status === 'active')) s = run(s, { type: 'lead', target: a.id, zone: 'stenmuren' });
     expect(s.phase).toBe('map');
     // Every region already walked: no way on. We still look back, and then the story stops.
-    s.run.regions = ['dalen', 'akrarna', 'staden'];
+    s.run.regions = ['dalen', 'akrarna', 'staden', 'mossen'];
     s = run(s, { type: 'travel', to: 'akrarna' });
     expect(s.run.offered).toEqual([]);
     expect(s.meeting).toMatchObject({ id: 'interlude', frame: 'start' });

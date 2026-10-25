@@ -10,6 +10,7 @@ export interface Leaning {
 /** Each kind's own nature. */
 export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leaning>>>> = {
   toad: {
+    bog: { pull: 1, line: 'Mossen är min. Jag vet var den bär.' },
     river: { pull: 1, line: 'Vattnet är mitt hem. Ta ån – jag visar er stenarna.' },
     sprayer: { pull: 1, line: 'Det går en bäck längs det fältet. I vattnet når dimman oss inte.' },
     sewer: { pull: 1, line: 'Vatten och mörker. Där nere hittar jag vägen.' },
@@ -29,7 +30,10 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     cats: { pull: 1, line: 'Katter? De backar för en räv. Låt mig gå först över gården.' },
   },
   adder: { cats: { pull: 1, line: 'Katterna vet vad en huggorm är. De håller sig undan.' } },
-  badger: { river: { pull: 1, line: 'Strömmen rubbar inte mig. Håll er i mig, så går vi över.' } },
+  badger: {
+    river: { pull: 1, line: 'Strömmen rubbar inte mig. Håll er i mig, så går vi över.' },
+    bog: { pull: -1, line: 'Jag är för tung för mossan. Jag sjunker som en sten.' },
+  },
   owl: {
     farm: { pull: -1, line: 'Jag har sett gården från ovan. Hundarna sover inte så djupt som ni tror.' },
     raptor: { pull: -1, line: 'Där ute är det jag som är bytet. Inte fälten.' },
@@ -53,6 +57,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     sewer: { pull: 1, line: 'Tunnlar. Jag hör vart de leder.' },
   },
   beaver: {
+    bog: { pull: 1, line: 'Under mossan är det vatten. Där flyter jag.' },
     river: { pull: 1, line: 'Ån är min. Jag vet var dammen håller.' },
     sprayer: { pull: 1, line: 'Bäcken där borta tvättar bort vad som helst.' },
     fence: { pull: 1, line: 'Ett dike som stiger? Jag har dämt större än så.' },
@@ -73,8 +78,14 @@ export const BODY_LEANINGS = {
 
 /** Between two landscapes: which way each kind wants, and why. */
 export const REGION_LEANINGS: Partial<Record<Species, Partial<Record<RegionId, Leaning>>>> = {
-  badger: { akrarna: { pull: 1, line: 'Jorden på fälten är mjuk. Där kan jag gräva oss ett gryt.' } },
-  toad: { akrarna: { pull: 1, line: 'Det går diken mellan fälten. Vatten, hela vägen.' } },
+  badger: {
+    akrarna: { pull: 1, line: 'Jorden på fälten är mjuk. Där kan jag gräva oss ett gryt.' },
+    mossen: { pull: -1, line: 'Mossen bär inte en som jag. Inte dit.' },
+  },
+  toad: {
+    mossen: { pull: 1, line: 'Mossen! Där finns vatten överallt, och ingen människa.' },
+    akrarna: { pull: 1, line: 'Det går diken mellan fälten. Vatten, hela vägen.' },
+  },
   fox: { staden: { pull: 1, line: 'I staden finns mat i varje tunna. Det har jag hört.' } },
   owl: { staden: { pull: 1, line: 'Staden har tak och torn att se ifrån. Fälten har bara himmel – och vråkar.' } },
   adder: { akrarna: { pull: 1, line: 'Fälten är varma av sol, och fulla av sork.' } },
@@ -83,8 +94,14 @@ export const REGION_LEANINGS: Partial<Record<Species, Partial<Record<RegionId, L
   hedgehog: { staden: { pull: 1, line: 'Trädgårdar. Sniglar i varje rabatt.' } },
   squirrel: { staden: { pull: 1, line: 'Fälten har inga träd. Staden har parker.' } },
   mole: { staden: { pull: -1, line: 'Asfalt. Man kan inte gräva i asfalt.' } },
-  beaver: { staden: { pull: -1, line: 'Människorna där dämmer inte åarna. De murar in dem.' } },
-  fawn: { staden: { pull: -1, line: 'Mamma sa: aldrig nära människorna.' } },
+  beaver: {
+    mossen: { pull: 1, line: 'Mossen är bara en damm som ingen har byggt. Där trivs jag.' },
+    staden: { pull: -1, line: 'Människorna där dämmer inte åarna. De murar in dem.' },
+  },
+  fawn: {
+    staden: { pull: -1, line: 'Mamma sa: aldrig nära människorna.' },
+    mossen: { pull: -1, line: 'Mina ben är för smala för mossan. Jag sjunker.' },
+  },
 };
 
 /** What weighs heavier at the crossroads than nature: grief for the glen, and hunger. */

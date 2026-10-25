@@ -10,6 +10,7 @@ import { bitten, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown, underfoot } from '../engine/encounters/street';
 import { TUNNELS, bittenByRats, depthIn, isFound, sweptHere } from '../engine/encounters/sewer';
+import { STUCK_AT, UNDER_AT, isSoft, isStuck, puller, sinkRate, sinkSteps } from '../engine/encounters/bog';
 import { FIREWORKS, burstsNow, crowdNow, holdsWith, reaches } from '../engine/encounters/fireworks';
 import { SWEEPS_SMALL } from '../engine/encounters/fence';
 import { encounterOf, zoneDef } from '../engine/encounters';
@@ -97,6 +98,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'street') out.push(...streetStatuses(s, a));
   if (s.encounterId === 'sewer') out.push(...sewerStatuses(s, a));
   if (s.encounterId === 'fireworks') out.push(...fireworksStatuses(s, a));
+  if (s.encounterId === 'bog') out.push(...bogStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -256,6 +258,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'street') out.push(...streetForecast(s, zoneOf));
   if (s.encounterId === 'sewer') out.push(...sewerForecast(s, zoneOf));
   if (s.encounterId === 'fireworks') out.push(...fireworksForecast(s, zoneOf));
+  if (s.encounterId === 'bog') out.push(...bogForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -516,6 +519,27 @@ function sewerStatuses(s: GameState, a: Animal): Status[] {
   if (sweptHere(s).includes(a)) out.push({ key: 'water', icon: '≈', label: 'vattnet drar', tone: 'bad', explain: `Vattnet står ${d} djupt här när timmen går. Det drar med sig ${a.name}, om ingen stor står bredvid.` });
   else if (d >= SWEEPS_SMALL && a.size !== 'large' && !a.swimmer) out.push({ key: 'water', icon: '■', label: 'håller sig fast', tone: 'good', explain: `Vattnet är djupt, men ${a.name} håller sig i en av de stora.` });
   if (bittenByRats(s, a.zone) === a) out.push({ key: 'rats', icon: '⌇', label: 'bland råttorna', tone: 'bad', explain: `Råttorna håller den här korsningen. Betalar vi ingen tull biter de ${a.name} när timmen går.` });
+  return out;
+}
+
+/** The bog: how deep one of us has sunk, and whether it is stuck. */
+function bogStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active') return [];
+  if (isStuck(s, a)) return [{ key: 'bog', icon: '⊗', label: puller(s, a) ? 'fast – en stor kan dra' : 'fast i mossan', tone: 'bad', explain: puller(s, a) ? `${a.name} sitter fast. En stor i samma zon kan dra loss ${a.name} (◆1 mer).` : `${a.name} sitter fast och kan inte gå. Bara en stor i samma zon kan dra loss ${a.name} – eller Bära.` }];
+  if (!a.flying && isSoft(s, a.zone)) return [{ key: 'bog', icon: '≋', label: `sjunker ${sinkSteps(a)}/3`, tone: sinkSteps(a) ? 'warn' : 'info', explain: `${a.name} står på mjuk mossa. Står ${a.name} kvar hela timmen sjunker ${a.name}${a.size === 'large' ? ' två steg' : a.size === 'small' || a.species === 'hare' || a.species === 'fawn' ? ' ett halvt steg' : ' ett steg'}. Vid 2 sitter man fast, vid 3 dras man ner.` }];
+  return [];
+}
+
+/** The bog: who sinks if they stay, who gets stuck, who is pulled under. */
+function bogForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  for (const a of s.animals.filter((x) => isActive(x) && !x.flying && isSoft(s, where(x)) && where(x) === s.bogFrom[x.id])) {
+    const after = (a.sink ?? 0) + sinkRate(s, a);
+    if (after >= UNDER_AT) out.push(a.swimmer ? { text: `${a.name} sjunker till halsen – men flyter.`, tone: 'warn' } : { text: `Mossan drar ner ${a.name}: dödar.`, tone: 'bad' });
+    else if (after >= STUCK_AT && (a.sink ?? 0) < STUCK_AT) out.push({ text: `${a.name} fastnar i mossan om ${a.name} står kvar.`, tone: 'bad' });
+    else if (Math.floor(after / 2) > sinkSteps(a)) out.push({ text: `${a.name} sjunker en bit om ${a.name} står kvar.`, tone: 'warn' });
+  }
   return out;
 }
 

@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -428,6 +428,30 @@ function streetSvg(): string {
 }
 
 /** New Year's Eve in the city park: bare trees, the bandstand, the pond, the embankment with its rails, rockets in the sky. */
+/** Gungflyet: a grey-green bog with black pools, three tussocks and an old plank, the pine islet beyond. */
+function bogSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const pools = [[12, 66], [80, 70], [16, 46], [52, 50], [10, 26], [86, 24], [60, 30]]
+    .map(([px, py], i) => `<ellipse cx="${x(px)}" cy="${y(py)}" rx="${30 + (i % 3) * 10}" ry="${8 + (i % 2) * 4}" fill="#1c2a2a" opacity="0.85"/>`).join('');
+  const tufts: string[] = [];
+  for (let i = 0; i < 60; i++) tufts.push(`<path d="M${(i * 37) % 400} ${y(16) + ((i * 53) % 320)} l-2 -8 m2 8 l0 -10 m0 10 l3 -8"/>`);
+  const tussock = (px: number, py: number) => `<ellipse cx="${x(px)}" cy="${y(py)}" rx="34" ry="14" fill="#4a5a32"/><path d="M${x(px) - 20} ${y(py) - 4} l-3 -12 m10 12 l0 -14 m10 14 l3 -12 m8 12 l5 -10" stroke="#6a7a40" stroke-width="2" fill="none"/>`;
+  const pines = [10, 28, 50, 70, 88].map((px, i) => `<path d="M${x(px)} ${y(1)} L${x(px) - 14} ${y(13)} H${x(px) + 14} Z" fill="#1e2a1e" transform="translate(0 ${i % 2 ? 4 : 0})"/>`).join('');
+  return `
+<svg class="scene-bg bog" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="500" fill="#5e6a4c"/>
+  <rect width="400" height="${y(14)}" fill="#3a4a34"/>${pines}
+  <g>${pools}</g>
+  <g stroke="#7a8456" stroke-width="1.4" fill="none" opacity="0.7">${tufts.join('')}</g>
+  ${tussock(50, 69)}${tussock(83, 47)}
+  <rect x="${x(36)}" y="${y(23)}" width="${x(28)}" height="10" fill="#6a5438" filter="url(#cut)"/><rect x="${x(36)}" y="${y(23) + 12}" width="${x(28)}" height="4" fill="#4a3826"/>
+  <rect y="${y(80)}" width="400" height="${y(20)}" fill="#6a6a44"/>
+  <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.5"/>
+</svg>`;
+}
+
 function fireworksSvg(): string {
   const y = (p: number) => p * 5;
   const x = (p: number) => p * 4;
