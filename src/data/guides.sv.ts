@@ -4,6 +4,7 @@ import { STREET } from '../engine/encounters/street';
 import { SEWER } from '../engine/encounters/sewer';
 import { BOG } from '../engine/encounters/bog';
 import { WISPS } from '../engine/encounters/wisps';
+import { CRANES } from '../engine/encounters/cranes';
 import { FIREWORKS } from '../engine/encounters/fireworks';
 import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
@@ -85,6 +86,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   fireworks: {
     day: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
     night: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
+  },
+  cranes: {
+    day: 'Tranorna dansar bara i gryningen. Det går inte att vänta på natten.',
+    night: 'Tranorna dansar bara i gryningen. Det går inte att vänta på natten.',
   },
   wisps: {
     day: 'Irrblossen syns bara om natten. Det går inte att vänta på dagen.',
@@ -419,6 +424,23 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Trösta den som står bredvid ett ljus innan timmen går.',
       'Led de tvivlande längs stenen och kavelbron, bort från gölarna.',
+    ],
+  },
+  cranes: {
+    title: 'Så tar vi oss förbi tranornas dans',
+    hard: 'Ibland dansar hela myren: två flockar, från var sitt håll.',
+    goal: `Få alla från Myrkanten till Björkbacken – ${CRANES.maxTurn} timmar, i gryningen. Över myren: tre steg.`,
+    dangers: [
+      { icon: '⋀', name: 'Dansen', text: 'Flocken dansar i en zon och flyttar sig ett steg varje timme – det syns var den dansar nu och nästa timme. Den som står där när timmen går drivs bort en zon och tappar 1 tro. Ingen dör av dansen, men tiden går.' },
+      { icon: '≀', name: 'Trampad', effect: 'skadar', text: 'De små som står i dansen blir trampade: chock, som läker vid elden.' },
+    ],
+    shelter: [
+      { icon: '♣', name: 'Videsnåret och björkdungen', text: 'I snåren dansar tranorna aldrig. Där är det lugnt.' },
+      { icon: '♪', name: 'Ropet', text: 'Första timmen flocken dansar minst två steg från oss alla bär deras rop över hela mossen – och vi hör vad som väntar längre fram på kartan.' },
+    ],
+    tips: [
+      'Se var tranorna dansar nästa timme, och gå runt dem.',
+      'Håll avstånd i början – ropet visar vägen framåt.',
     ],
   },
 };

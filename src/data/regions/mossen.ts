@@ -30,6 +30,12 @@ export const MOSSEN: RegionDef = {
   first: bog,
   dangers: [
     {
+      key: 'tranmyren', kind: 'encounter', encounter: 'cranes', name: 'Tranmyren', fogName: 'Rop över mossen?',
+      memory: { normal: 'några tranor', hard: 'en hel dans' },
+      arrive: 'Dimman ligger låg över en öppen myr. Ur den hörs ett rop som en trumpet – och sedan dansar något grått.',
+      note: 'Fast mark, och dansande tranor.',
+    },
+    {
       key: 'irrblossen', kind: 'encounter', encounter: 'wisps', name: 'Irrblosskärret', fogName: 'Ljus över mossen?',
       memory: { normal: 'ett irrbloss', hard: 'många irrbloss' },
       arrive: 'Kärret ligger svart framför oss. Långt ute över mossen tänds ett litet blått ljus.',

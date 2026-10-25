@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 9.2)
+## Status (after step 9.3)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 9.2: Irrbloss, branch `irrbloss`, open for review. Everything through 9.1 (#43) is in `main` and live. |
-| **Save version** | 34 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 400 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 9.3: Tranorna, branch `tranorna`, open for review. Everything through 9.2 (#44) is in `main` and live. |
+| **Save version** | 35 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 407 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -31,7 +31,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 |---|---|---|
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
 | **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden), the gravel road (Grusvägen) + old dangers in new places; six story parts of its own (`src/data/meetings/akrarna.sv.ts`) | Skördetröskan |
-| **Mossen** (9.1–) | Gungflyet, the quaking bog (`bog`); Irrbloss, the lit bog (`wisps`) + old dangers (Myrbäcken, Det öppna kärret); story parts borrowed from Dalen; a plain end, *Mossens slut*, until Dimman | – |
+| **Mossen** (9.1–) | Gungflyet, the quaking bog (`bog`); Irrbloss, the lit bog (`wisps`); Tranorna, the cranes' dance (`cranes`) + old dangers (Myrbäcken, Det öppna kärret); story parts borrowed from Dalen; a plain end, *Mossens slut*, until Dimman | – |
 | **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan), the sewer (Avloppet) + old dangers; six story parts of its own (`src/data/meetings/staden.sv.ts`) | Fyrverkerinatten |
 
 **Animals** are species, not characters: badger, toad, fox, owl, adder, mice, hare, and since 7.6 hedgehog, squirrel, mole, beaver and fawn (`SPECIES` in `src/data/animals.ts`, with Swedish grammar fields `en` / `den` / `definite`). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
@@ -80,18 +80,19 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: 9.3, Tranorna
+## Next step: 9.4, Torvtäkten
 Mossen (Milestone 9 in `DESIGN.md`) is built like the city: one PR per danger, then the story parts, then the boss.
 - **The interview's plan:**
   1. Gungflyet (done)
   2. Irrbloss (done)
-  3. **Tranorna**, the cranes: a dancing flock that stamps a zone each hour and scares the small
-  4. Torvtäkten, the peat cutting: a machine digging ditches that fill with water
+  3. Tranorna (done)
+  4. **Torvtäkten**, the peat cutting: a machine digging ditches that fill with water
   5. Mossen's story parts, in a lost-and-lonely mood
   6. **Dimman**, the boss: we lose each other. Zones beyond our own are unseen, and only an animal with a bond of 2+ in the same or a next zone can be led.
-- **Ask the design questions first:** how the dance moves, whom it scares, and whether the cranes can also help (they see far).
+- **Ask the design questions first:** what the machine does (digs ditches that fill with water?), whether it's the only place people come to Mossen, and how it links to Dalen's machines.
 
 ## Open questions and known quirks
+- **Tranorna's bot balance (9.3):** a reading bot (heaviest first, sideways only to get out of the dance) keeps 4.76 of 6 with one flock and 4.25 with two. Almost all losses are animals left behind at the end: the dance costs time, never lives. A simpler forward-only bot scored about 3, and it also scores only 2.7 on Gungflyet, so that walker is too weak to judge by. The push goes aside or ahead, never back (my change after the first numbers).
 - **Irrbloss's bot balance (9.2):** the reading bot keeps 4.77 of 6 on a normal night and 4.89 with many lights. More lights barely matter, because only the two or three doubters are ever drawn, and a bot that keeps them off the pools rarely loses them. Levers: the lights also draw those who follow us below belief 6, or a light pulls from two steps away.
 - **Sinking is shared (9.2):** any zone marked `soft` sinks us, in Gungflyet and Irrbloss alike (`sinks` in `src/engine/encounters/bog.ts`). Gungflyet's rain rule stays its own.
 - **Gungflyet's bot balance (9.1):** a reading bot (heaviest first, firm ground first) keeps 5.15 of 6 on a normal bog and 4.35 after rain. That's the gentlest opening so far, near Gatlyktorna (4.9). Losses are the slow left behind and the large pulled under. Levers: a faster medium rate, or one more hour less.

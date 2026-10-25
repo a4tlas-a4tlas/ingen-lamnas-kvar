@@ -104,6 +104,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'fireworks') out.push(...fireworksStatuses(s, a));
   if (sinks(s)) out.push(...bogStatuses(s, a));
   if (s.encounterId === 'wisps') out.push(...wispsStatuses(s, a));
+  if (s.encounterId === 'cranes') out.push(...cranesStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -267,6 +268,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'fireworks') out.push(...fireworksForecast(s, zoneOf));
   if (sinks(s)) out.push(...bogForecast(s, zoneOf));
   if (s.encounterId === 'wisps') out.push(...wispsForecast(s, zoneOf));
+  if (s.encounterId === 'cranes') out.push(...cranesForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -527,6 +529,28 @@ function sewerStatuses(s: GameState, a: Animal): Status[] {
   if (sweptHere(s).includes(a)) out.push({ key: 'water', icon: '≈', label: 'vattnet drar', tone: 'bad', explain: `Vattnet står ${d} djupt här när timmen går. Det drar med sig ${a.name}, om ingen stor står bredvid.` });
   else if (d >= SWEEPS_SMALL && a.size !== 'large' && !a.swimmer) out.push({ key: 'water', icon: '■', label: 'håller sig fast', tone: 'good', explain: `Vattnet är djupt, men ${a.name} håller sig i en av de stora.` });
   if (bittenByRats(s, a.zone) === a) out.push({ key: 'rats', icon: '⌇', label: 'bland råttorna', tone: 'bad', explain: `Råttorna håller den här korsningen. Betalar vi ingen tull biter de ${a.name} när timmen går.` });
+  return out;
+}
+
+/** Where the cranes dance this hour, or the next. */
+export const cranesAt = (s: GameState, turn = s.turn): ZoneId[] => s.cranes.flocks.map((f) => f[turn - 1]).filter(Boolean);
+
+/** The cranes: standing where they dance. */
+function cranesStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active' || !cranesAt(s).includes(a.zone)) return [];
+  return [{ key: 'cranes', icon: '⋀', label: 'där tranorna dansar', tone: a.size === 'small' ? 'bad' : 'warn', explain: `Tranorna dansar här när timmen går. ${a.name} drivs bort en zon och tappar 1 tro${a.size === 'small' ? ' – och blir trampad (chock)' : ''}.` }];
+}
+
+/** The cranes: whom the dance drives out and tramples, and where it goes next. */
+function cranesForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  const now = cranesAt(s);
+  const hit = s.animals.filter((a) => isActive(a) && now.includes(where(a)));
+  const out: ForecastLine[] = hit.map((a) => {
+    const trampled = a.size === 'small' && !a.flying;
+    return { text: `Tranorna knuffar ${a.name} ut ur ${zoneDef(s, where(a)).name} (−1 tro)${trampled ? ` och trampar ${a.name} (chock)` : ''}.`, tone: trampled ? 'bad' : 'warn' };
+  });
+  if (!hit.length) out.push({ text: `Tranorna dansar på ${now.map((z) => zoneDef(s, z).name).join(' och ')} – ingen av oss är där.`, tone: 'good' });
   return out;
 }
 

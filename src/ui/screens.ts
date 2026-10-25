@@ -43,6 +43,7 @@ function icon(p: Place): string {
       if (p.encounter === 'machines') return MACHINE_ICON;
       // A bird of prey: a V of wings.
       if (p.encounter === 'lamps') return '<path d="M-0.4 2.6 V-1.6 H1.6 M-1.4 2.6 H0.6" stroke="currentColor" stroke-width="0.7" fill="none" /><path d="M0.8 -1.6 L2.4 -1.6 L2 -0.8 L1.2 -0.8 Z" />';
+      if (p.encounter === 'cranes') return '<path d="M0 -2.6 L0 -0.4 M-2.8 -1.4 Q-1.4 0.4 0 -0.4 Q1.4 0.4 2.8 -1.4 M-0.6 2.6 L0 -0.4 L0.6 2.6" stroke="currentColor" stroke-width="0.55" fill="none" /><circle cx="0" cy="-2.8" r="0.6" />';
       if (p.encounter === 'wisps') return '<circle cx="0" cy="-0.6" r="1.1" /><circle cx="0" cy="-0.6" r="2.2" fill="none" stroke="currentColor" stroke-width="0.35" stroke-dasharray="0.6 0.6" /><path d="M-2.8 2.2 Q-1.4 1.2 0 2.2 Q1.4 3.2 2.8 2.2" stroke="currentColor" stroke-width="0.5" fill="none" />';
       if (p.encounter === 'bog') return '<path d="M-2.8 1.2 Q-1.4 0.2 0 1.2 Q1.4 2.2 2.8 1.2 M-2.8 2.6 Q-1.4 1.6 0 2.6 Q1.4 3.6 2.8 2.6" stroke="currentColor" stroke-width="0.55" fill="none" /><path d="M-1.4 0.4 L-0.8 -2.2 M0 0.2 L0 -2.6 M1.2 0.4 L1.8 -2" stroke="currentColor" stroke-width="0.5" />';
       if (p.encounter === 'sewer') return '<circle r="2.4" fill="none" stroke="currentColor" stroke-width="0.7" /><path d="M-1.6 -0.8 H1.6 M-2 0.4 H2 M-1.6 1.6 H1.6" stroke="currentColor" stroke-width="0.5" fill="none" />';

@@ -9,6 +9,7 @@ import { SEWER } from './sewer';
 import { FIREWORKS } from './fireworks';
 import { BOG } from './bog';
 import { WISPS } from './wisps';
+import { CRANES } from './cranes';
 import { MACHINES } from './machines';
 import { RAPTOR } from './raptor';
 import { RIVER } from './river';
@@ -16,7 +17,7 @@ import { ROAD } from './road';
 import { SPRAYER } from './sprayer';
 import type { ByTime, EncounterDef, ZoneDef } from './types';
 
-export const ENCOUNTERS: Record<EncounterId, EncounterDef> = { road: ROAD, farm: FARM, river: RIVER, machines: MACHINES, raptor: RAPTOR, sprayer: SPRAYER, fence: FENCE, harvest: HARVEST, lamps: LAMPS, cats: CATS, street: STREET, sewer: SEWER, fireworks: FIREWORKS, bog: BOG, wisps: WISPS };
+export const ENCOUNTERS: Record<EncounterId, EncounterDef> = { road: ROAD, farm: FARM, river: RIVER, machines: MACHINES, raptor: RAPTOR, sprayer: SPRAYER, fence: FENCE, harvest: HARVEST, lamps: LAMPS, cats: CATS, street: STREET, sewer: SEWER, fireworks: FIREWORKS, bog: BOG, wisps: WISPS, cranes: CRANES };
 
 export function encounterOf(s: GameState): EncounterDef {
   return ENCOUNTERS[s.encounterId];
