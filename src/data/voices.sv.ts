@@ -27,6 +27,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     sewer: { pull: -1, line: 'Råttor. Våra stora, elaka kusiner. Inte under jorden.' },
     wisps: { pull: -1, line: 'Djupa gölar i mörkret. Vi kan inte simma. Inte där.' },
     cranes: { pull: -1, line: 'Så stora fötter. De ser oss inte ens när de trampar.' },
+    peat: { pull: -1, line: 'Diken som fylls med vatten. Vi kommer aldrig över.' },
   },
   fox: {
     farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' },
@@ -63,12 +64,14 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
   },
   beaver: {
     bog: { pull: 1, line: 'Under mossan är det vatten. Där flyter jag.' },
+    peat: { pull: 1, line: 'Diken är bara vatten. Över dem simmar jag.' },
     river: { pull: 1, line: 'Ån är min. Jag vet var dammen håller.' },
     sprayer: { pull: 1, line: 'Bäcken där borta tvättar bort vad som helst.' },
     fence: { pull: 1, line: 'Ett dike som stiger? Jag har dämt större än så.' },
     sewer: { pull: 1, line: 'Strömmande vatten under staden. Håll er i mig.' },
   },
   fawn: {
+    peat: { pull: -1, line: 'Den låter som maskinerna hemma. Inte dit.' },
     cranes: { pull: -1, line: 'De är lika långa som mamma. Och de skriker.' },
     farm: { pull: -1, line: 'Där bor människor. Mamma sa: aldrig nära människorna.' },
     sprayer: { pull: -1, line: 'Traktorn. Jag har sett vad den gör med dem som ligger stilla i raderna.' },

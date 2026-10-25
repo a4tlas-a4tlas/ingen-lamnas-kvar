@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : id === 'wisps' ? wispsSvg() : id === 'cranes' ? cranesSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : id === 'wisps' ? wispsSvg() : id === 'cranes' ? cranesSvg() : id === 'peat' ? peatSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -449,6 +449,26 @@ function bogSvg(): string {
   <rect x="${x(36)}" y="${y(23)}" width="${x(28)}" height="10" fill="#6a5438" filter="url(#cut)"/><rect x="${x(36)}" y="${y(23) + 12}" width="${x(28)}" height="4" fill="#4a3826"/>
   <rect y="${y(80)}" width="400" height="${y(20)}" fill="#6a6a44"/>
   <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.5"/>
+</svg>`;
+}
+
+/** Torvtäkten: a cut, brown bog in blocks, three peat stacks, pines beyond, a machine at the far edge. */
+function peatSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const blocks: string[] = [];
+  for (let r = 0; r < 6; r++) for (let i = 0; i < 6; i++) blocks.push(`<rect x="${i * 68 + (r % 2) * 20}" y="${y(16) + r * 55}" width="58" height="44" fill="${(i + r) % 3 ? '#5a4230' : '#4e3a2a'}"/>`);
+  const stack = (px: number, py: number) => `<path d="M${x(px) - 30} ${y(py) + 10} L${x(px) - 18} ${y(py) - 14} H${x(px) + 18} L${x(px) + 30} ${y(py) + 10} Z" fill="#3a2a1e" filter="url(#cut)"/>`;
+  const pines = [8, 24, 42, 60, 78, 94].map((px, i) => `<path d="M${x(px)} ${y(0)} L${x(px) - 12} ${y(13)} H${x(px) + 12} Z" fill="#2a3a24" transform="translate(0 ${i % 2 ? 3 : 0})"/>`).join('');
+  return `
+<svg class="scene-bg peat" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="500" fill="#6a5240"/>
+  <rect width="400" height="${y(14)}" fill="#a8b49a"/>${pines}
+  <g>${blocks.join('')}</g>
+  ${stack(17, 68)}${stack(83, 46)}${stack(50, 24)}
+  <rect x="${x(80)}" y="${y(14)}" width="44" height="22" fill="#b8902a"/><rect x="${x(86)}" y="${y(11)}" width="18" height="14" fill="#8a6a1e"/>
+  <rect y="${y(80)}" width="400" height="${y(20)}" fill="#7a6a4a"/>
 </svg>`;
 }
 

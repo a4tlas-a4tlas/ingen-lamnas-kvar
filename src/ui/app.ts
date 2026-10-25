@@ -13,6 +13,7 @@ import { bikesAt, feetAt, tramIn, tramKnown } from '../engine/encounters/street'
 import { SOUND, TUNNELS, bittenByRats, depthIn, isFound } from '../engine/encounters/sewer';
 import { burstsNow, crowdNow, reaches } from '../engine/encounters/fireworks';
 import { isSoft } from '../engine/encounters/bog';
+import { DITCH_FULL, ditchLevel, machineRow } from '../engine/encounters/peat';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -126,7 +127,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 35 && s.phase !== 'over' ? s : null;
+    return s.version === 36 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -975,6 +976,18 @@ export class App {
   }
 
   /** The sewer: fog over the tunnels we have not found, and what we hear from them; the depth in those we have; the rats. */
+  /** The peat cutting: the machine's row now and next, and the ditches it has left. */
+  private peatTelegraphHtml(s: GameState): string {
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const now = machineRow(s);
+    const later = s.turn < s.maxTurn ? machineRow(s, s.turn + 1) : [];
+    return [
+      ...Object.keys(s.peat.ditch).map((z) => `<div class="ditch-mark ${ditchLevel(s, z) >= DITCH_FULL ? 'full' : ''}" style="${box(z)}"><em>${ditchLevel(s, z) >= DITCH_FULL ? 'fullt dike' : 'dike · fylls'}</em></div>`),
+      ...now.map((z) => `<div class="tractor-mark" style="${box(z)}"><span>Maskinen · dödar</span></div>`),
+      ...later.filter((z) => !now.includes(z)).map((z) => `<div class="next-mark" style="${box(z)}"><em>maskinen nästa timme</em></div>`),
+    ].join('');
+  }
+
   /** The cranes: where they dance now, and where next hour. */
   private cranesTelegraphHtml(s: GameState): string {
     const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
@@ -1109,6 +1122,7 @@ export class App {
     if (s.encounterId === 'sewer') return s.phase === 'over' ? '' : this.sewerTelegraphHtml(s);
     if (s.encounterId === 'bog' || s.encounterId === 'wisps') return s.phase === 'over' ? '' : this.bogTelegraphHtml(s);
     if (s.encounterId === 'cranes') return s.phase === 'over' ? '' : this.cranesTelegraphHtml(s);
+    if (s.encounterId === 'peat') return s.phase === 'over' ? '' : this.peatTelegraphHtml(s);
     if (s.encounterId === 'fireworks') return s.phase === 'over' ? '' : this.fireworksTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };

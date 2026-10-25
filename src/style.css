@@ -1032,3 +1032,8 @@ h2 .skills-btn { margin: 0 0 0 8px; vertical-align: middle; }
 /* The cranes' dance. */
 .crane-mark { position: absolute; pointer-events: none; background: repeating-radial-gradient(circle at 50% 60%, rgba(230,226,212,0.22) 0 6px, transparent 6px 16px); }
 .crane-mark span { position: absolute; left: 5px; top: 4px; font-size: 0.66em; padding: 1px 6px; border-radius: 2px; background: rgba(60,50,40,0.8); color: var(--paper); }
+
+/* The peat cutting: ditches that fill. */
+.ditch-mark { position: absolute; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(40,70,90,0.25) 0 4px, transparent 4px 12px); }
+.ditch-mark.full { background: rgba(40,70,90,0.45); }
+.ditch-mark em { position: absolute; right: 5px; top: 4px; font-style: normal; font-size: 0.62em; padding: 0 5px; border-radius: 2px; background: rgba(20,40,60,0.75); color: var(--paper); }
