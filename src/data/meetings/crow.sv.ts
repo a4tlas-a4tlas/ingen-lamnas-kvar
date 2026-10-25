@@ -75,6 +75,19 @@ export type MeetingEffect =
   | 'binSniff'
   | 'restAllotment'
   | 'pond'
+  // Mossen's.
+  | 'searchLost'
+  | 'joinLost'
+  | 'homeLost'
+  | 'leaveLost'
+  | 'talkHermit'
+  | 'stayHermit'
+  | 'answerEcho'
+  | 'followEcho'
+  | 'cloudberries'
+  | 'restNest'
+  | 'backpack'
+  | 'tarn'
   // Between two regions.
   | 'lookBack'
   | 'chooseRegion';

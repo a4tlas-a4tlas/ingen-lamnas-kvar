@@ -361,6 +361,14 @@ export type MeetingId =
   | 'soptunnan'
   | 'kolonilotten'
   | 'parkdammen'
+  // Mossen's.
+  | 'vilsna'
+  | 'eremiten'
+  | 'ekot'
+  | 'hjortron'
+  | 'boet'
+  | 'ryggsacken'
+  | 'tjarnen'
   | 'interlude';
 
 export interface Meeting {
@@ -393,6 +401,8 @@ export interface FireDebt {
   apart: string[];
   /** Sit in the dark by their own choice: alone, and no place by the embers. */
   dark: string[];
+  /** We scattered on the bog, and haven't found our way back to one another: no bonds grow tonight. */
+  noBonds?: boolean;
 }
 
 /** By the embers, one of a pair teaches the other a skill instead of resting. */
@@ -421,7 +431,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 36;
+  version: 37;
   /** The road we cross: asphalt, or Åkrarna's gravel. */
   roadKind: RoadKind;
   /** Which group left the glen. */

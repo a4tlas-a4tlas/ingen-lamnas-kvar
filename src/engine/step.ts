@@ -528,11 +528,12 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
     const b = animal(s, bi);
     if (!isPresent(a) || !isPresent(b)) continue;
     const kind = a.predator !== b.predator ? 'wary' : bond(s, a.id, b.id) >= 2 ? 'close' : 'other';
-    addBond(c, a, b, 1);
+    if (!s.fireDebt.noBonds) addBond(c, a, b, 1);
     changeBelief(c, a, 1);
     changeBelief(c, b, 1);
     line(c, a.id, talk(FIRE_TALK[kind], a, b));
   }
+  if (s.fireDebt.noBonds && plan.pairs.length) narrate(c, 'Vi har inte riktigt hittat tillbaka till varandra än. Banden får vänta.');
   const alone = sitsAlone(s, plan);
   for (const a of alone) {
     changeBelief(c, a, -1);
@@ -1002,6 +1003,89 @@ function respond(c: Ctx, optionId: string, uid?: number) {
       }
       break;
     }
+    // ------------------------------------------------ Mossen's finds and meetings
+    case 'searchLost': {
+      const lost = [...present].sort((a, b) => a.belief - b.belief)[0];
+      if (lost) {
+        changeBelief(c, lost, -1);
+        line(c, lost.id, `${lost.name} kommer bort i dimman en stund, och hittar tillbaka till slut.`);
+        about = lost.id;
+      }
+      break;
+    }
+    case 'joinLost':
+      joinUs(c, m.kind!, m.name!);
+      break;
+    case 'homeLost':
+      changeHope(c, 1, 'laugh');
+      s.met.push(m.kind!);
+      break;
+    case 'leaveLost': {
+      const e = s.animals.find((a) => a.elder && isPresent(a));
+      if (e) {
+        changeBelief(c, e, -1);
+        line(c, e.id, `${e.name} hör ropet länge efter att det tystnat.`);
+      }
+      s.met.push(m.kind!);
+      break;
+    }
+    case 'talkHermit':
+      changeBelief(c, speaker!, 1);
+      m.card = learnCard(c, speaker!);
+      break;
+    case 'stayHermit':
+      about = speaker!.id;
+      leaveGroup(c, speaker!, 'stayed');
+      changeHope(c, 2, 'laugh');
+      break;
+    case 'answerEcho':
+      speaker!.grief = speaker!.grief.slice(1);
+      changeBelief(c, speaker!, 1);
+      break;
+    case 'followEcho':
+      speaker!.grief = [];
+      changeBelief(c, speaker!, -1);
+      changeHope(c, -1, 'lost');
+      break;
+    case 'cloudberries':
+      changeHope(c, 2, 'food');
+      for (const a of present) changeBelief(c, a, 1);
+      s.fireDebt.noBonds = true;
+      break;
+    case 'restNest': {
+      for (const a of present) heal(c, a, `${a.name} vilade i boet.`);
+      for (let i = 0; i < present.length; i++) for (let j = i + 1; j < present.length; j++) {
+        if (bond(s, present[i].id, present[j].id) >= 2) addBond(c, present[i], present[j], 1);
+      }
+      for (const a of present.filter((x) => !present.some((o) => o !== x && bond(s, x.id, o.id) >= 2))) {
+        changeBelief(c, a, -1);
+        line(c, a.id, `${a.name} sov ensam vid kanten av boet.`);
+      }
+      break;
+    }
+    case 'backpack': {
+      m.told = revealAhead(c, 'På kartan i ryggsäcken:', 'Kartan visade inget vi inte redan visste.');
+      const fearful = [...present].sort((a, b) => a.belief - b.belief)[0];
+      if (fearful) {
+        changeBelief(c, fearful, -1);
+        line(c, fearful.id, `Lukten av människa sitter kvar i ${fearful.name}s nos länge.`);
+      }
+      const hungry = [...present].filter((a) => a.predator).sort((a, b) => b.hunger - a.hunger)[0];
+      if (hungry) {
+        hungry.hunger = 0;
+        line(c, hungry.id, `${hungry.name} äter upp smörgåsen.`);
+      }
+      break;
+    }
+    case 'tarn':
+      for (const a of present) {
+        if (a.grief.length) {
+          a.grief = a.grief.slice(1);
+          line(c, a.id, `${a.name} ser något i vattnet och släpper en sorg.`);
+        } else changeBelief(c, a, 1);
+      }
+      s.clock = otherTime(s.clock);
+      break;
     case 'lookBack':
       changeBelief(c, speaker!, 1);
       if (speaker!.grief.includes(s.journey.region)) {
@@ -2266,6 +2350,11 @@ function moodAtFire(c: Ctx) {
 
 /** Who waits in a story when we come: the one in the furrow is a hedgehog – or, if we already have one, someone else. */
 function whoIsThere(s: GameState, id: MeetingId): Partial<Meeting> {
+  if (id === 'vilsna' || id === 'eremiten') {
+    const kind = trappedKind(s, id === 'vilsna' ? ['flier'] : []) ?? (id === 'eremiten' ? 'hare' : undefined);
+    if (!kind) return {};
+    return { kind, name: nameFor(kind, s.seed + 6151 * (s.met.length + 5), s.animals.map((a) => a.name)) };
+  }
   if (id === 'stadsraven') {
     // The city fox speaks to the hunter least sure of us: on a tie, the hungriest.
     const t = s.animals.filter((a) => isPresent(a) && a.predator).sort((a, b) => a.belief - b.belief || b.hunger - a.hunger)[0];
