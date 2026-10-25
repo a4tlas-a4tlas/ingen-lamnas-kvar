@@ -58,7 +58,7 @@ import { dogSilhouette, silhouette, speciesColor } from './silhouettes';
 import { alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM, DAM_MAX } from '../engine/encounters/river';
 import { TIME_NAMES, TIME_NOTES } from '../data/guides.sv';
-import { animalStatuses, forecast, type Status } from './status';
+import { animalStatuses, forecast, knowsTrue, type Status } from './status';
 
 const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
 
@@ -126,7 +126,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 33 && s.phase !== 'over' ? s : null;
+    return s.version === 34 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -980,7 +980,13 @@ export class App {
     const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
     return encounterOf(s).zones
       .filter((z) => !z.start && !z.goal)
-      .map((z) => `<div class="bog-mark ${isSoft(s, z.id) ? 'soft' : 'firm'}" style="${box(z.id)}"><span>${isSoft(s, z.id) ? 'mjuk mossa · sjunker' : 'bär'}</span></div>`)
+      .map((z) => {
+        const kind = z.pool ? 'pool' : isSoft(s, z.id) ? 'soft' : 'firm';
+        const label = z.pool ? 'djupt vatten · de små drunknar' : kind === 'soft' ? 'mjuk mossa · sjunker' : 'bär';
+        const lights = s.encounterId === 'wisps' ? (s.wisps.plan[s.turn - 1] ?? []) : [];
+        const light = lights.includes(z.id) ? `<em class="wisp ${knowsTrue(s) && z.id === s.wisps.trueZone ? 'true' : ''}">${knowsTrue(s) && z.id === s.wisps.trueZone ? 'sant ljus · +1 tro' : 'irrbloss · lockar'}</em>` : '';
+        return `<div class="bog-mark ${kind}" style="${box(z.id)}"><span>${label}</span>${light}</div>`;
+      })
       .join('');
   }
 
@@ -1090,7 +1096,7 @@ export class App {
     if (s.encounterId === 'cats') return s.phase === 'over' ? '' : this.catsTelegraphHtml(s);
     if (s.encounterId === 'street') return s.phase === 'over' ? '' : this.streetTelegraphHtml(s);
     if (s.encounterId === 'sewer') return s.phase === 'over' ? '' : this.sewerTelegraphHtml(s);
-    if (s.encounterId === 'bog') return s.phase === 'over' ? '' : this.bogTelegraphHtml(s);
+    if (s.encounterId === 'bog' || s.encounterId === 'wisps') return s.phase === 'over' ? '' : this.bogTelegraphHtml(s);
     if (s.encounterId === 'fireworks') return s.phase === 'over' ? '' : this.fireworksTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };

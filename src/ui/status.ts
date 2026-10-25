@@ -10,13 +10,13 @@ import { bitten, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown, underfoot } from '../engine/encounters/street';
 import { TUNNELS, bittenByRats, depthIn, isFound, sweptHere } from '../engine/encounters/sewer';
-import { STUCK_AT, UNDER_AT, isSoft, isStuck, puller, sinkRate, sinkSteps } from '../engine/encounters/bog';
+import { STUCK_AT, UNDER_AT, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from '../engine/encounters/bog';
 import { FIREWORKS, burstsNow, crowdNow, holdsWith, reaches } from '../engine/encounters/fireworks';
 import { SWEEPS_SMALL } from '../engine/encounters/fence';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
-import { animal, backZone, boltZone, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
+import { animal, backZone, boltZone, canFly, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
 import type { InjuryKind } from '../engine/types';
 import type { Animal, GameState, ZoneId } from '../engine/types';
 
@@ -65,6 +65,10 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
         explain: `${a.name} har glömt eden och anfaller ${t} när timmen går, om de står nära. Trösta ${a.name}, eller flytta ${t} undan.` });
       break;
     }
+    case 'lured':
+      out.push({ key: 'lured', icon: '✧', label: 'lockas mot ljuset', intent: true, tone: 'warn',
+        explain: `${a.name} ser ett irrbloss och går mot ${zoneDef(s, i.to).name} när timmen går – om ingen tröstar.` });
+      break;
     case 'raid':
       out.push({ key: 'raid', icon: '⚑', label: 'går mot hönsen', intent: true, tone: 'warn',
         explain: `${a.name} är hungrig och tar en höna när timmen går, i stället för en av oss. ${a.name} får +2 tro – men larmet ökar med 3. Trösta för att stoppa.` });
@@ -98,7 +102,8 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'street') out.push(...streetStatuses(s, a));
   if (s.encounterId === 'sewer') out.push(...sewerStatuses(s, a));
   if (s.encounterId === 'fireworks') out.push(...fireworksStatuses(s, a));
-  if (s.encounterId === 'bog') out.push(...bogStatuses(s, a));
+  if (sinks(s)) out.push(...bogStatuses(s, a));
+  if (s.encounterId === 'wisps') out.push(...wispsStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -217,6 +222,8 @@ export function forecast(s: GameState): ForecastLine[] {
     } else if (i.kind === 'leave') {
       out.push({ text: `${a.name} lämnar oss.`, tone: 'bad' });
       continue;
+    } else if (i.kind === 'lured') {
+      if (i.to !== a.zone && zoneDistance(s, a.zone, i.to) === 1) { z = i.to; out.push({ text: `${a.name} går mot ljuset i ${zoneDef(s, i.to).name}.`, tone: 'warn' }); }
     } else if (i.kind === 'raid') {
       z = HEN_HOUSE;
       out.push({ text: `${a.name} tar en höna: +2 tro för ${a.name}, men larmet ökar med 3.`, tone: 'warn' });
@@ -258,7 +265,8 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'street') out.push(...streetForecast(s, zoneOf));
   if (s.encounterId === 'sewer') out.push(...sewerForecast(s, zoneOf));
   if (s.encounterId === 'fireworks') out.push(...fireworksForecast(s, zoneOf));
-  if (s.encounterId === 'bog') out.push(...bogForecast(s, zoneOf));
+  if (sinks(s)) out.push(...bogForecast(s, zoneOf));
+  if (s.encounterId === 'wisps') out.push(...wispsForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -521,6 +529,32 @@ function sewerStatuses(s: GameState, a: Animal): Status[] {
   if (bittenByRats(s, a.zone) === a) out.push({ key: 'rats', icon: '⌇', label: 'bland råttorna', tone: 'bad', explain: `Råttorna håller den här korsningen. Betalar vi ingen tull biter de ${a.name} när timmen går.` });
   return out;
 }
+
+/** The lit bog: standing in a deep pool, or in the true light. */
+function wispsStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active' || a.flying) return [];
+  if (zoneDef(s, a.zone).pool && !a.swimmer) return [{ key: 'pool', icon: '◍', label: a.size === 'small' ? 'drunknar' : 'fryser', tone: a.size === 'small' ? 'bad' : 'warn', explain: a.size === 'small' ? `${a.name} kan inte simma. Står ${a.name} kvar i gölen när timmen går drunknar ${a.name}.` : `Vattnet är iskallt. Står ${a.name} kvar när timmen går tappar ${a.name} 1 tro.` }];
+  return [];
+}
+
+/** The lit bog: who drowns or freezes in the pools, and who stands in the true light, if we know it. */
+function wispsForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const out: ForecastLine[] = [];
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  // Whoever moves this hour and can fly is in the air when the hour goes: the water doesn't reach it.
+  const airborne = (a: Animal) => a.flying || (where(a) !== a.zone && canFly(a));
+  for (const a of s.animals.filter((x) => isActive(x) && !airborne(x) && !x.swimmer && zoneDef(s, where(x)).pool)) {
+    out.push(a.size === 'small' ? { text: `${a.name} drunknar i ${zoneDef(s, where(a)).name}: dödar.`, tone: 'bad' } : { text: `${a.name} fryser i ${zoneDef(s, where(a)).name} (−1 tro).`, tone: 'warn' });
+  }
+  if (knowsTrue(s)) {
+    const lit = s.animals.filter((x) => isActive(x) && where(x) === s.wisps.trueZone);
+    out.push({ text: lit.length ? `Det sanna ljuset över ${zoneDef(s, s.wisps.trueZone).name}: ${lit.map((x) => x.name).join(' och ')} får +1 tro.` : `Ljuset över ${zoneDef(s, s.wisps.trueZone).name} är sant: den som står där får +1 tro.`, tone: 'good' });
+  }
+  return out;
+}
+
+/** Do we know, this hour, which light is the true one? */
+export const knowsTrue = (s: GameState) => s.encounterId === 'wisps' && s.turn === s.wisps.trueAt && (s.wisps.known || s.darkRevealed);
 
 /** The bog: how deep one of us has sunk, and whether it is stuck. */
 function bogStatuses(s: GameState, a: Animal): Status[] {

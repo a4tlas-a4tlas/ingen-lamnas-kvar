@@ -4,6 +4,7 @@
 // a stuck one free.
 import type { Animal, GameState, ZoneId } from '../types';
 import type { EncounterDef } from './types';
+import { WISPS } from './wisps';
 
 export const BOG: EncounterDef = {
   id: 'bog',
@@ -56,7 +57,11 @@ export const BOG: EncounterDef = {
 };
 
 /** The moss that gives way. The tussocks hold – but after rain the far ones are soft too. */
-export const isSoft = (s: GameState, z: ZoneId) => !!BOG.zones.find((d) => d.id === z)?.soft || (z === 'tuvorna' && s.variant === 'hard');
+/** The dangers where soft moss sinks us: Gungflyet, and the lit bog. */
+export const sinks = (s: GameState) => s.encounterId === 'bog' || s.encounterId === 'wisps';
+export const isSoft = (s: GameState, z: ZoneId) =>
+  (s.encounterId === 'bog' && (!!BOG.zones.find((d) => d.id === z)?.soft || (z === 'tuvorna' && s.variant === 'hard'))) ||
+  (s.encounterId === 'wisps' && !!WISPS.zones.find((d) => d.id === z)?.soft);
 
 /** Sinking is counted in half-steps: stuck at two steps, pulled under at three. */
 export const STUCK_AT = 4;
@@ -66,12 +71,12 @@ export const UNDER_AT = 6;
 export function sinkRate(s: GameState, a: Animal): number {
   const light = a.size === 'small' || a.species === 'hare' || a.species === 'fawn';
   const base = light ? 1 : a.size === 'large' ? 4 : 2;
-  return base + (s.variant === 'hard' ? 1 : 0);
+  return base + (s.encounterId === 'bog' && s.variant === 'hard' ? 1 : 0);
 }
 
 /** Depth in whole steps, as shown: 0–3. */
 export const sinkSteps = (a: Animal) => Math.min(3, Math.floor((a.sink ?? 0) / 2));
-export const isStuck = (s: GameState, a: Animal) => s.encounterId === 'bog' && (a.sink ?? 0) >= STUCK_AT;
+export const isStuck = (s: GameState, a: Animal) => sinks(s) && (a.sink ?? 0) >= STUCK_AT;
 /** A large one of ours in the same zone, who can pull a stuck one free. */
 export const puller = (s: GameState, a: Animal) =>
   s.animals.find((o) => o !== a && o.status === 'active' && o.zone === a.zone && o.size === 'large' && !isStuck(s, o));

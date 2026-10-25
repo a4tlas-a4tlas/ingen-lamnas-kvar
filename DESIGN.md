@@ -940,6 +940,31 @@ Design from the milestone 9 interview:
 - **Bot:** 5.15 of 6 safe on a normal bog, 4.35 after rain. That's the gentlest opening yet, near Gatlyktorna.
 - **Save version 33.**
 
+### Step 2: Irrbloss (done)
+*Irrblosskärret* (`src/engine/encounters/wisps.ts`, id `wisps`, always at night, 8 hours, three steps). Memory: "ett irrbloss" / "många irrbloss".
+
+| Row | | | |
+|---|---|---|---|
+| goal | **Granskogen** | | |
+| 3 | Starren (soft) | **Kavelbron** | **Tuvbacken** |
+| 2 | Svartgölen (pool) | Mossen (soft) | Djupgölen (pool) |
+| 1 | Kärret, väst (soft) | **Stenen** (cover) | Kärret, öst (soft) |
+| start | **Ljungkanten** | | |
+
+- **The lights:** each hour one light (two or three when there are many) hangs over a pool or soft moss, shown for that hour.
+- **The pull** (your choice: *they pull the doubting*):
+  - Whoever has a will of their own (below the mood's line) and stands in or beside a light is drawn to it. A new intent, *lockas mot ljuset*, replaces their own, and when the hour goes they walk one step into the light.
+  - Comfort breaks it; the stuck can't follow.
+- **The pools:** whoever stands in one when the hour goes is chilled (−1 belief). The small who can't swim drown, with a last moment. Swimmers, and fliers in the air, are fine.
+- **The soft moss** sinks us as on Gungflyet: the sinking is now a shared rule for any `soft` zone.
+- **One light is true** (your choice): once a night (hour 2–7) a light hangs over firm ground.
+  - Whoever stands there when the hour goes gets +1 belief.
+  - The toad knows it and says so.
+  - The cards that sense the dark (Känna skakningar, Lyssna i marken, Vittring) show it too.
+- **Voices at a fork:** the toad and the owl want it; the mice fear the pools.
+- **Bot:** 4.77 of 6 on a normal night, 4.89 with many lights. More lights hardly matter to a bot that keeps the doubters off the pools.
+- **Save version 34.**
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

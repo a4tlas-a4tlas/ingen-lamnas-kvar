@@ -20,7 +20,8 @@ import { DITCH_MAX, FENCE, levelAfter, onTheWire, planFence, sweptIn } from './e
 import { cutting, planHarvest, stubblePrey } from './encounters/harvest';
 import { bitten, lit, planLamps, planWalkers, walkerZone } from './encounters/lamps';
 import { eyesFor, guard, nextHide, placeCats, pounced, scarer } from './encounters/cats';
-import { STUCK_AT, UNDER_AT, isSoft, isStuck, puller, sinkRate, sinkSteps } from './encounters/bog';
+import { STUCK_AT, UNDER_AT, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from './encounters/bog';
+import { planWisps } from './encounters/wisps';
 import { burstsNow, crowdNow, holdsWith, planBursts, planCrowd as planParkCrowd, pushOptions, reaches } from './encounters/fireworks';
 import { SOUND, TUNNELS, bittenByRats, foundBy, isFound, levelNow, planKinds, planRats, planRise, sweptHere } from './encounters/sewer';
 import { STAGGER, bikesAt, feetAt, planBikes, planCrowd, planTram, sideOf, tramIn, tramNow, underfoot } from './encounters/street';
@@ -397,6 +398,8 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   if (id === 'sewer') findTunnels(s);
   // New Year's Eve: the night's bursts and the people on the paths – more of both when the whole city fires.
   s.fireworks = id === 'fireworks' ? { plan: planBursts(s, s.maxTurn, hard), crowdPlan: planParkCrowd(s, s.maxTurn) } : { plan: [], crowdPlan: [] };
+  // The lit bog: the night's lights, false and true.
+  s.wisps = id === 'wisps' ? planWisps(s, s.maxTurn, hard) : { plan: [], trueAt: 0, trueZone: '', known: false };
   // The harvest: the wheat stands, and the harvester's rounds are planned.
   s.harvest = { plan: id === 'harvest' ? planHarvest(s, s.maxTurn) : [], cut: [], shadow: null };
   if (id === 'fireworks' && s.knowledge.includes('barnetSag')) narrate(c, 'Någonstans i parken, bland alla människor, finns barnet från fönstret.');
@@ -1220,7 +1223,8 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'street') telegraphStreet(c);
   if (s.encounterId === 'sewer') telegraphSewer(c);
   if (s.encounterId === 'fireworks') telegraphFireworks(c);
-  if (s.encounterId === 'bog') telegraphBog(c);
+  if (sinks(s)) telegraphBog(c);
+  if (s.encounterId === 'wisps') telegraphWisps(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1231,6 +1235,7 @@ function startTurn(c: Ctx) {
   }
 
   rollIntents(c);
+  if (s.encounterId === 'wisps') lureToLights(c);
   drawCards(c, handSize(s) + s.stash);
   s.stash = 0;
 }
@@ -1317,7 +1322,7 @@ function moveAnimal(c: Ctx, a: Animal, to: ZoneId, byPlayer: boolean) {
   }
   a.zone = to;
   // Off the spot where it was sinking: the moss lets go.
-  if (s.encounterId === 'bog') a.sink = 0;
+  if (sinks(s)) a.sink = 0;
   if (a.climbing) {
     a.climbing = false;
     a.flying = false;
@@ -1886,6 +1891,57 @@ function bogHazards(c: Ctx) {
       s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'gungfly' });
     } else if (a.sink >= STUCK_AT && before < 2) line(c, a.id, `${a.name} har sjunkit ner till magen och kommer inte loss.`);
     else if (sinkSteps(a) > before) line(c, a.id, `${a.name} sjunker. Mossan gungar och suger.`);
+  }
+}
+
+// ---------------------------------------------------------------- the lit bog
+
+/** Start of the hour: where the lights hang – and, in its hour, whether we know the true one. */
+function telegraphWisps(c: Ctx) {
+  const s = c.s;
+  const w = s.wisps;
+  const lights = w.plan[s.turn - 1] ?? [];
+  if (s.turn === 1) narrate(c, 'Över mossen tänds små ljus, blå och stilla. De gamla sa: följ dem aldrig.');
+  narrate(c, lights.length === 1 ? `Ett ljus svävar över ${zoneDef(s, lights[0]).name}.` : `Ljus svävar över ${lights.map((z) => zoneDef(s, z).name).join(', ')}.`);
+  if (s.turn === w.trueAt && !w.known) {
+    const toad = s.animals.find((a) => isActive(a) && a.species === 'toad');
+    if (toad) {
+      w.known = true;
+      line(c, toad.id, `${toad.name} ser länge på ljusen. ”Det där över ${zoneDef(s, w.trueZone).name} är sant. Jag har sett dem hela mitt liv.”`);
+    }
+  }
+}
+
+/** After the intents: whoever has a will of their own, and stands in or beside a light, is drawn to it. */
+function lureToLights(c: Ctx) {
+  const s = c.s;
+  const lights = s.wisps.plan[s.turn - 1] ?? [];
+  for (const a of s.animals.filter(isActive)) {
+    if (willOf(s, a) === 'follow' || isStuck(s, a) || a.intent.kind === 'leave') continue;
+    const near = lights.map((z) => ({ z, d: zoneDistance(s, a.zone, z) })).filter((x) => x.d <= 1).sort((x, y) => x.d - y.d)[0];
+    if (!near) continue;
+    a.intent = { kind: 'lured', to: near.z };
+    line(c, a.id, intentLine(a.name, a.intent)!);
+  }
+}
+
+/** End of the hour: the deep pools take the small and chill the rest; the true light lifts those who reached it. */
+function wispsHazards(c: Ctx) {
+  const s = c.s;
+  for (const a of s.animals.filter((x) => isActive(x) && !x.flying && zoneDef(s, x.zone).pool)) {
+    if (a.swimmer) continue;
+    if (a.size === 'small') s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'gölen' });
+    else {
+      changeBelief(c, a, -1);
+      line(c, a.id, `Vattnet i ${zoneDef(s, a.zone).name} är iskallt. ${a.name} huttrar.`);
+    }
+  }
+  if (s.turn === s.wisps.trueAt) {
+    if (s.darkRevealed) s.wisps.known = true;
+    for (const a of s.animals.filter((x) => isActive(x) && x.zone === s.wisps.trueZone)) {
+      changeBelief(c, a, 1);
+      line(c, a.id, `Ljuset över ${zoneDef(s, a.zone).name} var sant. ${a.name} står i det, och det är varmt.`);
+    }
   }
 }
 
@@ -2634,7 +2690,8 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'street') streetHazards(c);
   if (s.encounterId === 'sewer') sewerHazards(c);
   if (s.encounterId === 'fireworks') fireworksHazards(c);
-  if (s.encounterId === 'bog') bogHazards(c);
+  if (sinks(s)) bogHazards(c);
+  if (s.encounterId === 'wisps') wispsHazards(c);
   processHits(c);
 }
 
@@ -2664,6 +2721,12 @@ function resolveIntents(c: Ctx) {
       }
       case 'leave':
         leaveGroup(c, a, 'doubt');
+        break;
+      case 'lured':
+        if (i.to !== a.zone && zoneDistance(s, a.zone, i.to) === 1) {
+          line(c, a.id, `${a.name} gick mot ljuset, ut i ${zoneDef(s, i.to).name}.`);
+          moveAnimal(c, a, i.to, false);
+        }
         break;
       case 'raid':
         moveAnimal(c, a, HEN_HOUSE, false);
@@ -2746,6 +2809,7 @@ function processHits(c: Ctx) {
 
 /** How the last moment begins, by what is coming. */
 const LAST_MOMENT: Record<string, string> = {
+  gölen: 'Det svarta vattnet sluter sig över {name}. Ett ögonblick kvar.',
   gungfly: 'Mossan sluter sig om {name}. Det svarta vattnet når upp till nosen. Ett ögonblick kvar.',
   forsen: 'Strömmen drar {name} mot forsen. Ett ögonblick kvar.',
   fällaren: 'Det knakar ovanför {name}. En gran lutar, och faller. Ett ögonblick kvar.',
@@ -2769,7 +2833,7 @@ const TREE_FALL = ['fällaren', 'schaktaren'];
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'traktor', 'bonde'];
 
-const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern', katt: 'Katten', fötter: 'Fötterna', cykel: 'Cykeln', spårvagn: 'Spårvagnen', avloppet: 'Vattnet', råttor: 'Råttorna', gungfly: 'Gungflyet' };
+const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern', katt: 'Katten', fötter: 'Fötterna', cykel: 'Cykeln', spårvagn: 'Spårvagnen', avloppet: 'Vattnet', råttor: 'Råttorna', gungfly: 'Gungflyet', gölen: 'Gölen' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
