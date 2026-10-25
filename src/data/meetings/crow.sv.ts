@@ -61,6 +61,20 @@ export type MeetingEffect =
   | 'hareStays'
   | 'hareGoodbye'
   | 'hareTracks'
+  // The city's.
+  | 'pigeonsStepBack'
+  | 'pigeonsPay'
+  | 'seenByChild'
+  | 'hideFromChild'
+  | 'foxRefuses'
+  | 'foxHold'
+  | 'foxFeast'
+  | 'foxTempts'
+  | 'foxEyes'
+  | 'binEat'
+  | 'binSniff'
+  | 'restAllotment'
+  | 'pond'
   // Between two regions.
   | 'lookBack'
   | 'chooseRegion';

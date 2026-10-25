@@ -256,6 +256,41 @@ export function sceneArt(kind: SceneArt): string {
       return svg(`
         <path d="M0 40 Q32 34 64 40 L64 48 L0 48 Z" fill="#7a5c3a"/>
         ${[[16, 0], [34, 2], [50, -1]].map(([x, d]) => `<ellipse cx="${x}" cy="${36 + d}" rx="6" ry="4" fill="#b8a07e"/><ellipse cx="${x + 5}" cy="${32 + d}" rx="3" ry="2.6" fill="#b8a07e"/><path d="M${x + 4} ${30 + d} q-1 -8 1 -10 q2 3 1 10 Z" fill="#b8a07e"/>`).join('')}`);
+    case 'pigeons':
+      return svg(`
+        <path d="M0 22 L64 22 L64 26 L0 26 Z" fill="#5a5e66"/><path d="M0 26 L64 26 L64 48 L0 48 Z" fill="#3a3a40"/>
+        <rect x="10" y="32" width="8" height="10" fill="#d8b860" opacity="0.7"/><rect x="40" y="32" width="8" height="10" fill="#1e1e24"/>
+        ${[8, 20, 32, 44, 54].map((x, i) => `<ellipse cx="${x}" cy="${18 + (i % 2)}" rx="4.4" ry="3.4" fill="#8a8e9a"/><circle cx="${x + 3.4}" cy="${15 + (i % 2)}" r="1.9" fill="#6a6e7a"/><path d="M${x + 5} ${15 + (i % 2)} l1.6 0.6 l-1.6 0.4 Z" fill="#c9a84a"/>`).join('')}`);
+    case 'window':
+      return svg(`
+        <path d="M0 0 L64 0 L64 48 L0 48 Z" fill="#3a3430"/>
+        <rect x="16" y="8" width="32" height="26" fill="#e8c878"/>
+        <path d="M32 8 V34 M16 21 H48" stroke="#3a3430" stroke-width="1.6"/>
+        <path d="M22 34 Q22 24 27 22 Q24 18 27 15 Q31 13 33 17 Q35 21 31 22 Q36 24 36 34 Z" fill="#2a2420"/>
+        <rect x="12" y="34" width="40" height="3" fill="#5a4e44"/>
+        <path d="M0 46 L64 46" stroke="#1e1a16" stroke-width="4"/>`);
+    case 'bin':
+      return svg(`
+        <path d="M0 42 L64 42 L64 48 L0 48 Z" fill="#4a4a4e"/>
+        <path d="M14 18 L34 18 L32 44 L16 44 Z" fill="#3e5a44"/><path d="M12 14 L36 12 L37 17 L13 19 Z" fill="#2e4434"/>
+        <path d="M40 22 L58 22 L56 44 L42 44 Z" fill="#3e5a44"/><path d="M39 20 L60 16 L60 19 L39 23 Z" fill="#2e4434"/>
+        <path d="M44 44 Q48 38 54 42 L60 44 Z" fill="#8a6a44"/><ellipse cx="50" cy="45" rx="3" ry="1.2" fill="#d8b070"/>`);
+    case 'allotment':
+      return svg(`
+        <path d="M0 36 L64 36 L64 48 L0 48 Z" fill="#4a3826"/>
+        <path d="M34 36 L34 22 L46 14 L58 22 L58 36 Z" fill="#7a3a26"/><rect x="43" y="26" width="6" height="10" fill="#2a1e14"/>
+        <path d="M32 22 L46 12 L60 22" stroke="#3a2a1e" stroke-width="2" fill="none"/>
+        ${[4, 10, 16, 22].map((x) => `<path d="M${x} 36 L${x} 28 M${x} 30 l-2 -2 M${x} 31 l2 -2" stroke="#5d7b44" stroke-width="1.4"/>`).join('')}
+        <path d="M2 30 L30 30 M4 26 L4 36 M28 26 L28 36" stroke="#8a7a5a" stroke-width="1"/>
+        <ellipse cx="18" cy="42" rx="12" ry="4" fill="#2f2418"/>`);
+    case 'pond':
+      return svg(`
+        <path d="M0 30 L64 30 L64 48 L0 48 Z" fill="#3e5032"/>
+        <ellipse cx="32" cy="38" rx="28" ry="7" fill="#3a5a6e"/>
+        <path d="M30 36 Q30 28 34 26 Q35 20 38 20 Q40 21 38 22 Q36 24 37 28 Q42 30 40 36 Z" fill="#efe9dc"/>
+        <path d="M38 20 l2.6 0.8 l-2.4 0.6 Z" fill="#d87a3a"/>
+        <path d="M6 34 L6 22 M9 34 L10 24 M56 34 L56 20 M59 34 L58 24" stroke="#5d6b44" stroke-width="1.2"/>
+        <path d="M14 40 q3 -1.5 6 0 M44 42 q3 -1.5 6 0" stroke="#7a9aae" stroke-width="0.8" fill="none"/>`);
   }
 }
 

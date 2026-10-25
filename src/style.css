@@ -570,6 +570,7 @@ button.link { background: none; border: 0; padding: 0 0 0 8px; color: var(--gold
 .map-svg .hills { fill: none; stroke: var(--map-ink); stroke-width: 0.35; opacity: 0.6; }
 .map-svg .trail path { fill: none; stroke: var(--map-ink); stroke-width: 0.45; stroke-dasharray: 1.2 1.6; stroke-linecap: round; }
 .map-svg .trail path.walked { stroke-dasharray: none; opacity: 0.35; }
+.map-svg .trail path.roof { stroke: #6a7a9a; stroke-width: 0.5; stroke-dasharray: 0.4 1.2; }
 .map-svg .paws ellipse { fill: var(--map-ink); opacity: 0.75; }
 .map-svg .place { color: var(--map-ink); }
 .map-svg .place .dot { fill: var(--map-paper); stroke: var(--map-ink); stroke-width: 0.45; }

@@ -98,6 +98,9 @@ export function mapSvg(s: GameState, interactive: boolean): string {
       : '';
     return `<path d="${c.d}" class="${walked ? 'walked' : 'unwalked'}" />${paws ? `<g class="paws">${paws}</g>` : ''}`;
   })).join('');
+  // The pigeons' way over the roofs: from here to places no path leads to.
+  const from = byId.get(here);
+  const roofs = from ? [...next].filter((to) => !from.next.includes(to)).map((to) => `<path d="${curve(from, byId.get(to)!).d}" class="roof" />`).join('') : '';
 
   const places = nodes.map((p) => {
     const known = visited.has(p.id);
@@ -125,7 +128,7 @@ export function mapSvg(s: GameState, interactive: boolean): string {
         <ellipse cx="40" cy="6" rx="44" ry="7" /><ellipse cx="18" cy="40" rx="14" ry="6" /><ellipse cx="64" cy="30" rx="14" ry="5" />
       </g>
       <path class="hills" d="M0 98 Q12 90 24 97 Q36 89 48 96 Q60 90 80 98" />
-      <g class="trail">${paths}</g>
+      <g class="trail">${paths}${roofs}</g>
       ${places}
     </svg>`;
 }

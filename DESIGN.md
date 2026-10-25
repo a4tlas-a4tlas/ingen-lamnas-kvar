@@ -559,7 +559,7 @@ Every story part is a meeting in frames (`src/data/meetings/dalen.sv.ts`). Repli
 - **When the last of us is over the ridge,** the run ends with the epilogue ("fortsättning följer").
 - **Balance:** a lead-only bot, with no cards, no comforting and always letting go, brings 3.6 of 6 over the ridge on average. A human with cards and last moments should do better, but rarely bring everyone.
 
-## Milestone 6 – Åkrarna, Stadens utkant, and the choice between them (in progress)
+## Milestone 6 – Åkrarna, Stadens utkant, and the choice between them (in progress: both regions done)
 Design from the milestone 6 interview:
 - **Two regions first:** Åkrarna and Stadens utkant. After that, the choice between 2 random regions.
 - **Each region has at least 4 different scenarios and a boss,** all of them feeling different. Each has 6 rows plus the boss, like Dalen.
@@ -835,6 +835,22 @@ New Year's Eve in the city park (`src/engine/encounters/fireworks.ts`, id `firew
 - **State:** `s.fireworks = { plan, crowdPlan }`, with save version 30.
 - **After the boss:** the city ends. The end screen says "Bortom staden", and as no regions are left the run ends with "fortsättning följer".
 - **Bot balance:** the reading bot over 300 seeds keeps 4.16 of 6 on the normal night, 3.49 when the whole city fires. Skördetröskan scores 4.46 with the same bot. The hard version first added a rocket every hour, which gave 2.83; from the fourth hour on it gives 3.49.
+
+### Step 12: Stadens berättelser – the city's own story parts (done)
+The city stops borrowing story parts from Dalen and Åkrarna. It has six of its own, and nothing borrowed (your choice). They live in `src/data/meetings/staden.sv.ts`.
+
+| Part | Kind | What happens |
+|---|---|---|
+| **Duvorna** (*Takrännan*) | meeting | Pigeons who know the roofs. They won't come down while a predator is near: one steps back (−1 belief to it). For a card they show the way **over the roofs**: our next step on the map may go to any place in the next row, not only the connected ones. The map draws those ways as blue dotted lines. |
+| **Barnet vid fönstret** (*Fönstret*) | meeting | A child at a window sees us. **Stand still:** it puts out water and an old sweater (the hurt heal, +1 hope), and remembers us (`barnetSag`). **Hide:** the fawn, or else the most trusting of the prey, −1 belief ("Det ville bara titta"). |
+| **Stadsräven** (*Bakom slaktaren*) | meeting | A fat city fox behind the butcher's tempts our predator **least sure of us** (on a tie, the hungriest) to stay, with meat every night. At belief 5+ it refuses by itself (+1), and our hunters eat anyway (hunger 0). Below 5 we answer: **"Vi behöver dig"** (only someone with a bond of 2+ can say it; −1 belief), **"Ät, och följ med oss"** (every predator's hunger 0, the tempted one −2), or **"Stanna då"** (it stays, *Ingen lämnas kvar* breaks, +1 hope). With no predators among us it only looks at our small ones, and the eldest −1 belief. |
+| **Soptunnan** | find | Tip it over: +2 hope and every predator's hunger 0, but the greediest (*Hungrig* first, then the hungriest, then a predator) is poisoned half the time. Or a nose (badger, mice or fox) picks the good food: +1 hope, hunger 0, no poison. |
+| **Kolonilotten** (*Kolonilotterna*) | find | Sleep in the warm compost: the hurt heal, and it counts as a night by the embers for fading bad traits. But we sleep too long: the next place comes at the other time of day. |
+| **Parkdammen** | find | Drink and wash: poison and shock heal, and swimmers +1 belief. The swan guards its nest: a large one stands in its way (+1 belief), and with no large one it bites one of the small (bleeding). |
+
+- **The child in Stadsparken:** with `barnetSag`, the child is in the park with its family. Once, in the first hour their crowd would come right up to us (in a zone next to one of ours), they step aside, and that hour has no crowd (`s.fireworks.childHour`).
+- **Paying with a card:** a reply that asks for a card (the crow, the hungry stranger, the crows, the pigeons) is now offered only if we hold a card we can give. Until now, a group left with only memories could get stuck at the crow; the whole-run walker found it on the city's new maps.
+- **Save version 31.**
 
 ## Milestone 7 – the animals rethought (done)
 Your direction:

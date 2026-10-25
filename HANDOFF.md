@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 6.11)
+## Status (after step 6.12)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | #38, Milestone 6.11: Fyrverkerinatten – merged. Everything through 6.11 is in `main` and live; no PR is open. |
-| **Save version** | 30 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 345 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 6.12: Stadens berättelser, branch `stadens-berattelser`, open for review. Everything through 6.11 is in `main` and live. |
+| **Save version** | 31 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 365 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -31,7 +31,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 |---|---|---|
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
 | **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden), the gravel road (Grusvägen) + old dangers in new places; six story parts of its own (`src/data/meetings/akrarna.sv.ts`) | Skördetröskan |
-| **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan), the sewer (Avloppet) + old dangers; story parts borrowed for now; comes after Åkrarna (`RegionDef.after`) | Fyrverkerinatten |
+| **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan), the sewer (Avloppet) + old dangers; six story parts of its own (`src/data/meetings/staden.sv.ts`); comes after Åkrarna (`RegionDef.after`) | Fyrverkerinatten |
 
 **Animals** are species, not characters: badger, toad, fox, owl, adder, mice, hare, and since 7.6 hedgehog, squirrel, mole, beaver and fawn (`SPECIES` in `src/data/animals.ts`, with Swedish grammar fields `en` / `den` / `definite`). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
 
@@ -79,14 +79,21 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: the city's own story parts (then 6.12)
-Stadens utkant now has all four dangers of its own and its boss. Its story parts are still borrowed from Dalen and Åkrarna (`story(...)` in `src/data/regions/staden.ts`).
-- **The approved list** (Milestone 6 in `DESIGN.md`): Duvorna (pigeons who know the roofs), Barnet vid fönstret (a child who sees us), Soptunnan (food, at a cost), Kolonilotten (rest), Stadsräven (a city fox, the opposite of our own fox), Parkdammen.
-- **Ask the design questions first** (as for Åkrarna in 6.5: which parts, and what each does), then build them like `src/data/meetings/akrarna.sv.ts` and swap them into `STADEN.meetings` / `STADEN.finds`.
-
-**After that:** 6.12, the choice between 2 random regions in the interlude. With only Åkrarna and the city built, that means drawing the order of the two, which needs `RegionDef.after` loosened.
+## Next step: 6.13, the choice between 2 regions
+Both middle regions are built, with their own dangers, story parts and bosses. What's left of Milestone 6 is the real choice in the interlude.
+- **Today:** `RegionDef.after` keeps the city behind Åkrarna, so a run always goes Dalen → Åkrarna → the city. `endRegion` offers only regions whose `after` has been walked.
+- **The goal (Milestone 6 in `DESIGN.md`):** after each boss, choose between 2 regions drawn at random from those not yet walked. With only Åkrarna and the city built, that means choosing the order of the two, so `RegionDef.after` has to be loosened or dropped.
+- **Ask the design questions first:**
+  - Can the city come straight after Dalen? Dalen's promise "Vi går aldrig dit där maskinerna bor" already breaks when we choose the city.
+  - What does the interlude say when only one way is left?
+  - Should the city's dangers be gentler when it comes second?
 
 ## Open questions and known quirks
+- **The city's story parts (6.12)** have no bot balance of their own. Things to watch in play:
+  - Kolonilotten's flip of day and night can make the next danger harder.
+  - Stadsräven can cost Rovdjurens pakt a predator every city.
+  - Duvorna's roofs skip the map's paths.
+- **The child (6.12)** cancels the park crowd once, in the first hour it would come next to us, which is often hour 1 (we all start at the gate, next to the park's first row). If it should matter later in the night, it could wait for a zone ahead of the leader instead.
 - **Hope** only affects the hand size (and waiting). It may deserve more weight; it isn't tied to traits yet.
 - **The fields** are easier for the bot at night than by day: the eagle owl strikes only one of two marked zones.
 - **Gamla vägar can be taught across kinds** (it's "insight"). A badger can then find the culvert but doesn't fit through it.

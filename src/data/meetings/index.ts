@@ -2,8 +2,10 @@
 import { CROW, isHere, type MeetingFrame, type MeetingOption } from './crow.sv';
 import { BARSNAR, FRAMLINGEN, GAMMAL_STIG, GRAVSKOPAN, GRYT, HJORTEN, IHALIGT_TRAD, KOLTRASTEN, KVARNS_TVEKAN, MATEN } from './dalen.sv';
 import { FARAN, HAREN, KRAKFLOCKEN, SKRAMMAN, SPILLSAD, TRAKTORN } from './akrarna.sv';
+import { BARNET, DUVORNA, KOLONILOTTEN, PARKDAMMEN, SOPTUNNAN, STADSRAVEN } from './staden.sv';
 import { INTERLUDE } from './interlude.sv';
 import { PROPOSAL } from './proposal.sv';
+import { crowCards } from '../../engine/campfire';
 import { guideName } from '../../engine/roles';
 import type { GameState, MeetingId } from '../../engine/types';
 
@@ -16,7 +18,7 @@ export interface MeetingDef {
   taker?: string;
 }
 
-export type SceneArt = 'bird' | 'tree' | 'berries' | 'path' | 'den' | 'deer' | 'basket' | 'fox' | 'tracks' | 'toad' | 'ridge' | 'furrow' | 'scarecrow' | 'crows' | 'grain' | 'tractor' | 'hare';
+export type SceneArt = 'bird' | 'tree' | 'berries' | 'path' | 'den' | 'deer' | 'basket' | 'fox' | 'tracks' | 'toad' | 'ridge' | 'furrow' | 'scarecrow' | 'crows' | 'grain' | 'tractor' | 'hare' | 'pigeons' | 'window' | 'bin' | 'allotment' | 'pond';
 
 export const MEETINGS: Record<MeetingId, MeetingDef> = {
   crow: { title: 'Kråkan vid elden', art: 'crow', frames: CROW, taker: 'Kråkan' },
@@ -37,6 +39,12 @@ export const MEETINGS: Record<MeetingId, MeetingDef> = {
   spillsad: { title: 'Spillsäd', art: 'grain', frames: SPILLSAD },
   traktorn: { title: 'Den övergivna traktorn', art: 'tractor', frames: TRAKTORN },
   haren: { title: 'Haren på åkern', art: 'hare', frames: HAREN },
+  duvorna: { title: 'Duvorna', art: 'pigeons', frames: DUVORNA, taker: 'Duvorna' },
+  barnet: { title: 'Barnet vid fönstret', art: 'window', frames: BARNET },
+  stadsraven: { title: 'Stadsräven', art: 'fox', frames: STADSRAVEN },
+  soptunnan: { title: 'Soptunnan', art: 'bin', frames: SOPTUNNAN },
+  kolonilotten: { title: 'Kolonilotten', art: 'allotment', frames: KOLONILOTTEN },
+  parkdammen: { title: 'Parkdammen', art: 'pond', frames: PARKDAMMEN },
   interlude: { title: 'Mellan två landskap', art: 'ridge', frames: INTERLUDE },
 };
 
@@ -46,13 +54,13 @@ export const currentFrame = (s: GameState) => (s.meeting ? MEETINGS[s.meeting.id
 export const speakerOf = (s: GameState, o: MeetingOption) => (typeof o.by === 'function' ? o.by(s) : o.by);
 export const labelOf = (s: GameState, o: MeetingOption) => (typeof o.label === 'function' ? o.label(s) : o.label);
 
-/** The replies we can give now: whoever speaks must be with us, and not already have spoken. */
+/** The replies we can give now: whoever speaks must be with us, and not already have spoken. A card is asked only of those who have one to give. */
 export function meetingOptions(s: GameState): MeetingOption[] {
   const m = s.meeting;
   const frame = currentFrame(s);
   if (!m || !frame) return [];
   return frame.options.filter((o) => {
-    if (m.used.includes(o.id) || (o.when && !o.when(s))) return false;
+    if (m.used.includes(o.id) || (o.when && !o.when(s)) || (o.pickCard && !crowCards(s).length)) return false;
     if (!o.by) return true;
     const who = speakerOf(s, o);
     return !!who && isHere(s, who);

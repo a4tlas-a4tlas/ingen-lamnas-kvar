@@ -10,7 +10,7 @@ import { bitten, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown, underfoot } from '../engine/encounters/street';
 import { TUNNELS, bittenByRats, depthIn, isFound, sweptHere } from '../engine/encounters/sewer';
-import { FIREWORKS, burstsNow, holdsWith, reaches } from '../engine/encounters/fireworks';
+import { FIREWORKS, burstsNow, crowdNow, holdsWith, reaches } from '../engine/encounters/fireworks';
 import { SWEEPS_SMALL } from '../engine/encounters/fence';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
@@ -503,7 +503,7 @@ function fireworksForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastL
       ? { text: `${b.strength === 2 ? 'En stor smäll' : 'En smäll'} över ${place} driver iväg ${driven.map((a) => a.name).join(' och ')} (−1 tro)${held.length ? `; ${held.map((a) => a.name).join(' och ')} håller i varandra` : ''}.`, tone: 'warn' }
       : { text: `${b.strength === 2 ? 'En stor smäll' : 'En smäll'} över ${place}${held.length ? ` – ${held.map((a) => a.name).join(' och ')} håller i varandra` : ' – ingen av oss är där'}.`, tone: 'good' });
   }
-  const crowd = s.fireworks.crowdPlan[s.turn - 1];
+  const crowd = crowdNow(s);
   if (crowd) out.push({ text: `Folkmassan fyller ${zoneDef(s, crowd).name}. Dit kan vi inte gå den här timmen.`, tone: 'info' });
   return out;
 }

@@ -5,6 +5,7 @@ import { VERSES } from '../data/verses';
 import { closestTo, crowCards, crowOffers, hungryWatcher, inheritedTrait, living, planProblem, sitsAlone, unseenAhead } from './campfire';
 import { trickChance } from '../data/meetings/crow.sv';
 import { crowMemory } from '../data/meetings/akrarna.sv';
+import { childsFriendId } from '../data/meetings/staden.sv';
 import { labelOf, meetingOptions, speakerOf } from '../data/meetings';
 import { brokenByTravel, keptPromises, promiseFloor, promiseText, proposalAtFire, promises } from './promises';
 import { CARDS } from '../data/cards';
@@ -219,6 +220,7 @@ function travel(c: Ctx, to: string, wait = false) {
   const p = place(s, to);
   if (wait && p.kind !== 'encounter') fail('Här finns inget att vänta på.');
   const voices = forkVoices(s);
+  delete s.journey.roofs;
   s.journey.at = to;
   if (!s.journey.visited.includes(to)) s.journey.visited.push(to);
   log(c, { kind: 'turn', text: p.name });
@@ -375,6 +377,7 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.fireworks = id === 'fireworks' ? { plan: planBursts(s, s.maxTurn, hard), crowdPlan: planParkCrowd(s, s.maxTurn) } : { plan: [], crowdPlan: [] };
   // The harvest: the wheat stands, and the harvester's rounds are planned.
   s.harvest = { plan: id === 'harvest' ? planHarvest(s, s.maxTurn) : [], cut: [], shadow: null };
+  if (id === 'fireworks' && s.knowledge.includes('barnetSag')) narrate(c, 'Någonstans i parken, bland alla människor, finns barnet från fönstret.');
   if (id === 'harvest' && s.knowledge.includes('faranHjalpt')) narrate(c, 'Någonstans i vetet tänker vi på den vi hjälpte upp ur fåran.');
   s.fence = id === 'fence' ? { ...planFence(s, s.maxTurn), level: hard ? 1 : 0, gateOpen: false } : { level: 0, risePlan: [], pulsePlan: [], gateOpen: false };
   // Someone is trapped here, the first time we come.
@@ -485,15 +488,7 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
   }
   const teachers = teaching ? [teaching.teacher, teaching.learner] : [];
   const byEmbers = new Set(plan.pairs.flat());
-  for (const a of living(s)) {
-    a.emberNights = byEmbers.has(a.id) ? (a.emberNights ?? 0) + 1 : 0;
-    const fading = a.traits.find((t) => TRAITS[t].fades && !TRAITS[t].good);
-    if (fading && a.emberNights >= 2) {
-      a.traits = a.traits.filter((t) => t !== fading);
-      a.emberNights = 0;
-      line(c, a.id, `Två nätter vid glöden. Det ${TRAITS[fading].name.toLowerCase()} i ${a.name} har släppt.`);
-    }
-  }
+  for (const a of living(s)) emberNight(c, a, byEmbers.has(a.id));
   for (const [ai, bi] of plan.pairs) {
     const a = animal(s, ai);
     const b = animal(s, bi);
@@ -871,6 +866,108 @@ function respond(c: Ctx, optionId: string, uid?: number) {
     case 'hareTracks':
       changeHope(c, 1, 'laugh');
       break;
+    // ------------------------------------------------ the city's finds and meetings
+    case 'pigeonsStepBack':
+      changeBelief(c, speaker!, -1);
+      break;
+    case 'pigeonsPay': {
+      const card = crowCards(s).find((x) => x.uid === uid);
+      if (!card) fail('Välj vilket kort duvorna får.');
+      forgetCard(s, card.uid);
+      narrate(c, `Duvorna tog ${CARDS[card.kind].name} från ${animal(s, card.owner).name}.`);
+      s.journey.roofs = true;
+      break;
+    }
+    case 'seenByChild':
+      for (const a of present) heal(c, a, `${a.name} vilade på tröjan.`);
+      changeHope(c, 1, 'laugh');
+      remember('barnetSag');
+      break;
+    case 'hideFromChild': {
+      const friend = s.animals.find((a) => a.id === childsFriendId(s));
+      if (friend) {
+        changeBelief(c, friend, -1);
+        about = friend.id;
+      }
+      break;
+    }
+    case 'foxRefuses':
+      changeBelief(c, speaker!, 1);
+      for (const a of present.filter((x) => x.predator)) a.hunger = 0;
+      break;
+    case 'foxHold': {
+      const t = animal(s, m.tempted!);
+      changeBelief(c, t, -1);
+      break;
+    }
+    case 'foxFeast': {
+      const t = animal(s, m.tempted!);
+      for (const a of present.filter((x) => x.predator)) a.hunger = 0;
+      changeBelief(c, t, -2);
+      about = t.id;
+      break;
+    }
+    case 'foxTempts': {
+      const t = animal(s, m.tempted!);
+      about = t.id;
+      leaveGroup(c, t, 'stayed');
+      changeHope(c, 1, 'laugh');
+      break;
+    }
+    case 'foxEyes': {
+      const e = s.animals.find((a) => a.elder && isPresent(a));
+      if (e) {
+        changeBelief(c, e, -1);
+        line(c, e.id, `${e.name} ställer sig framför de små tills räven är borta.`);
+      }
+      break;
+    }
+    case 'binEat': {
+      // The greediest eats the most, and the rot with it.
+      const greedy = [...present].sort((a, b) => greed(b) - greed(a))[0];
+      changeHope(c, 2, 'food');
+      for (const a of present.filter((x) => x.predator)) a.hunger = 0;
+      if (greedy && random(s) < 0.5) {
+        injure(c, greedy, 'poisoned', '{name} har ätit något ruttet.');
+        about = greedy.id;
+        next = 'sick';
+      }
+      break;
+    }
+    case 'binSniff':
+      changeHope(c, 1, 'food');
+      for (const a of present.filter((x) => x.predator)) a.hunger = 0;
+      break;
+    case 'restAllotment':
+      for (const a of present) {
+        heal(c, a, `${a.name} sov i komposten.`);
+        emberNight(c, a, true);
+      }
+      s.clock = otherTime(s.clock);
+      break;
+    case 'pond': {
+      for (const a of present) {
+        const washed: InjuryKind[] = a.injuries.filter((k) => k === 'poisoned' || k === 'shock');
+        if (washed.length) {
+          a.injuries = a.injuries.filter((k) => !washed.includes(k));
+          line(c, a.id, `${a.name} tvättade av sig i dammen.`);
+        }
+        if (a.swimmer) changeBelief(c, a, 1);
+      }
+      const large = present.find((a) => a.size === 'large');
+      const small = present.filter((a) => a.size === 'small');
+      if (large) {
+        changeBelief(c, large, 1);
+        about = large.id;
+        next = 'swan';
+      } else if (small.length) {
+        const v = small[Math.floor(random(s) * small.length)];
+        injure(c, v, 'bleeding', 'Svanen högg {name}. Det blöder.');
+        about = v.id;
+        next = 'bitten';
+      }
+      break;
+    }
     case 'lookBack':
       changeBelief(c, speaker!, 1);
       if (speaker!.grief.includes(s.journey.region)) {
@@ -1724,6 +1821,15 @@ function streetHazards(c: Ctx) {
 /** Start of the hour: where the people walk (that zone is closed this hour), and where the rockets will burst. */
 function telegraphFireworks(c: Ctx) {
   const s = c.s;
+  // The child from the window is here with its family: once, when they would come right up to us, they step aside.
+  const coming = crowdNow(s);
+  if (coming && s.knowledge.includes('barnetSag') && s.fireworks.childHour === undefined) {
+    const ours = new Set(s.animals.filter(isActive).map((a) => a.zone));
+    if (encounterOf(s).edges.some(([a, b]) => (a === coming && ours.has(b)) || (b === coming && ours.has(a)))) {
+      s.fireworks.childHour = s.turn;
+      narrate(c, 'Barnet från fönstret känner igen oss. Familjen går åt sidan.');
+    }
+  }
   const crowd = crowdNow(s);
   s.closed = crowd ? [crowd] : [];
   if (crowd) narrate(c, `Folk med tomtebloss trängs i ${zoneDef(s, crowd).name}. Dit kommer ingen.`);
@@ -1907,8 +2013,27 @@ function joinUs(c: Ctx, species: Species, name: string): Animal {
   return made.animal;
 }
 
+/** How much one of us eats when the bin tips over: the hungry first, then the hunters. */
+const greed = (a: Animal) => (a.traits.includes('hungrig') ? 10 : 0) + a.hunger * 2 + (a.predator ? 1 : 0);
+
+/** A night by the embers, or not: two in a row, and a fading bad trait lets go. */
+function emberNight(c: Ctx, a: Animal, byEmbers: boolean) {
+  a.emberNights = byEmbers ? (a.emberNights ?? 0) + 1 : 0;
+  const fading = a.traits.find((t) => TRAITS[t].fades && !TRAITS[t].good);
+  if (fading && a.emberNights >= 2) {
+    a.traits = a.traits.filter((t) => t !== fading);
+    a.emberNights = 0;
+    line(c, a.id, `Två nätter vid glöden. Det ${TRAITS[fading].name.toLowerCase()} i ${a.name} har släppt.`);
+  }
+}
+
 /** Who waits in a story when we come: the one in the furrow is a hedgehog – or, if we already have one, someone else. */
 function whoIsThere(s: GameState, id: MeetingId): Partial<Meeting> {
+  if (id === 'stadsraven') {
+    // The city fox speaks to the hunter least sure of us: on a tie, the hungriest.
+    const t = s.animals.filter((a) => isPresent(a) && a.predator).sort((a, b) => a.belief - b.belief || b.hunger - a.hunger)[0];
+    return t ? { tempted: t.id } : {};
+  }
   if (id !== 'faran') return {};
   const hasHedgehog = s.animals.some((a) => a.species === 'hedgehog' && isPresent(a));
   const kind = !hasHedgehog && !s.met.includes('hedgehog') ? 'hedgehog' : trappedKind(s, ['swimmer', 'flier']);

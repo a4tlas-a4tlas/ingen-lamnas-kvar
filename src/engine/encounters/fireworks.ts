@@ -97,8 +97,8 @@ export function planCrowd(h: RngHolder, maxTurn: number): ZoneId[] {
 
 /** This hour's bursts. */
 export const burstsNow = (s: GameState): Burst[] => s.fireworks.plan[s.turn - 1] ?? [];
-/** Where the people walk this hour. */
-export const crowdNow = (s: GameState): ZoneId | null => s.fireworks.crowdPlan[s.turn - 1] ?? null;
+/** Where the people walk this hour – unless it is the hour the child's family stepped aside for us. */
+export const crowdNow = (s: GameState): ZoneId | null => (s.fireworks.childHour === s.turn ? null : s.fireworks.crowdPlan[s.turn - 1] ?? null);
 
 /** Does this burst reach a zone? Cover dulls it: there, only a burst right overhead. */
 export function reaches(b: Burst, z: ZoneId): boolean {
