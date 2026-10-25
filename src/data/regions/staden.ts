@@ -45,8 +45,10 @@ export const STADEN: RegionDef = {
   fogName: 'Staden – ljus, och hundar',
   epilogue: 'Bakom oss lyser staden, och ljuset når långt ut över fälten. Vi går ut i mörkret igen, och för första gången är vi glada för det.',
   beyond: 'Bortom staden',
-  after: ['akrarna'],
-  start: { key: 'stadsgransen', kind: 'start', name: 'Stadsgränsen', fogName: 'Stadsgränsen', arrive: 'Åkrarna tar slut vid en skylt. Bortom den börjar staden: asfalt, ljus, och ett ljud som aldrig tystnar.' },
+  arriveFrom: {
+    akrarna: 'Åkrarna tar slut vid en skylt. Bortom den börjar staden: asfalt, ljus, och ett ljud som aldrig tystnar.',
+  },
+  start: { key: 'stadsgransen', kind: 'start', name: 'Stadsgränsen', fogName: 'Stadsgränsen', arrive: 'Dalen ligger bakom oss. Framför oss börjar staden: asfalt, ljus, och ett ljud som aldrig tystnar. Det var härifrån maskinerna kom.' },
   first: lamps,
   dangers: [
     cats,

@@ -12,6 +12,9 @@ export const AKRARNA: RegionDef = {
   fogName: 'Åkrarna – vida fält, och himmel',
   epilogue: 'Bakom oss ligger åkrarna, gula och tomma. Ingen av oss kommer att glömma hur stor himlen var där.',
   beyond: 'Bortom åkrarna',
+  arriveFrom: {
+    staden: 'Staden tar slut, och ljuset med den. Framför oss: fält, och himmel, och tystnad.',
+  },
   start: { key: 'akerkanten', kind: 'start', name: 'Åkerkanten', fogName: 'Åkerkanten', arrive: 'Nedanför åsen börjar åkrarna. Så långt vi ser: fält, och himmel.' },
   first: {
     key: 'grusvagen', kind: 'encounter', encounter: 'road', road: 'gravel', name: 'Grusvägen', fogName: 'En väg mellan fälten?',

@@ -559,7 +559,7 @@ Every story part is a meeting in frames (`src/data/meetings/dalen.sv.ts`). Repli
 - **When the last of us is over the ridge,** the run ends with the epilogue ("fortsättning följer").
 - **Balance:** a lead-only bot, with no cards, no comforting and always letting go, brings 3.6 of 6 over the ridge on average. A human with cards and last moments should do better, but rarely bring everyone.
 
-## Milestone 6 – Åkrarna, Stadens utkant, and the choice between them (in progress: both regions done)
+## Milestone 6 – Åkrarna, Stadens utkant, and the choice between them (done)
 Design from the milestone 6 interview:
 - **Two regions first:** Åkrarna and Stadens utkant. After that, the choice between 2 random regions.
 - **Each region has at least 4 different scenarios and a boss,** all of them feeling different. Each has 6 rows plus the boss, like Dalen.
@@ -851,6 +851,25 @@ The city stops borrowing story parts from Dalen and Åkrarna. It has six of its 
 - **The child in Stadsparken:** with `barnetSag`, the child is in the park with its family. Once, in the first hour their crowd would come right up to us (in a zone next to one of ours), they step aside, and that hour has no crowd (`s.fireworks.childHour`).
 - **Paying with a card:** a reply that asks for a card (the crow, the hungry stranger, the crows, the pigeons) is now offered only if we hold a card we can give. Until now, a group left with only memories could get stuck at the crow; the whole-run walker found it on the city's new maps.
 - **Save version 31.**
+
+### Step 13: Vägvalet – the choice between the ways (done)
+- **One way or the other (your choice):**
+  - After Dalen the interlude offers both Åkrarna and the city. We can walk only one, and the other is passed by for good: "Vägen mot … går vi aldrig." (`s.run.skipped`).
+  - `RegionDef.after` is gone, so the city may come straight after the glen. Dalen's promise "Vi går aldrig dit där maskinerna bor" still breaks when we choose it.
+- **The animals speak at the crossroads,** as at a fork on the map. Up to two voices, for different ways if anyone disagrees, are shown in the way frame. Going their way gives +belief; going the other, −belief (double for the eldest under *Den äldste*).
+
+  | Who | Wants |
+  |---|---|
+  | badger, toad, adder, hare | the fields |
+  | fox, owl, hedgehog, squirrel | the city |
+  | mice, mole, beaver, fawn | anywhere but the city |
+  | someone grieving the glen | anywhere but the city ("Där bor maskinerna."), weighs double |
+  | a hungry predator | the city ("Det luktar mat därifrån…"), weighs double |
+
+- **Arrival by where we came from:** a region may greet us differently depending on the region behind us (`RegionDef.arriveFrom`). The city from the glen: "Dalen ligger bakom oss … Det var härifrån maskinerna kom." The old "Åkrarna tar slut vid en skylt" is kept for a city that comes after the fields.
+- **Looking back at the very end:** when no way is left, the interlude still lets everyone look back, and then the story stops ("Fortsättning följer"). Åkrarna and the city have their own look-back line for every kind.
+- **Harder the later it comes:** the chance that a place is harder than it looks is 0.4, plus 0.15 for each middle region already walked. Today only one middle region is walked per run, so this starts to count with the next region.
+- **Save version 32.**
 
 ## Milestone 7 – the animals rethought (done)
 Your direction:

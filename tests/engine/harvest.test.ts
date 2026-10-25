@@ -13,6 +13,7 @@ function harvest(seed = 5): GameState {
   let s = run(plain(createGame(seed)), { type: 'swear', verses: ['manen'] });
   s.journey = regionJourney(AKRARNA, seed);
   s.run.regions = ['dalen', 'akrarna'];
+  s.run.skipped = ['staden'];
   const end = s.journey.nodes.find((n) => n.encounter === 'harvest')!;
   const fire = s.journey.nodes.find((n) => n.next.includes(end.id))!;
   s.journey.at = fire.id;
@@ -101,14 +102,16 @@ describe('Skördetröskan', () => {
     expect(forecast(s).map((l) => l.text).join(' | ')).toMatch(/Skördetröskan skär .* kör över .*: dödar/);
   });
 
-  it('once across, the fields are behind us – and the way leads on, into the city', () => {
+  it('once across, the fields are behind us; with the city passed by, we look back one last time', () => {
     let s = harvest();
     for (const a of s.animals) if (a.status === 'active') a.zone = 'vete2m';
     for (const a of s.animals.filter((x) => x.status === 'active')) s = run(s, { type: 'lead', target: a.id, zone: 'hacken' });
     expect(s.phase).toBe('map');
     expect(s.run.between).toBe(true);
-    expect(s.run.offered).toEqual(['staden']);
+    expect(s.run.offered).toEqual([]);
     expect(s.meeting?.id).toBe('interlude');
+    s = run(s, { type: 'respond', option: 'onward' });
+    expect(s.phase).toBe('over');
   });
 
   it('every hour plays out the same for the same state', () => {

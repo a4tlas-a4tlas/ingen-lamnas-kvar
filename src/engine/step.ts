@@ -11,7 +11,7 @@ import { brokenByTravel, keptPromises, promiseFloor, promiseText, proposalAtFire
 import { CARDS } from '../data/cards';
 import { LOADOUT, allSkills } from '../data/skills';
 import { planRoad } from './encounters/road';
-import { forkVoices, voiceStake } from './voices';
+import { forkVoices, regionVoices, voiceStake, type Voice } from './voices';
 import { CURRENT, DAM, DAM_MAX, FLOOD_DAM_CREAK, FLOOD_HOURS, FLOOD_HOURS_TOTAL, STONES, aboveTheWater, carriedAway, holdsOnTo, planRiver, swims } from './encounters/river';
 import { planMachines, roarZones } from './encounters/machines';
 import { exposedIn, prey, shadowOptions } from './encounters/raptor';
@@ -224,17 +224,7 @@ function travel(c: Ctx, to: string, wait = false) {
   s.journey.at = to;
   if (!s.journey.visited.includes(to)) s.journey.visited.push(to);
   log(c, { kind: 'turn', text: p.name });
-  for (const v of voices) {
-    const a = animal(s, v.who);
-    const d = voiceStake(s, a);
-    if (v.to === to) {
-      changeBelief(c, a, d);
-      line(c, a.id, `${a.name} nickar. Vi gick den väg ${a.name} bad om.`);
-    } else {
-      changeBelief(c, a, -d);
-      line(c, a.id, `${a.name} ser ner i marken och följer efter.`);
-    }
-  }
+  heedVoices(c, voices, to);
   if (p.kind === 'encounter') {
     const fixed = ENCOUNTERS[p.encounter!].fixedTime;
     if (wait && fixed) fail('Maskinerna väntar inte på oss.');
@@ -274,13 +264,9 @@ function travel(c: Ctx, to: string, wait = false) {
 function endRegion(c: Ctx) {
   const s = c.s;
   narrate(c, REGIONS[s.journey.region].epilogue);
-  // Until the way forks for real, some regions wait for others: the city comes after the fields.
-  const left = MIDDLE_REGIONS.filter((r) => !s.run.regions.includes(r) && (REGIONS[r].after ?? []).every((x) => s.run.regions.includes(x)));
+  // The ways on: regions neither walked nor passed by. With none left, we still look back before the story stops.
+  const left = MIDDLE_REGIONS.filter((r) => !s.run.regions.includes(r) && !s.run.skipped.includes(r));
   s.run.offered = shuffle(s, left).slice(0, OFFERED);
-  if (!s.run.offered.length) {
-    narrate(c, 'Fortsättning följer.');
-    return endRun(c);
-  }
   s.phase = 'map';
   s.run.between = true;
   s.meeting = { id: 'interlude', frame: 'start', used: [], told: [] };
@@ -300,14 +286,42 @@ function chooseRegion(c: Ctx, id: RegionId) {
   const s = c.s;
   if (!s.run.offered.includes(id)) fail('Dit leder ingen väg.');
   const def = REGIONS[id];
+  const voices = regionVoices(s);
+  const from = s.run.regions[s.run.regions.length - 1];
+  // The later a region comes, the likelier its places are harder than they look.
+  const walked = s.run.regions.filter((r) => MIDDLE_REGIONS.includes(r)).length;
   // Into the city: where the machines live.
   if (id === 'staden') breakPromises(c, 'noCity');
+  heedVoices(c, voices, id);
+  // We can only walk one: the other way is passed by for good.
+  for (const r of s.run.offered.filter((x) => x !== id)) {
+    s.run.skipped.push(r);
+    narrate(c, `Vägen mot ${REGIONS[r].name.toLowerCase()} går vi aldrig.`);
+  }
   s.run.regions.push(id);
   s.run.offered = [];
   s.run.between = false;
-  s.journey = regionJourney(def, s.seed + 7919 * s.run.regions.length);
+  s.journey = regionJourney(def, s.seed + 7919 * s.run.regions.length, hardChanceAfter(walked));
   log(c, { kind: 'turn', text: def.name });
-  narrate(c, def.start.arrive);
+  narrate(c, def.arriveFrom?.[from] ?? def.start.arrive);
+}
+
+/** How often a place is harder than it looks, in the next middle region: more so the more of them lie behind us. */
+export const hardChanceAfter = (walked: number) => 0.4 + 0.15 * walked;
+
+/** Those who spoke for a way: going theirs strengthens them; going another weakens them. */
+function heedVoices(c: Ctx, voices: Voice[], to: string) {
+  for (const v of voices) {
+    const a = animal(c.s, v.who);
+    const d = voiceStake(c.s, a);
+    if (v.to === to) {
+      changeBelief(c, a, d);
+      line(c, a.id, `${a.name} nickar. Vi gick den väg ${a.name} bad om.`);
+    } else {
+      changeBelief(c, a, -d);
+      line(c, a.id, `${a.name} ser ner i marken och följer efter.`);
+    }
+  }
 }
 
 /** Everyone still with us starts the next danger at its start, with the whole deck shuffled. */
@@ -989,7 +1003,13 @@ function respond(c: Ctx, optionId: string, uid?: number) {
   s.meeting = null;
   const way: Meeting = { id: 'interlude', frame: 'way', used: [], told: [] };
   if (m.id === 'interlude' && m.frame === 'start') {
-    // Done looking back: the region may leave a promise in someone, before we choose the way on.
+    // Done looking back. If no way leads on, the story stops here – for now.
+    if (!s.run.offered.length) {
+      s.run.between = false;
+      narrate(c, 'Fortsättning följer.');
+      return endRun(c);
+    }
+    // The region may leave a promise in someone, before we choose the way on.
     s.proposal = regionVerse(s);
     s.meeting = s.proposal ? { id: 'proposal', frame: 'ask', used: [], told: [] } : way;
   } else if (m.id === 'proposal') {

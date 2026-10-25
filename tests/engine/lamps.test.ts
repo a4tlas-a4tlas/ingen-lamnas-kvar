@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { meetingOptions } from '../../src/data/meetings';
-import { REGIONS } from '../../src/data/regions';
 import { STADEN } from '../../src/data/regions/staden';
 import { LAMPED, ROUND, lit, planLamps, walkerZone } from '../../src/engine/encounters/lamps';
 import { generateRegion } from '../../src/engine/regions';
@@ -139,7 +138,7 @@ describe('Stadens utkant', () => {
     }
   });
 
-  it('comes after the fields: past the machines of the glen, only Åkrarna is offered', () => {
+  it('past the machines of the glen, both ways are offered: the fields and the city', () => {
     let s = run(createGame(4), { type: 'swear', verses: ['manen'] });
     s.journey.at = 'granbacken';
     s.journey.visited.push('granbacken');
@@ -149,14 +148,13 @@ describe('Stadens utkant', () => {
     // Everyone over the ridge at once.
     for (const a of s.animals) if (a.status === 'active') a.status = 'safe';
     s = run(s, { type: 'endTurn' });
-    expect(s.run.offered).toEqual(['akrarna']);
-    expect(REGIONS.staden.after).toEqual(['akrarna']);
+    expect([...s.run.offered].sort()).toEqual(['akrarna', 'staden']);
   });
 
   it('choosing the city breaks the promise never to go where the machines live', () => {
     let s = run(createGame(3), { type: 'swear', verses: ['ingenLamnas'] });
     s.verses.push({ id: 'lofte-x', kind: 'promise', text: 'Vi går aldrig dit där maskinerna bor.', flippedText: 'Vi gick in bland maskinerna.', flipped: false, promise: { by: 'badger', rule: 'noCity' } });
-    s.run = { regions: ['dalen', 'akrarna'], offered: ['staden'], between: true };
+    s.run = { regions: ['dalen'], offered: ['akrarna', 'staden'], skipped: [], between: true };
     s.phase = 'map';
     s.meeting = { id: 'interlude', frame: 'way', used: [], told: [] };
     const go = meetingOptions(s).find((o) => o.id === 'go-staden')!;
@@ -164,6 +162,10 @@ describe('Stadens utkant', () => {
     expect(s.verses.find((v) => v.id === 'lofte-x')!.flipped).toBe(true);
     expect(s.journey.region).toBe('staden');
     expect(verseStatus(s, 'ingenLamnas')).toBe('intact');
+    // Straight from the glen, the city says so; and the fields are passed by for good.
+    expect(s.run.skipped).toEqual(['akrarna']);
+    expect(s.log.some((e) => 'text' in e && /Dalen ligger bakom oss/.test(e.text))).toBe(true);
+    expect(s.log.some((e) => 'text' in e && /Vägen mot åkrarna går vi aldrig/.test(e.text))).toBe(true);
   });
 
 });
