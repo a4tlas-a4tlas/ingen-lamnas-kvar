@@ -1,12 +1,12 @@
 // An animal's own will: at five belief and above it follows us. Below five it has
 // a will of its own – hesitating, mostly. Below three it is worse: fleeing back,
 // bolting into the open. Traits move the lines; shock and grief weigh like lost belief.
-import { hasInjury } from './rules';
+import { hasInjury, mood } from './rules';
 import type { Animal, GameState } from './types';
 
-/** Below this belief, an animal follows its own will. Brave ones hold out longer; shy ones less long in the light. */
+/** Below this belief, an animal follows its own will. Brave ones hold out longer; shy ones less long in the light. Trust carries us all; despair weighs on us all. */
 export function ownWillBelow(s: GameState, a: Animal): number {
-  let line = 5;
+  let line = 5 + ({ fortvivlan: 1, oro: 0, tillit: -1 } as const)[mood(s)];
   if (a.traits.includes('modig') || a.traits.includes('hardad')) line -= 1;
   if (a.traits.includes('skygg') && s.time === 'day') line += 1;
   if (a.traits.includes('sorjande')) line += 1;

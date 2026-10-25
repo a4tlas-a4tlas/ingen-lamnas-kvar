@@ -46,6 +46,10 @@ import {
   cardTarget,
   cardZones,
   handSize,
+  DRIFT_FROM,
+  mood,
+  moodAt,
+  moodKraft,
   hasInjury,
   huntsAt,
   canPrey,
@@ -164,6 +168,9 @@ function changeHope(c: Ctx, d: number, reason: HopeReason, who?: string) {
   const before = c.s.hope;
   c.s.hope = Math.max(0, Math.min(10, c.s.hope + d));
   if (c.s.hope !== before) c.ev.push({ kind: 'hope', delta: c.s.hope - before, reason, who });
+  const was = moodAt(before);
+  const now = mood(c.s);
+  if (was !== now) narrate(c, now === 'fortvivlan' ? 'Förtvivlan tar oss.' : now === 'tillit' ? 'Något har lättat. Vi litar på varandra.' : was === 'tillit' ? 'Oron kommer tillbaka.' : 'Det värsta har släppt, lite.');
 }
 
 function addBond(c: Ctx, a: Animal, b: Animal, d: number) {
@@ -501,6 +508,8 @@ function restAtFire(c: Ctx, plan: Extract<Action, { type: 'restAtFire' }>) {
     line(c, t.id, `${t.name} visade ${l.name} hur man ${CARDS[teaching.skill].name.toLowerCase()} – hela natten, tills det satt.`);
   }
   const teachers = teaching ? [teaching.teacher, teaching.learner] : [];
+  // The mood we sit down in pulls on us first; then the embers do their work.
+  moodAtFire(c);
   const byEmbers = new Set(plan.pairs.flat());
   for (const a of living(s)) emberNight(c, a, byEmbers.has(a.id));
   for (const [ai, bi] of plan.pairs) {
@@ -1185,7 +1194,7 @@ function startTurn(c: Ctx) {
 
   const hidden = moonHidden(s);
   const moon = verseStatus(s, 'manen');
-  s.kraft = 3 + (hidden && moon === 'intact' ? 1 : 0) - (moonVisible(s) && moon === 'flipped' ? 1 : 0);
+  s.kraft = Math.max(0, 3 + moodKraft(s) + (hidden && moon === 'intact' ? 1 : 0) - (moonVisible(s) && moon === 'flipped' ? 1 : 0));
 
   log(c, { kind: 'turn', text: `Timme ${s.turn} av ${s.maxTurn}` });
   if (s.time === 'night' && s.encounterId === 'road') narrate(c, hidden ? 'Månen gömmer sig bakom molnen.' : 'Månen lyser över asfalten.');
@@ -2036,14 +2045,43 @@ function joinUs(c: Ctx, species: Species, name: string): Animal {
 /** How much one of us eats when the bin tips over: the hungry first, then the hunters. */
 const greed = (a: Animal) => (a.traits.includes('hungrig') ? 10 : 0) + a.hunger * 2 + (a.predator ? 1 : 0);
 
-/** A night by the embers, or not: two in a row, and a fading bad trait lets go. */
+/** A night by the embers, or not: two in a row, and a fading bad trait lets go. In trust one is enough; in despair nothing lets go. */
 function emberNight(c: Ctx, a: Animal, byEmbers: boolean) {
   a.emberNights = byEmbers ? (a.emberNights ?? 0) + 1 : 0;
   const fading = a.traits.find((t) => TRAITS[t].fades && !TRAITS[t].good);
-  if (fading && a.emberNights >= 2) {
+  const m = mood(c.s);
+  const needed = m === 'tillit' ? 1 : 2;
+  if (fading && m !== 'fortvivlan' && a.emberNights >= needed) {
     a.traits = a.traits.filter((t) => t !== fading);
     a.emberNights = 0;
-    line(c, a.id, `Två nätter vid glöden. Det ${TRAITS[fading].name.toLowerCase()} i ${a.name} har släppt.`);
+    line(c, a.id, needed === 1
+      ? `En natt vid glöden räckte. Det ${TRAITS[fading].name.toLowerCase()} i ${a.name} har släppt.`
+      : `Två nätter vid glöden. Det ${TRAITS[fading].name.toLowerCase()} i ${a.name} har släppt.`);
+  }
+}
+
+/** At the fire, the mood pulls on everyone: belief far from our hope drifts toward it. In despair, doubt takes root in the weakest. */
+function moodAtFire(c: Ctx) {
+  const s = c.s;
+  const m = mood(s);
+  if (m === 'tillit') narrate(c, 'Hoppet bär oss. Någon nynnar vid elden.');
+  if (m === 'fortvivlan') narrate(c, 'Förtvivlan sitter med vid elden.');
+  for (const a of living(s)) {
+    if (a.belief - s.hope >= DRIFT_FROM) {
+      changeBelief(c, a, -1);
+      line(c, a.id, `Ingen av de andra tror längre. Det tär på ${a.name} också.`);
+    } else if (s.hope - a.belief >= DRIFT_FROM) {
+      changeBelief(c, a, 1);
+      line(c, a.id, `De andras hopp smittar. ${a.name} sträcker på sig.`);
+    }
+  }
+  if (m === 'fortvivlan') {
+    const weakest = [...living(s)].filter((a) => !a.traits.includes('tvivlande')).sort((a, b) => a.belief - b.belief)[0];
+    if (weakest) {
+      weakest.traits.push('tvivlande');
+      changeBelief(c, weakest, -1);
+      line(c, weakest.id, `${weakest.name} börjar tvivla, på oss och på vägen.`);
+    }
   }
 }
 

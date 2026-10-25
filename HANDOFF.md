@@ -2,20 +2,20 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 6.13)
+## Status (after step 8.1)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 6.13: Vägvalet, branch `vagvalet`, open for review. Everything through 6.12 (#40) is in `main` and live. |
+| **Latest PR** | Milestone 8.1: Hoppet väger, branch `hopp`, open for review. Everything through 6.13 (#41) is in `main` and live. |
 | **Save version** | 32 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 375 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Tests** | 383 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
 - **The player is Eden, the oath:** you swear one verse at the start.
 - **Each animal has belief (0–10).** At 5 and up it follows. Below 5 it has its own will; below 3 the will is worse; at 0 it leaves.
-- **The group shares hope (0–10).** Below 4 you draw fewer cards.
+- **The group shares hope (0–10),** and its mood: *Förtvivlan* (0–2), *Oro* (3–6), *Tillit* (7–10) (`mood` in `src/engine/rules.ts`). The mood moves the will line, each hour's Kraft, how bad traits fade, and at each fire belief drifts toward hope. Below 4 you draw fewer cards.
 
 **The run:**
 1. Vilka går? – choose one of four groups.
@@ -80,11 +80,10 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
 ## Next step: ask the user
-Milestone 6 is done: two middle regions, each with its own dangers, story parts and boss, and the choice between them. A run is now Dalen → Åkrarna *or* the city → "fortsättning följer".
+Milestone 6 is done, and Milestone 8 (hope and the group) has its first step. A run is Dalen → Åkrarna *or* the city → "fortsättning följer".
 **Ask what comes next.** The candidates from the earlier interviews:
 - **More of the way** (Milestone 5's plan): Mossen (boss Dimman), Höglandet (Stormen), and Skogsbrynet with the final boss Jägaren.
 - **Seasons**, which were left for later.
-- **Hope with more weight** (see the open questions below).
 
 ## Open questions and known quirks
 - **How many middle regions a run holds (6.13):** with "choose one, skip the other", four middle regions (Åkrarna, the city, Mossen, Höglandet) give at most two per run. Milestone 5's 5-region run (Dalen, three middle, Skogsbrynet) needs a rule once more regions exist, e.g. skip only when more than enough are left.
@@ -94,7 +93,7 @@ Milestone 6 is done: two middle regions, each with its own dangers, story parts 
   - Stadsräven can cost Rovdjurens pakt a predator every city.
   - Duvorna's roofs skip the map's paths.
 - **The child (6.12)** cancels the park crowd once, in the first hour it would come next to us, which is often hour 1 (we all start at the gate, next to the park's first row). If it should matter later in the night, it could wait for a zone ahead of the leader instead.
-- **Hope** only affects the hand size (and waiting). It may deserve more weight; it isn't tied to traits yet.
+- **Hope's mood (8.1)** can spiral: despair makes the will weaker, Kraft lower and doubt spread, which costs more hope. The bot barely moved, but watch it in play. The levers are the drift distance (`DRIFT_FROM`, 3) or dropping the Tvivlande part.
 - **The fields** are easier for the bot at night than by day: the eagle owl strikes only one of two marked zones.
 - **Gamla vägar can be taught across kinds** (it's "insight"). A badger can then find the culvert but doesn't fit through it.
 - **The adder starts hungry** (belief 4, hunger 2) and often hunts from hour 1. That's older behaviour, kept on purpose so far.
