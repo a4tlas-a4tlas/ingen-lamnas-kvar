@@ -11,7 +11,7 @@ import { LAMPED, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown } from '../engine/encounters/street';
 import { SOUND, TUNNELS, bittenByRats, depthIn, isFound } from '../engine/encounters/sewer';
-import { burstsNow, reaches } from '../engine/encounters/fireworks';
+import { burstsNow, crowdNow, reaches } from '../engine/encounters/fireworks';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -116,7 +116,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 30 && s.phase !== 'over' ? s : null;
+    return s.version === 31 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -949,7 +949,7 @@ export class App {
   private fireworksTelegraphHtml(s: GameState): string {
     const out: string[] = [];
     const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
-    const crowd = s.fireworks.crowdPlan[s.turn - 1];
+    const crowd = crowdNow(s);
     if (crowd) out.push(`<div class="crowd-mark" style="${box(crowd)}"><span>Folkmassan · stängt</span></div>`);
     const next = s.turn < s.maxTurn ? s.fireworks.crowdPlan[s.turn] : undefined;
     if (next) out.push(`<div class="next-mark" style="${box(next)}"><em>folkmassan nästa timme</em></div>`);

@@ -323,6 +323,8 @@ export interface Journey {
   guess: Record<string, Variant>;
   /** Places the owl has flown ahead to see. */
   scouted: string[];
+  /** The pigeons showed us the roofs: the next step may go to any place in the next row. */
+  roofs?: boolean;
 }
 
 export type MourningChoice = 'bury' | 'carry';
@@ -348,6 +350,13 @@ export type MeetingId =
   | 'spillsad'
   | 'traktorn'
   | 'haren'
+  // The city's.
+  | 'duvorna'
+  | 'barnet'
+  | 'stadsraven'
+  | 'soptunnan'
+  | 'kolonilotten'
+  | 'parkdammen'
   | 'interlude';
 
 export interface Meeting {
@@ -369,6 +378,8 @@ export interface Meeting {
   name?: string;
   /** Who of us helped them, for the bond. */
   helper?: string;
+  /** Who of us the city fox tempts with the butcher's meat. */
+  tempted?: string;
 }
 
 /** What a meeting cost us at tonight's fire: fewer places by the embers, someone apart, someone in the dark. */
@@ -406,7 +417,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 30;
+  version: 31;
   /** The road we cross: asphalt, or Åkrarna's gravel. */
   roadKind: RoadKind;
   /** Which group left the glen. */
@@ -484,7 +495,8 @@ export interface GameState {
   street: { crowdPlan: ZoneId[][]; bikePlan: (ZoneId | null)[]; tramAt: number[]; drunks: ZoneId[] };
   /** The sewer: what each tunnel is, where the rats hold, which tunnels we have found, what we hear this hour, the water's level and when it rises, and whether the toll is paid this hour. */
   /** New Year's Eve in the park: the bursts hour by hour, each with a zone and a strength; where the people walk each hour. */
-  fireworks: { plan: { zone: ZoneId; strength: 1 | 2 }[][]; crowdPlan: ZoneId[] };
+  /** New Year's Eve: the bursts and the people, hour by hour – and the hour the child's family stepped aside for us. */
+  fireworks: { plan: { zone: ZoneId; strength: 1 | 2 }[][]; crowdPlan: ZoneId[]; childHour?: number };
   sewer: { kinds: Record<ZoneId, 'low' | 'walk' | 'ledge'>; rats: ZoneId[]; found: ZoneId[]; heard: ZoneId[]; level: number; risePlan: boolean[]; paid: boolean };
   /** Someone trapped in this encounter, not yet one of us: they must come to trust us before we can free them. */
   rescue: Rescue | null;

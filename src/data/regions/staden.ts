@@ -1,15 +1,12 @@
 // Stadens utkant: where the fields end and the town begins. Street lights, dogs on
 // leads, roads that never sleep. Its own dangers are the lamps, the cats in the courtyard,
-// the shopping street and the sewer, and its boss is Fyrverkerinatten. Its story parts
-// come in the next step; old dangers stand in new places, and borrowed stories, meanwhile.
+// the shopping street and the sewer, and its boss is Fyrverkerinatten. Old dangers stand
+// in new places, and the story parts are the city's own: the pigeons, the child at the
+// window, the city fox, the bins, the allotments and the park pond.
 import type { Template } from './dalen';
-import { AKRARNA } from './akrarna';
 import { DALEN, type RegionDef } from './dalen';
 
 const [, , river] = DALEN.dangers;
-/** A story part borrowed from the glen or the fields, until the town has its own. */
-const story = (key: string): Template =>
-  [...DALEN.meetings, ...DALEN.finds, ...AKRARNA.meetings, ...AKRARNA.finds].find((t) => t.key === key)!;
 
 const lamps: Template = {
   key: 'gatlyktorna', kind: 'encounter', encounter: 'lamps', name: 'Gatlyktorna', fogName: 'Ljus i fjärran?',
@@ -64,8 +61,16 @@ export const STADEN: RegionDef = {
     },
     { ...river, key: 'anGenomStan', name: 'Ån genom stan', fogName: 'Vatten mellan husen?', arrive: 'Ån rinner rakt genom staden, mellan murar. Någon har lagt stenar i den.', arriveNight: 'Ån glittrar svart mellan husen.', note: 'Vatten, och murar.' },
   ],
-  meetings: ['maten', 'framlingen', 'krakflocken', 'koltrasten'].map(story),
-  finds: ['barsnar', 'tradet', 'spillsad'].map(story),
+  meetings: [
+    { key: 'duvorna', kind: 'meeting', meeting: 'duvorna', name: 'Takrännan', fogName: 'Något som kuttrar?', arrive: 'Ovanför oss, på en takränna, sitter duvor i en lång rad.', note: 'Någon som vet vägen, kanske.' },
+    { key: 'barnet', kind: 'meeting', meeting: 'barnet', name: 'Fönstret', fogName: 'Ett ljus vid marken?', arrive: 'Ett hus med ett upplyst fönster, lågt, alldeles vid marken.', note: 'Någon ser ut.' },
+    { key: 'stadsraven', kind: 'meeting', meeting: 'stadsraven', name: 'Bakom slaktaren', fogName: 'Det luktar kött?', arrive: 'En bakdörr till en slaktare. Det luktar blod och fett, och någon har varit här före oss.', note: 'Mat – för några av oss.' },
+  ],
+  finds: [
+    { key: 'soptunnan', kind: 'find', meeting: 'soptunnan', name: 'Soptunnan', fogName: 'Något som luktar?', arrive: 'Bakom en restaurang står soptunnorna i en rad.', note: 'Mat, kanske. Eller något annat.' },
+    { key: 'kolonilotten', kind: 'find', meeting: 'kolonilotten', name: 'Kolonilotterna', fogName: 'Små hus och trädgårdar?', arrive: 'Ett staket, och bakom det små trädgårdar med var sin stuga.', note: 'Vila, kanske.' },
+    { key: 'parkdammen', kind: 'find', meeting: 'parkdammen', name: 'Parkdammen', fogName: 'Vatten mellan träden?', arrive: 'En park, och mitt i den en damm.', note: 'Vatten.' },
+  ],
   fire: { key: 'underBron', kind: 'campfire', name: 'Under bron', fogName: 'En bro?', arrive: 'Under en bro är det torrt och mörkt. Ovanför oss dånar bilarna.', note: 'Vila, under bron.' },
   lastFire: { key: 'skjulet', kind: 'campfire', name: 'Skjulet', fogName: 'Ett skjul?', arrive: 'Ett gammalt skjul längst bak i en trädgård. Dörren står på glänt.', note: 'Sista vilan i staden.' },
   /** The boss of the city: New Year's Eve in the city park. */

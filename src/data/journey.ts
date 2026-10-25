@@ -23,7 +23,12 @@ export function place(s: GameState, id: string): Place {
 
 export function pathsFrom(s: GameState, id: string): Path[] {
   const from = s.journey.nodes.find((x) => x.id === id);
-  return (from?.next ?? []).map((to) => ({ from: id, to, note: place(s, to).note }));
+  if (!from) return [];
+  // Over the roofs, the pigeons' way: from here, to anywhere in the next row.
+  const next = s.journey.roofs && id === s.journey.at && from.next.length
+    ? s.journey.nodes.filter((x) => x.row === from.row + 1).map((x) => x.id)
+    : from.next;
+  return next.map((to) => ({ from: id, to, note: place(s, to).note }));
 }
 
 /** Every place within `depth` paths ahead of here: how far the owl flies in a night. */
