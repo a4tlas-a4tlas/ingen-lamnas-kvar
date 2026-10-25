@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : id === 'wisps' ? wispsSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : id === 'wisps' ? wispsSvg() : id === 'cranes' ? cranesSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -449,6 +449,27 @@ function bogSvg(): string {
   <rect x="${x(36)}" y="${y(23)}" width="${x(28)}" height="10" fill="#6a5438" filter="url(#cut)"/><rect x="${x(36)}" y="${y(23) + 12}" width="${x(28)}" height="4" fill="#4a3826"/>
   <rect y="${y(80)}" width="400" height="${y(20)}" fill="#6a6a44"/>
   <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.5"/>
+</svg>`;
+}
+
+/** Tranmyren: an open bog at dawn under low mist, willows and birches at the far edge. */
+function cranesSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const tufts: string[] = [];
+  for (let i = 0; i < 55; i++) tufts.push(`<path d="M${(i * 43) % 400} ${y(16) + ((i * 61) % 320)} l-2 -7 m2 7 l0 -9 m0 9 l3 -7"/>`);
+  const birches = [72, 78, 84, 90, 96].map((px, i) => `<rect x="${x(px)}" y="${y(14 + (i % 2) * 2)}" width="4" height="${y(18)}" fill="#e8e2d4"/><ellipse cx="${x(px) + 2}" cy="${y(14)}" rx="16" ry="12" fill="#7a9a54" opacity="0.8"/>`).join('');
+  const willows = [4, 12, 20, 28].map((px) => `<ellipse cx="${x(px)}" cy="${y(26)}" rx="22" ry="16" fill="#5a7040"/>`).join('');
+  return `
+<svg class="scene-bg cranes" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="500" fill="#8a8a66"/>
+  <rect width="400" height="${y(14)}" fill="#c9c2a4"/>
+  <g stroke="#6a6a48" stroke-width="1.4" fill="none" opacity="0.7">${tufts.join('')}</g>
+  ${willows}${birches}
+  <rect y="${y(30)}" width="400" height="${y(10)}" fill="#efe9d8" opacity="0.35"/>
+  <rect y="${y(52)}" width="400" height="${y(8)}" fill="#efe9d8" opacity="0.25"/>
+  <rect y="${y(80)}" width="400" height="${y(20)}" fill="#6a6a44"/>
 </svg>`;
 }
 

@@ -26,6 +26,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     street: { pull: -1, line: 'Alla de där fötterna. Vi är för små för en sådan gata.' },
     sewer: { pull: -1, line: 'Råttor. Våra stora, elaka kusiner. Inte under jorden.' },
     wisps: { pull: -1, line: 'Djupa gölar i mörkret. Vi kan inte simma. Inte där.' },
+    cranes: { pull: -1, line: 'Så stora fötter. De ser oss inte ens när de trampar.' },
   },
   fox: {
     farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' },
@@ -44,6 +45,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     street: { pull: 1, line: 'Över gatan flyger jag på ett ögonblick. Jag kan se vagnen komma.' },
   },
   hare: {
+    cranes: { pull: 1, line: 'Fast mark, och vida! Där kan jag springa runt dem.' },
     fence: { pull: -1, line: 'Stängsel. Jag har sett en hare fastna i ett. Den skrek länge.' },
     lamps: { pull: -1, line: 'Hundar i koppel är fortfarande hundar.' },
     cats: { pull: -1, line: 'En katt hoppar längre än jag tror. Inte bakgårdarna.' },
@@ -67,6 +69,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     sewer: { pull: 1, line: 'Strömmande vatten under staden. Håll er i mig.' },
   },
   fawn: {
+    cranes: { pull: -1, line: 'De är lika långa som mamma. Och de skriker.' },
     farm: { pull: -1, line: 'Där bor människor. Mamma sa: aldrig nära människorna.' },
     sprayer: { pull: -1, line: 'Traktorn. Jag har sett vad den gör med dem som ligger stilla i raderna.' },
   },

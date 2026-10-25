@@ -58,7 +58,7 @@ import { dogSilhouette, silhouette, speciesColor } from './silhouettes';
 import { alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM, DAM_MAX } from '../engine/encounters/river';
 import { TIME_NAMES, TIME_NOTES } from '../data/guides.sv';
-import { animalStatuses, forecast, knowsTrue, type Status } from './status';
+import { animalStatuses, cranesAt, forecast, knowsTrue, type Status } from './status';
 
 const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
 
@@ -126,7 +126,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 34 && s.phase !== 'over' ? s : null;
+    return s.version === 35 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -975,6 +975,17 @@ export class App {
   }
 
   /** The sewer: fog over the tunnels we have not found, and what we hear from them; the depth in those we have; the rats. */
+  /** The cranes: where they dance now, and where next hour. */
+  private cranesTelegraphHtml(s: GameState): string {
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const now = cranesAt(s);
+    const later = s.turn < s.maxTurn ? cranesAt(s, s.turn + 1) : [];
+    return [
+      ...now.map((z) => `<div class="crane-mark" style="${box(z)}"><span>Tranorna dansar · knuffar</span></div>`),
+      ...later.filter((z) => !now.includes(z)).map((z) => `<div class="next-mark" style="${box(z)}"><em>tranorna nästa timme</em></div>`),
+    ].join('');
+  }
+
   /** The bog: which zones give way, and which hold. */
   private bogTelegraphHtml(s: GameState): string {
     const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
@@ -1097,6 +1108,7 @@ export class App {
     if (s.encounterId === 'street') return s.phase === 'over' ? '' : this.streetTelegraphHtml(s);
     if (s.encounterId === 'sewer') return s.phase === 'over' ? '' : this.sewerTelegraphHtml(s);
     if (s.encounterId === 'bog' || s.encounterId === 'wisps') return s.phase === 'over' ? '' : this.bogTelegraphHtml(s);
+    if (s.encounterId === 'cranes') return s.phase === 'over' ? '' : this.cranesTelegraphHtml(s);
     if (s.encounterId === 'fireworks') return s.phase === 'over' ? '' : this.fireworksTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };

@@ -965,6 +965,28 @@ Design from the milestone 9 interview:
 - **Bot:** 4.77 of 6 on a normal night, 4.89 with many lights. More lights hardly matter to a bot that keeps the doubters off the pools.
 - **Save version 34.**
 
+### Step 3: Tranorna (done)
+*Tranmyren* (`src/engine/encounters/cranes.ts`, id `cranes`, always at dawn, 8 hours, three steps). Memory: "några tranor" / "en hel dans". Firm ground: no sinking here.
+
+| Row | | | |
+|---|---|---|---|
+| goal | **Björkbacken** | | |
+| 3 | **Videsnåret** (cover) | Starrmyren | **Björkdungen** (cover) |
+| 2 | Tranbotten, väst | Dansplatsen | Tranbotten, öst |
+| 1 | Kärrkanten, väst | Myrslogen | Kärrkanten, öst |
+| start | **Myrkanten** | | |
+
+- **The flock** (your choice: *a flock that dances across*):
+  - It dances in one zone of the open bog and moves one step an hour along the edges, never straight back.
+  - Its zone is shown this hour and the next.
+  - **Hard:** two flocks, starting at opposite ends.
+  - It never dances in the thickets.
+- **The dance:** whoever stands in it when the hour goes is driven out one zone, aside or ahead but never back, and loses 1 belief. The small are trampled (shock). No one dies; the cost is time.
+- **Their call** (your choice): the first hour the flock dances two or more steps from all of us, its call carries, and we hear what lies ahead on the map, as when the crow tells. Once per danger.
+- **Voices at a fork:** the hare wants the open bog; the mice and the fawn fear the dance.
+- **Bot:** 4.76 of 6 with one flock, 4.25 with two.
+- **Save version 35.**
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

@@ -22,6 +22,7 @@ import { bitten, lit, planLamps, planWalkers, walkerZone } from './encounters/la
 import { eyesFor, guard, nextHide, placeCats, pounced, scarer } from './encounters/cats';
 import { STUCK_AT, UNDER_AT, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from './encounters/bog';
 import { planWisps } from './encounters/wisps';
+import { planFlocks } from './encounters/cranes';
 import { burstsNow, crowdNow, holdsWith, planBursts, planCrowd as planParkCrowd, pushOptions, reaches } from './encounters/fireworks';
 import { SOUND, TUNNELS, bittenByRats, foundBy, isFound, levelNow, planKinds, planRats, planRise, sweptHere } from './encounters/sewer';
 import { STAGGER, bikesAt, feetAt, planBikes, planCrowd, planTram, sideOf, tramIn, tramNow, underfoot } from './encounters/street';
@@ -400,6 +401,8 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.fireworks = id === 'fireworks' ? { plan: planBursts(s, s.maxTurn, hard), crowdPlan: planParkCrowd(s, s.maxTurn) } : { plan: [], crowdPlan: [] };
   // The lit bog: the night's lights, false and true.
   s.wisps = id === 'wisps' ? planWisps(s, s.maxTurn, hard) : { plan: [], trueAt: 0, trueZone: '', known: false };
+  // The cranes' dawn: where each flock dances, hour by hour.
+  s.cranes = { flocks: id === 'cranes' ? planFlocks(s, s.maxTurn, hard) : [], called: false };
   // The harvest: the wheat stands, and the harvester's rounds are planned.
   s.harvest = { plan: id === 'harvest' ? planHarvest(s, s.maxTurn) : [], cut: [], shadow: null };
   if (id === 'fireworks' && s.knowledge.includes('barnetSag')) narrate(c, 'Någonstans i parken, bland alla människor, finns barnet från fönstret.');
@@ -1225,6 +1228,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'fireworks') telegraphFireworks(c);
   if (sinks(s)) telegraphBog(c);
   if (s.encounterId === 'wisps') telegraphWisps(c);
+  if (s.encounterId === 'cranes') telegraphCranes(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1891,6 +1895,46 @@ function bogHazards(c: Ctx) {
       s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'gungfly' });
     } else if (a.sink >= STUCK_AT && before < 2) line(c, a.id, `${a.name} har sjunkit ner till magen och kommer inte loss.`);
     else if (sinkSteps(a) > before) line(c, a.id, `${a.name} sjunker. Mossan gungar och suger.`);
+  }
+}
+
+// ---------------------------------------------------------------- the cranes
+
+/** Where the flocks dance this hour. */
+const dancing = (s: GameState, turn = s.turn) => s.cranes.flocks.map((f) => f[turn - 1]).filter(Boolean);
+
+/** Start of the hour: where the cranes dance now and next – and, when they are far from us all, their call, which tells us what lies ahead. */
+function telegraphCranes(c: Ctx) {
+  const s = c.s;
+  const now = dancing(s);
+  if (s.turn === 1) narrate(c, 'Dimman ligger låg över myren. Ur den hörs ett trumpetande rop, och sedan ett till. Tranorna dansar.');
+  narrate(c, `Tranorna dansar på ${now.map((z) => zoneDef(s, z).name).join(' och på ')}.`);
+  const later = dancing(s, s.turn + 1);
+  if (s.turn < s.maxTurn && later.length) narrate(c, `Nästa timme dansar de mot ${later.map((z) => zoneDef(s, z).name).join(' och ')}.`);
+  const ours = s.animals.filter(isActive);
+  if (!s.cranes.called && ours.length && now.every((z) => ours.every((a) => zoneDistance(s, a.zone, z) >= 2))) {
+    s.cranes.called = true;
+    revealAhead(c, 'Tranornas rop bär långt över mossen. Vi hör vad som väntar:', 'Tranornas rop bär långt, men det säger oss inget nytt.');
+  }
+}
+
+/** End of the hour: wherever the cranes dance, they leap and beat their wings – whoever stands there is driven out, and the small are trampled. */
+function cranesHazards(c: Ctx) {
+  const s = c.s;
+  const now = dancing(s);
+  for (const a of s.animals.filter((x) => isActive(x) && now.includes(x.zone))) {
+    changeBelief(c, a, -1);
+    if (a.size === 'small' && !a.flying) injure(c, a, 'shock', 'Tranorna dansar rakt över {name}. Långa ben, och vingar överallt.');
+    // Driven aside or ahead, never back: the dance scatters us, it doesn't undo the way.
+    const row = (z: ZoneId) => zoneDef(s, z).rect[1];
+    const to = neighbors(s, { ...a, slowTime: 1 }).filter((z) => !zoneDef(s, z).goal && !now.includes(z) && row(z) <= row(a.zone));
+    if (!to.length) {
+      line(c, a.id, `${a.name} kryper ihop mitt i dansen. Det finns ingenstans att ta vägen.`);
+      continue;
+    }
+    const z = to[Math.floor(random(s) * to.length)];
+    line(c, a.id, `Tranorna slår med vingarna, och ${a.name} drivs bort mot ${zoneDef(s, z).name}.`);
+    moveAnimal(c, a, z, false);
   }
 }
 
@@ -2692,6 +2736,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'fireworks') fireworksHazards(c);
   if (sinks(s)) bogHazards(c);
   if (s.encounterId === 'wisps') wispsHazards(c);
+  if (s.encounterId === 'cranes') cranesHazards(c);
   processHits(c);
 }
 

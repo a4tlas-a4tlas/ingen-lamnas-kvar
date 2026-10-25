@@ -1028,3 +1028,7 @@ h2 .skills-btn { margin: 0 0 0 8px; vertical-align: middle; }
 .bog-mark.pool { background: radial-gradient(ellipse at center, rgba(10,20,30,0.35), transparent 70%); }
 .bog-mark .wisp { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); font-style: normal; font-size: 0.66em; padding: 2px 8px; border-radius: 10px; color: #0c1622; background: #bfe0ff; box-shadow: 0 0 18px 6px rgba(160,210,255,0.55); }
 .bog-mark .wisp.true { background: #f3d68a; box-shadow: 0 0 18px 6px rgba(240,210,130,0.6); }
+
+/* The cranes' dance. */
+.crane-mark { position: absolute; pointer-events: none; background: repeating-radial-gradient(circle at 50% 60%, rgba(230,226,212,0.22) 0 6px, transparent 6px 16px); }
+.crane-mark span { position: absolute; left: 5px; top: 4px; font-size: 0.66em; padding: 1px 6px; border-radius: 2px; background: rgba(60,50,40,0.8); color: var(--paper); }
