@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 6.12)
+## Status (after step 6.13)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 6.12: Stadens berättelser, branch `stadens-berattelser`, open for review. Everything through 6.11 is in `main` and live. |
-| **Save version** | 31 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 365 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 6.13: Vägvalet, branch `vagvalet`, open for review. Everything through 6.12 (#40) is in `main` and live. |
+| **Save version** | 32 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 375 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -21,9 +21,9 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 1. Vilka går? – choose one of four groups.
 2. The oath.
 3. The region map (the guide's sketch: 6 rows of dangers, meetings, finds and fires, then a boss).
-4. The interlude (looking back, a promise, choosing the way).
-5. The next region.
-6. When the built regions run out: "fortsättning följer".
+4. The interlude (looking back, a promise, choosing the way). After Dalen we choose Åkrarna *or* the city; the other is passed by for good (`s.run.skipped`). The animals speak for a way (`regionVoices` in `src/engine/voices.ts`).
+5. The chosen region. Each middle region already walked makes places likelier to be hard (`hardChanceAfter` in `step.ts`: 0.4, then 0.55).
+6. When no way is left: one last look back, then "fortsättning följer".
 
 **Built so far:**
 
@@ -31,7 +31,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 |---|---|---|
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
 | **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden), the gravel road (Grusvägen) + old dangers in new places; six story parts of its own (`src/data/meetings/akrarna.sv.ts`) | Skördetröskan |
-| **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan), the sewer (Avloppet) + old dangers; six story parts of its own (`src/data/meetings/staden.sv.ts`); comes after Åkrarna (`RegionDef.after`) | Fyrverkerinatten |
+| **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan), the sewer (Avloppet) + old dangers; six story parts of its own (`src/data/meetings/staden.sv.ts`) | Fyrverkerinatten |
 
 **Animals** are species, not characters: badger, toad, fox, owl, adder, mice, hare, and since 7.6 hedgehog, squirrel, mole, beaver and fawn (`SPECIES` in `src/data/animals.ts`, with Swedish grammar fields `en` / `den` / `definite`). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
 
@@ -79,16 +79,16 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: 6.13, the choice between 2 regions
-Both middle regions are built, with their own dangers, story parts and bosses. What's left of Milestone 6 is the real choice in the interlude.
-- **Today:** `RegionDef.after` keeps the city behind Åkrarna, so a run always goes Dalen → Åkrarna → the city. `endRegion` offers only regions whose `after` has been walked.
-- **The goal (Milestone 6 in `DESIGN.md`):** after each boss, choose between 2 regions drawn at random from those not yet walked. With only Åkrarna and the city built, that means choosing the order of the two, so `RegionDef.after` has to be loosened or dropped.
-- **Ask the design questions first:**
-  - Can the city come straight after Dalen? Dalen's promise "Vi går aldrig dit där maskinerna bor" already breaks when we choose the city.
-  - What does the interlude say when only one way is left?
-  - Should the city's dangers be gentler when it comes second?
+## Next step: ask the user
+Milestone 6 is done: two middle regions, each with its own dangers, story parts and boss, and the choice between them. A run is now Dalen → Åkrarna *or* the city → "fortsättning följer".
+**Ask what comes next.** The candidates from the earlier interviews:
+- **More of the way** (Milestone 5's plan): Mossen (boss Dimman), Höglandet (Stormen), and Skogsbrynet with the final boss Jägaren.
+- **Seasons**, which were left for later.
+- **Hope with more weight** (see the open questions below).
 
 ## Open questions and known quirks
+- **How many middle regions a run holds (6.13):** with "choose one, skip the other", four middle regions (Åkrarna, the city, Mossen, Höglandet) give at most two per run. Milestone 5's 5-region run (Dalen, three middle, Skogsbrynet) needs a rule once more regions exist, e.g. skip only when more than enough are left.
+- **The hard chance (6.13)** shows only from a second middle region on, so today it changes nothing in play.
 - **The city's story parts (6.12)** have no bot balance of their own. Things to watch in play:
   - Kolonilotten's flip of day and night can make the next danger harder.
   - Stadsräven can cost Rovdjurens pakt a predator every city.

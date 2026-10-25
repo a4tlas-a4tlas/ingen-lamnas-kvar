@@ -100,8 +100,8 @@ function choosePlaces(h: RngHolder, def: RegionDef, rows: Kind[][], edges: numbe
   return out;
 }
 
-/** Draw a region's map for this run. */
-export function generateRegion(def: RegionDef, seed: number): RegionMap {
+/** Draw a region's map for this run. The later the region, the likelier a place is harder than it looks. */
+export function generateRegion(def: RegionDef, seed: number, hardChance = 0.4): RegionMap {
   const h: RngHolder = { rng: (seed ^ 0x2545f491) | 0 };
   // Rows of kinds: the first danger, four rows to choose between, the last fire.
   let rows: Kind[][] = [];
@@ -144,7 +144,7 @@ export function generateRegion(def: RegionDef, seed: number): RegionMap {
   const truth: Record<string, Variant> = {};
   const guess: Record<string, Variant> = {};
   for (const n of nodes.filter((x) => x.memory)) {
-    truth[n.id] = random(h) < 0.4 ? 'hard' : 'normal';
+    truth[n.id] = random(h) < hardChance ? 'hard' : 'normal';
     guess[n.id] = random(h) < 2 / 3 ? truth[n.id] : truth[n.id] === 'hard' ? 'normal' : 'hard';
   }
   return { nodes, truth, guess };

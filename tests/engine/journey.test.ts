@@ -48,7 +48,8 @@ describe('the journey', () => {
     for (const a of s.animals.filter((x) => x.status === 'active')) s = run(s, { type: 'lead', target: a.id, zone: 'stenmuren' });
     s = run(s, { type: 'travel', to: 'akrarna' });
     expect(s.phase).toBe('map');
-    expect(s.run).toMatchObject({ between: true, offered: ['akrarna'] });
+    expect(s.run).toMatchObject({ between: true });
+    expect([...s.run.offered].sort()).toEqual(['akrarna', 'staden']);
     expect(s.meeting).toMatchObject({ id: 'interlude', frame: 'start' });
     // Gamla Ljung grieves the glen; saying it aloud lets it go a little.
     get(s, 'badger').grief = ['dalen'];
@@ -69,7 +70,7 @@ describe('the journey', () => {
     // A new map, the same of us: the deck, the poem and our wounds come along.
     expect(s.meeting).toBeNull();
     expect(s.journey).toMatchObject({ region: 'akrarna', at: 'akerkanten' });
-    expect(s.run).toMatchObject({ regions: ['dalen', 'akrarna'], between: false });
+    expect(s.run).toMatchObject({ regions: ['dalen', 'akrarna'], skipped: ['staden'], between: false });
     expect(s.draw.length + s.hand.length + s.discard.length).toBe(deck);
     expect(s.journey.nodes.find((n) => n.id === 'grusvagen')?.row).toBe(1);
     s = run(s, { type: 'travel', to: 'grusvagen' });
@@ -86,9 +87,14 @@ describe('the journey', () => {
     s.kraft = 99;
     for (const a of s.animals.filter((x) => x.status === 'active')) s = run(s, { type: 'lead', target: a.id, zone: 'stenmuren' });
     expect(s.phase).toBe('map');
-    // Every region already walked: no way on.
+    // Every region already walked: no way on. We still look back, and then the story stops.
     s.run.regions = ['dalen', 'akrarna', 'staden'];
     s = run(s, { type: 'travel', to: 'akrarna' });
+    expect(s.run.offered).toEqual([]);
+    expect(s.meeting).toMatchObject({ id: 'interlude', frame: 'start' });
+    s = run(s, { type: 'respond', option: 'look-0' }, { type: 'respond', option: 'onward' });
+    expect(s.proposal).toBeNull();
+    expect(s.log.some((e) => 'text' in e && e.text === 'Fortsättning följer.')).toBe(true);
     expect(s.phase).toBe('over');
     expect(s.outcome?.safe).toHaveLength(6);
     expect(s.outcome?.fallen).toBe(false);

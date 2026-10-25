@@ -417,7 +417,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 31;
+  version: 32;
   /** The road we cross: asphalt, or Åkrarna's gravel. */
   roadKind: RoadKind;
   /** Which group left the glen. */
@@ -507,7 +507,8 @@ export interface GameState {
   /** What we have learned along the way that helps later: 'machines' – how the machines move. */
   knowledge: string[];
   /** The regions we have walked through, the ones offered next, and whether we stand between two. */
-  run: { regions: RegionId[]; offered: RegionId[]; between: boolean };
+  /** The run's regions: walked, offered now, passed by for good, and whether we stand between two. */
+  run: { regions: RegionId[]; offered: RegionId[]; skipped: RegionId[]; between: boolean };
   meeting: Meeting | null;
   /** A promise an animal waits to ask of us, once the meeting before it is over. */
   proposal: Proposal | null;

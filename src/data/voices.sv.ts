@@ -1,5 +1,5 @@
 // What the animals say when the way forks: who wants which path, and why.
-import type { EncounterId, Species } from '../engine/types';
+import type { EncounterId, RegionId, Species } from '../engine/types';
 
 export interface Leaning {
   /** +1: wants to go there; −1: wants anything but there. */
@@ -70,3 +70,25 @@ export const BODY_LEANINGS = {
   bleeding: { encounter: 'farm', pull: -1, line: 'Hundarna känner lukten av mitt blod.' },
   hungry: { encounter: 'farm', pull: 1, line: 'Det luktar höns från gården…' },
 } as const satisfies Record<string, { encounter: EncounterId } & Leaning>;
+
+/** Between two landscapes: which way each kind wants, and why. */
+export const REGION_LEANINGS: Partial<Record<Species, Partial<Record<RegionId, Leaning>>>> = {
+  badger: { akrarna: { pull: 1, line: 'Jorden på fälten är mjuk. Där kan jag gräva oss ett gryt.' } },
+  toad: { akrarna: { pull: 1, line: 'Det går diken mellan fälten. Vatten, hela vägen.' } },
+  fox: { staden: { pull: 1, line: 'I staden finns mat i varje tunna. Det har jag hört.' } },
+  owl: { staden: { pull: 1, line: 'Staden har tak och torn att se ifrån. Fälten har bara himmel – och vråkar.' } },
+  adder: { akrarna: { pull: 1, line: 'Fälten är varma av sol, och fulla av sork.' } },
+  mice: { staden: { pull: -1, line: 'Katter, råttor, hundar. Inte staden, snälla.' } },
+  hare: { akrarna: { pull: 1, line: 'Fälten! Där kan jag springa så långt jag vill.' } },
+  hedgehog: { staden: { pull: 1, line: 'Trädgårdar. Sniglar i varje rabatt.' } },
+  squirrel: { staden: { pull: 1, line: 'Fälten har inga träd. Staden har parker.' } },
+  mole: { staden: { pull: -1, line: 'Asfalt. Man kan inte gräva i asfalt.' } },
+  beaver: { staden: { pull: -1, line: 'Människorna där dämmer inte åarna. De murar in dem.' } },
+  fawn: { staden: { pull: -1, line: 'Mamma sa: aldrig nära människorna.' } },
+};
+
+/** What weighs heavier at the crossroads than nature: grief for the glen, and hunger. */
+export const BODY_REGION_LEANINGS = {
+  grieving: { region: 'staden', pull: -1, line: 'Där bor maskinerna. Inte dit.' },
+  hungry: { region: 'staden', pull: 1, line: 'Det luktar mat därifrån…' },
+} as const satisfies Record<string, { region: RegionId } & Leaning>;

@@ -20,8 +20,8 @@ export function oathVerse(id: VerseId): Verse {
  * A region's map, with what each place really is and what Kvarn remembers.
  * Drawn from its own stream of the seed, so the rest of the run plays out the same.
  */
-export function regionJourney(def: RegionDef, seed: number): Journey {
-  const map = generateRegion(def, seed);
+export function regionJourney(def: RegionDef, seed: number, hardChance?: number): Journey {
+  const map = generateRegion(def, seed, hardChance);
   const start = def.start.key;
   return { region: def.id, nodes: map.nodes, at: start, visited: [start], truth: map.truth, guess: map.guess, scouted: [] };
 }
@@ -147,7 +147,7 @@ export function createGame(seed: number): GameState {
   const { cast, animals, draw, bonds, nextUid, rng } = buildCast(seed, 'dalensSista');
 
   return {
-    version: 31,
+    version: 32,
     roadKind: 'asphalt',
     cast,
     journey: firstRegion(seed),
@@ -201,7 +201,7 @@ export function createGame(seed: number): GameState {
     met: [],
     rescues: [],
     knowledge: [],
-    run: { regions: ['dalen'], offered: [], between: false },
+    run: { regions: ['dalen'], offered: [], skipped: [], between: false },
     meeting: null,
     proposal: null,
     fireDebt: { embers: 0, apart: [], dark: [] },
