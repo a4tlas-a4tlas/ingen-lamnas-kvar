@@ -43,6 +43,7 @@ function icon(p: Place): string {
       if (p.encounter === 'machines') return MACHINE_ICON;
       // A bird of prey: a V of wings.
       if (p.encounter === 'lamps') return '<path d="M-0.4 2.6 V-1.6 H1.6 M-1.4 2.6 H0.6" stroke="currentColor" stroke-width="0.7" fill="none" /><path d="M0.8 -1.6 L2.4 -1.6 L2 -0.8 L1.2 -0.8 Z" />';
+      if (p.encounter === 'bog') return '<path d="M-2.8 1.2 Q-1.4 0.2 0 1.2 Q1.4 2.2 2.8 1.2 M-2.8 2.6 Q-1.4 1.6 0 2.6 Q1.4 3.6 2.8 2.6" stroke="currentColor" stroke-width="0.55" fill="none" /><path d="M-1.4 0.4 L-0.8 -2.2 M0 0.2 L0 -2.6 M1.2 0.4 L1.8 -2" stroke="currentColor" stroke-width="0.5" />';
       if (p.encounter === 'sewer') return '<circle r="2.4" fill="none" stroke="currentColor" stroke-width="0.7" /><path d="M-1.6 -0.8 H1.6 M-2 0.4 H2 M-1.6 1.6 H1.6" stroke="currentColor" stroke-width="0.5" fill="none" />';
       if (p.encounter === 'street') return '<path d="M-2.6 -1.2 H2.6 M-2.6 1.2 H2.6" stroke="currentColor" stroke-width="0.6" fill="none" /><rect x="-1.6" y="-2.2" width="3.2" height="2.6" rx="0.6" /><circle cx="-0.9" cy="0.8" r="0.5" /><circle cx="0.9" cy="0.8" r="0.5" />';
       if (p.encounter === 'cats') return '<path d="M-2 2 V-1 L-1.4 -2.4 L-0.6 -1 H0.6 L1.4 -2.4 L2 -1 V2 Z" /><circle cx="-0.8" cy="0" r="0.35" fill="var(--map-paper)" /><circle cx="0.8" cy="0" r="0.35" fill="var(--map-paper)" />';
@@ -411,7 +412,7 @@ function zoneRole(z: ZoneDef): ZoneRole {
   if (z.goal) return 'goal';
   if (z.start) return 'start';
   if (z.cover) return 'cover';
-  if (z.road || z.exposed || z.water) return 'danger';
+  if (z.road || z.exposed || z.water || z.soft) return 'danger';
   return 'plain';
 }
 

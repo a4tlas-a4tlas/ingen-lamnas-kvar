@@ -888,6 +888,58 @@ Until now hope only changed the hand size. Now it is the group's **mood**, named
 - **The meter** reads "Hopp 8 · Tillit", tinted by mood. Its tooltip says what this mood does, and the Kraft tooltip names the mood's share.
 - **Bot:** the crude whole-run walker over 150 seeds per group, keeping this share of the group (before → after): Dalens sista 7.6 → 6.8 %, Rovdjurens pakt 7.1 → 6.5 %, De små 7.9 → 8.7 %, Slumpad 11.3 → 9.3 %. That's about the same: the walker sits in despair (hope ~2 at the end), so it feels the costs, and the drift partly makes up for them.
 
+## Milestone 9 – Mossen (in progress)
+Design from the milestone 9 interview:
+- **The third middle region:** the great bog. No people, only water, moss and silence. Its mood is **lost and lonely**.
+- **Its four dangers:**
+  1. **Gungflyet**, the quaking bog
+  2. **Irrbloss**, lights that lure
+  3. **Tranorna**, the cranes' dance
+  4. **Torvtäkten**, the peat cutting
+- **The boss, Dimman:** we lose each other. Only bonds let us lead.
+- **One PR per piece,** as for the city.
+
+### Step 1: Mossen, and Gungflyet (done)
+- **The region** (`src/data/regions/mossen.ts`):
+  - **Its places:** from *Myrkanten* through Gungflyet (always first), *Den stora mossen* (the bog again), *Myrbäcken* (the river) and *Det öppna kärret* (the raptors, a harrier).
+  - **The fires:** *Den torra holmen* and *Under granen*.
+  - **For now:** story parts borrowed from Dalen, and a plain end, *Mossens slut*.
+  - **Text by where we came from:** `arriveFrom` for the fields and the city; the default is from the glen.
+  - **Look-back lines:** a lonely one for every kind.
+- **The run now holds two middle regions:** after Dalen we are offered two of the three and pass one by. After the chosen region, the last one is the only way on (at the higher hard chance), and after it, "fortsättning följer".
+- **The voices:**
+  - **At the crossroads:** the toad and the beaver want the bog; the badger and the fawn fear it.
+  - **At a fork:** the toad and the beaver want Gungflyet, and the badger doesn't.
+- **Gungflyet** (`src/engine/encounters/bog.ts`, id `bog`, day or night, 8 hours, three steps):
+
+  | Row | | | |
+  |---|---|---|---|
+  | goal | **Tallholmen** | | |
+  | 3 | Dyn (soft) | **Spången** | Vitmossan (soft) |
+  | 2 | Gölen (soft, water) | Gungflyet (soft) | **Tuvorna** |
+  | 1 | Starrkärret, väst (soft) | **Tuvan** (cover) | Starrkärret, öst (soft) |
+  | start | **Myrkanten** | | |
+
+  - **Stand still and you sink** (counted in half-steps, `a.sink`): whoever ends an hour on soft moss in the zone they began it in, and isn't flying, sinks.
+
+    | Who | Each hour |
+    |---|---|
+    | small, the hare, the fawn | ½ step |
+    | medium | 1 step |
+    | large | 2 steps |
+
+  - **Stuck at 2 steps:** it can't move or be led on its own. A large one in the same zone pulls it free (◆1 more), and *Bära* lifts it out.
+  - **Pulled under at 3 steps:** a lethal hit with a last moment. Swimmers float instead, stuck but alive.
+  - **Moving, or a firm zone,** lets go.
+  - **After rain (hard):** Tuvorna is soft too, and everyone sinks ½ a step more each hour.
+  - **Kvarn's memory:** "mossan bär" / "det har regnat".
+- **The UI:**
+  - **The board:** soft zones are hatched and marked "mjuk mossa · sjunker"; firm ones are marked "bär".
+  - **The chips:** "sjunker 1/3", "fast".
+  - **The forecast:** who sinks, who gets stuck, who is pulled under, and who floats.
+- **Bot:** 5.15 of 6 safe on a normal bog, 4.35 after rain. That's the gentlest opening yet, near Gatlyktorna.
+- **Save version 33.**
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

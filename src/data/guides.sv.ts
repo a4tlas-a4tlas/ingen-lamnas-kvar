@@ -2,6 +2,7 @@ import { LAMPS } from '../engine/encounters/lamps';
 import { CATS } from '../engine/encounters/cats';
 import { STREET } from '../engine/encounters/street';
 import { SEWER } from '../engine/encounters/sewer';
+import { BOG } from '../engine/encounters/bog';
 import { FIREWORKS } from '../engine/encounters/fireworks';
 import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
@@ -83,6 +84,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   fireworks: {
     day: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
     night: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
+  },
+  bog: {
+    day: 'Vi ser var tuvorna står. Mossan är lika mjuk som alltid.',
+    night: 'Mossan är lika mjuk om natten. Tuvorna ser vi ändå – de är svartare än vattnet.',
   },
 };
 
@@ -372,6 +377,25 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Gå två och två – de som står varandra nära står kvar när det smäller.',
       'Spara tröst till timmen efter en stor smäll, när rädslan sitter i.',
+    ],
+  },
+  bog: {
+    title: 'Så tar vi oss över gungflyet',
+    hard: 'Ibland har det regnat: då bär inte ens tuvorna i öster, och alla sjunker fortare.',
+    goal: `Få alla från Myrkanten till Tallholmen – ${BOG.maxTurn} timmar. Över mossen: tre steg.`,
+    dangers: [
+      { icon: '≋', name: 'Den mjuka mossan', text: 'Den som står still en hel timme på mjuk mossa sjunker. De små, haren och kidet sjunker ett halvt steg i timmen, de mellanstora ett, de stora två – och efter regn alla lite fortare.' },
+      { icon: '⊗', name: 'Fast', text: 'Vid två steg sitter man fast: man kan inte gå själv och inte ledas – utom av en stor i samma zon, som drar loss en (◆1 mer).' },
+      { icon: '✝', name: 'Dras ner', effect: 'dödar', text: 'Vid tre steg drar mossen ner en. Sista stunden: någon kan kasta sig fram och dra. Simmare – paddan och bävern – flyter i stället, fast men vid liv.' },
+    ],
+    shelter: [
+      { icon: '▲', name: 'Tuvorna och spången', text: 'Tuvan, tuvorna i öster och den gamla spången bär. Där sjunker ingen.' },
+      { icon: '→', name: 'Gå vidare', text: 'Den som flyttar sig under timmen sjunker inte, och mossan släpper.' },
+      { icon: '⌃', name: 'Flyga, bäras', text: 'Den som flyger sjunker inte. Bära lyfter en som sitter fast.' },
+    ],
+    tips: [
+      'Flytta de stora först – de sjunker fortast.',
+      'Låt de små vänta en timme på mossan om det behövs; de har tid.',
     ],
   },
 };

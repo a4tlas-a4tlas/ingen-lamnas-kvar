@@ -12,6 +12,7 @@ import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown } from '../engine/encounters/street';
 import { SOUND, TUNNELS, bittenByRats, depthIn, isFound } from '../engine/encounters/sewer';
 import { burstsNow, crowdNow, reaches } from '../engine/encounters/fireworks';
+import { isSoft } from '../engine/encounters/bog';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -125,7 +126,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 32 && s.phase !== 'over' ? s : null;
+    return s.version === 33 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -974,6 +975,15 @@ export class App {
   }
 
   /** The sewer: fog over the tunnels we have not found, and what we hear from them; the depth in those we have; the rats. */
+  /** The bog: which zones give way, and which hold. */
+  private bogTelegraphHtml(s: GameState): string {
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    return encounterOf(s).zones
+      .filter((z) => !z.start && !z.goal)
+      .map((z) => `<div class="bog-mark ${isSoft(s, z.id) ? 'soft' : 'firm'}" style="${box(z.id)}"><span>${isSoft(s, z.id) ? 'mjuk mossa · sjunker' : 'bär'}</span></div>`)
+      .join('');
+  }
+
   private sewerTelegraphHtml(s: GameState): string {
     const out: string[] = [];
     const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
@@ -1080,6 +1090,7 @@ export class App {
     if (s.encounterId === 'cats') return s.phase === 'over' ? '' : this.catsTelegraphHtml(s);
     if (s.encounterId === 'street') return s.phase === 'over' ? '' : this.streetTelegraphHtml(s);
     if (s.encounterId === 'sewer') return s.phase === 'over' ? '' : this.sewerTelegraphHtml(s);
+    if (s.encounterId === 'bog') return s.phase === 'over' ? '' : this.bogTelegraphHtml(s);
     if (s.encounterId === 'fireworks') return s.phase === 'over' ? '' : this.fireworksTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
@@ -1177,7 +1188,7 @@ export class App {
         hint = `Välj var ${a.name} ska visa sig (◆1). Hundarna vänder sig dit och skäller – larmet ökar med 1.`;
       } else if (this.sel.mode === 'lead' && this.sel.animal) {
         const a = animal(s, this.sel.animal);
-        hint = `Välj en upplyst zon för ${a.name} (◆${leadCost(a)})${a.flier ? ' – flyger upp till 2 steg' : ''}, eller spela ett av ${a.name}s kort.${canLure(s, a) ? ` ${a.name} kan också locka hundarna.` : ''}`;
+        hint = `Välj en upplyst zon för ${a.name} (◆${leadCost(a, s)})${a.flier ? ' – flyger upp till 2 steg' : ''}, eller spela ett av ${a.name}s kort.${canLure(s, a) ? ` ${a.name} kan också locka hundarna.` : ''}`;
       } else hint = 'Tryck på ett djur med ljus ring för att leda det (◆1), eller spela ett kort.';
     }
     return `

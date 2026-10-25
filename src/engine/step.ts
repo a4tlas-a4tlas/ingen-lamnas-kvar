@@ -20,6 +20,7 @@ import { DITCH_MAX, FENCE, levelAfter, onTheWire, planFence, sweptIn } from './e
 import { cutting, planHarvest, stubblePrey } from './encounters/harvest';
 import { bitten, lit, planLamps, planWalkers, walkerZone } from './encounters/lamps';
 import { eyesFor, guard, nextHide, placeCats, pounced, scarer } from './encounters/cats';
+import { STUCK_AT, UNDER_AT, isSoft, isStuck, puller, sinkRate, sinkSteps } from './encounters/bog';
 import { burstsNow, crowdNow, holdsWith, planBursts, planCrowd as planParkCrowd, pushOptions, reaches } from './encounters/fireworks';
 import { SOUND, TUNNELS, bittenByRats, foundBy, isFound, levelNow, planKinds, planRats, planRise, sweptHere } from './encounters/sewer';
 import { STAGGER, bikesAt, feetAt, planBikes, planCrowd, planTram, sideOf, tramIn, tramNow, underfoot } from './encounters/street';
@@ -419,6 +420,7 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
     a.status = 'active';
     a.sated = false;
     a.steps = 0;
+    a.sink = 0;
     a.toughUsed = false;
     a.zone = start;
     a.slowTime = 0;
@@ -1218,6 +1220,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'street') telegraphStreet(c);
   if (s.encounterId === 'sewer') telegraphSewer(c);
   if (s.encounterId === 'fireworks') telegraphFireworks(c);
+  if (s.encounterId === 'bog') telegraphBog(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1313,6 +1316,8 @@ function moveAnimal(c: Ctx, a: Animal, to: ZoneId, byPlayer: boolean) {
     line(c, a.id, a.size === 'large' ? `${a.name} lägger hela sin tyngd mot grinden. Den ger efter, och står öppen.` : `${a.name} och de andra vid grinden trycker tillsammans. Den ger efter, och står öppen.`);
   }
   a.zone = to;
+  // Off the spot where it was sinking: the moss lets go.
+  if (s.encounterId === 'bog') a.sink = 0;
   if (a.climbing) {
     a.climbing = false;
     a.flying = false;
@@ -1352,7 +1357,9 @@ function lead(c: Ctx, target: string, zone: ZoneId) {
   if (!leadTargets(s).includes(target)) fail('Det djuret kan inte ledas nu.');
   const a = animal(s, target);
   if (!leadZones(s, a).includes(zone)) fail('Dit kan vi inte leda.');
-  s.kraft -= leadCost(a) + gatePush(s, a, zone);
+  const pulled = isStuck(s, a) ? puller(s, a) : undefined;
+  s.kraft -= leadCost(a, s) + gatePush(s, a, zone);
+  if (pulled) line(c, pulled.id, `${pulled.name} tar tag i ${a.name} och drar. Mossan släpper, med ett sugande ljud.`);
   a.steps = (a.steps ?? 0) + 1;
   moveAnimal(c, a, zone, true);
 }
@@ -1842,6 +1849,43 @@ function streetHazards(c: Ctx) {
         }
       }
     }
+  }
+}
+
+// ---------------------------------------------------------------- the quaking bog
+
+/** Start of the hour: where each of us stands (whoever is still there when it ends sinks), and who is stuck already. */
+function telegraphBog(c: Ctx) {
+  const s = c.s;
+  if (s.turn === 1) narrate(c, 'Mossan gungar under tassarna. Där tuvorna står är det fast – överallt annars bara vatten under.');
+  s.bogFrom = {};
+  for (const a of s.animals.filter(isActive)) {
+    s.bogFrom[a.id] = a.zone;
+    if (isStuck(s, a)) line(c, a.id, puller(s, a) ? `${a.name} sitter fast. En stor bredvid kan dra loss ${a.name}.` : `${a.name} sitter fast i mossan, och ingen stor är nära.`);
+  }
+}
+
+/** End of the hour: whoever stood still on soft moss sinks. Stuck at two steps; at three, pulled under – but swimmers float. */
+function bogHazards(c: Ctx) {
+  const s = c.s;
+  for (const a of s.animals.filter(isActive)) {
+    if (a.flying || !isSoft(s, a.zone) || s.bogFrom[a.id] !== a.zone) {
+      a.sink = 0;
+      continue;
+    }
+    const before = sinkSteps(a);
+    a.sink = (a.sink ?? 0) + sinkRate(s, a);
+    if (a.sink >= UNDER_AT) {
+      if (a.swimmer) {
+        a.sink = UNDER_AT;
+        line(c, a.id, `Mossan tar ${a.name} ända upp till halsen – men ${a.name} flyter. Fast, men vid liv.`);
+        continue;
+      }
+      // Held at stuck: if someone saves it in the last moment, it is still in the moss.
+      a.sink = STUCK_AT;
+      s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'gungfly' });
+    } else if (a.sink >= STUCK_AT && before < 2) line(c, a.id, `${a.name} har sjunkit ner till magen och kommer inte loss.`);
+    else if (sinkSteps(a) > before) line(c, a.id, `${a.name} sjunker. Mossan gungar och suger.`);
   }
 }
 
@@ -2590,6 +2634,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'street') streetHazards(c);
   if (s.encounterId === 'sewer') sewerHazards(c);
   if (s.encounterId === 'fireworks') fireworksHazards(c);
+  if (s.encounterId === 'bog') bogHazards(c);
   processHits(c);
 }
 
@@ -2597,6 +2642,8 @@ function resolveIntents(c: Ctx) {
   const s = c.s;
   for (const a of s.animals) {
     if (!isActive(a)) continue;
+    // Stuck in the moss, it can go nowhere of its own will.
+    if (isStuck(s, a)) continue;
     const i = a.intent;
     switch (i.kind) {
       case 'flee': {
@@ -2699,6 +2746,7 @@ function processHits(c: Ctx) {
 
 /** How the last moment begins, by what is coming. */
 const LAST_MOMENT: Record<string, string> = {
+  gungfly: 'Mossan sluter sig om {name}. Det svarta vattnet når upp till nosen. Ett ögonblick kvar.',
   forsen: 'Strömmen drar {name} mot forsen. Ett ögonblick kvar.',
   fällaren: 'Det knakar ovanför {name}. En gran lutar, och faller. Ett ögonblick kvar.',
   schaktaren: 'Schaktaren rullar in, och jorden rör sig under {name}. Ett ögonblick kvar.',
@@ -2721,7 +2769,7 @@ const TREE_FALL = ['fällaren', 'schaktaren'];
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'traktor', 'bonde'];
 
-const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern', katt: 'Katten', fötter: 'Fötterna', cykel: 'Cykeln', spårvagn: 'Spårvagnen', avloppet: 'Vattnet', råttor: 'Råttorna' };
+const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern', katt: 'Katten', fötter: 'Fötterna', cykel: 'Cykeln', spårvagn: 'Spårvagnen', avloppet: 'Vattnet', råttor: 'Råttorna', gungfly: 'Gungflyet' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {

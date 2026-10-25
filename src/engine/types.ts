@@ -1,7 +1,7 @@
 /** Zones are defined per encounter (see encounters/); ids are plain strings. */
 export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
-export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps' | 'cats' | 'street' | 'sewer' | 'fireworks';
+export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps' | 'cats' | 'street' | 'sewer' | 'fireworks' | 'bog';
 /** Which way the wind carries the mist over the sprayed field. */
 /** Asphalt with cars, or gravel with tractors. */
 export type RoadKind = 'asphalt' | 'gravel';
@@ -171,6 +171,8 @@ export interface Animal {
   toughUsed?: boolean;
   /** Nights in a row by the embers: two, and a bad trait may fade. */
   emberNights?: number;
+  /** On the quaking bog: how far it has sunk, in half-steps. Stuck at 4, pulled under at 6. */
+  sink?: number;
   /** Fed for this danger: it will not hunt here. */
   sated?: boolean;
   // Per-turn flags.
@@ -204,7 +206,7 @@ export interface Dog {
 export type PromiseRule = 'light' | 'current' | 'noneAlone' | 'together' | 'water' | 'farm' | 'night' | 'stay' | 'noCity';
 
 /** The regions of the way: the glen first, the forest's edge last, the others in between in any order. */
-export type RegionId = 'dalen' | 'akrarna' | 'staden';
+export type RegionId = 'dalen' | 'akrarna' | 'staden' | 'mossen';
 
 /** A promise an animal asked of us: who asked, what it binds us to, and – for two – who else it is about. */
 export interface Proposal {
@@ -417,7 +419,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 32;
+  version: 33;
   /** The road we cross: asphalt, or Åkrarna's gravel. */
   roadKind: RoadKind;
   /** Which group left the glen. */
@@ -496,6 +498,8 @@ export interface GameState {
   /** The sewer: what each tunnel is, where the rats hold, which tunnels we have found, what we hear this hour, the water's level and when it rises, and whether the toll is paid this hour. */
   /** New Year's Eve in the park: the bursts hour by hour, each with a zone and a strength; where the people walk each hour. */
   /** New Year's Eve: the bursts and the people, hour by hour – and the hour the child's family stepped aside for us. */
+  /** The quaking bog: where each of us stood when the hour began – whoever is still there sinks. */
+  bogFrom: Record<string, ZoneId>;
   fireworks: { plan: { zone: ZoneId; strength: 1 | 2 }[][]; crowdPlan: ZoneId[]; childHour?: number };
   sewer: { kinds: Record<ZoneId, 'low' | 'walk' | 'ledge'>; rats: ZoneId[]; found: ZoneId[]; heard: ZoneId[]; level: number; risePlan: boolean[]; paid: boolean };
   /** Someone trapped in this encounter, not yet one of us: they must come to trust us before we can free them. */

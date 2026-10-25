@@ -32,6 +32,8 @@ export interface ZoneDef {
   trees?: boolean;
   /** Electrified: whoever stands here touches the wire when it hums. */
   wire?: boolean;
+  /** Soft moss: whoever stands still here sinks. */
+  soft?: boolean;
   /** Cover only for these sizes: a furrow hides a mouse, not a fox. */
   coverFor?: Size[];
 }
