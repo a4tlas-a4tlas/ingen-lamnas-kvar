@@ -1,5 +1,6 @@
 // Read-only rule helpers shared by the engine (validation) and the UI (targeting).
 import { isStuck, puller } from './encounters/bog';
+import { blockedByDitch } from './encounters/peat';
 import { SPECIES } from '../data/animals';
 import { CARDS, type TargetSpec } from '../data/cards';
 import { encounterOf, zoneDef } from './encounters';
@@ -94,7 +95,7 @@ export function zoneOpen(s: GameState, z: ZoneId): boolean {
 /** Whether this animal can step into a zone at all (it must be found, and fit). */
 export function canEnter(s: GameState, a: Animal, z: ZoneId): boolean {
   const d = zoneDef(s, z);
-  return zoneOpen(s, z) && (!d.smallOnly || a.size === 'small');
+  return zoneOpen(s, z) && (!d.smallOnly || a.size === 'small') && !blockedByDitch(s, a, z);
 }
 
 const forwardOf = (s: GameState, z: ZoneId) => encounterOf(s).edges.filter(([f]) => f === z).map(([, t]) => t);

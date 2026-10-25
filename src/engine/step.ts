@@ -23,6 +23,7 @@ import { eyesFor, guard, nextHide, placeCats, pounced, scarer } from './encounte
 import { STUCK_AT, UNDER_AT, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from './encounters/bog';
 import { planWisps } from './encounters/wisps';
 import { planFlocks } from './encounters/cranes';
+import { DITCH_FULL, cutZones, machineRow, planPeat } from './encounters/peat';
 import { burstsNow, crowdNow, holdsWith, planBursts, planCrowd as planParkCrowd, pushOptions, reaches } from './encounters/fireworks';
 import { SOUND, TUNNELS, bittenByRats, foundBy, isFound, levelNow, planKinds, planRats, planRise, sweptHere } from './encounters/sewer';
 import { STAGGER, bikesAt, feetAt, planBikes, planCrowd, planTram, sideOf, tramIn, tramNow, underfoot } from './encounters/street';
@@ -403,6 +404,8 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.wisps = id === 'wisps' ? planWisps(s, s.maxTurn, hard) : { plan: [], trueAt: 0, trueZone: '', known: false };
   // The cranes' dawn: where each flock dances, hour by hour.
   s.cranes = { flocks: id === 'cranes' ? planFlocks(s, s.maxTurn, hard) : [], called: false };
+  // The peat cutting: the machine's rows, and no ditches yet.
+  s.peat = { rows: id === 'peat' ? planPeat(s, s.maxTurn, hard) : [], ditch: {} };
   // The harvest: the wheat stands, and the harvester's rounds are planned.
   s.harvest = { plan: id === 'harvest' ? planHarvest(s, s.maxTurn) : [], cut: [], shadow: null };
   if (id === 'fireworks' && s.knowledge.includes('barnetSag')) narrate(c, 'Någonstans i parken, bland alla människor, finns barnet från fönstret.');
@@ -1229,6 +1232,7 @@ function startTurn(c: Ctx) {
   if (sinks(s)) telegraphBog(c);
   if (s.encounterId === 'wisps') telegraphWisps(c);
   if (s.encounterId === 'cranes') telegraphCranes(c);
+  if (s.encounterId === 'peat') telegraphPeat(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1896,6 +1900,37 @@ function bogHazards(c: Ctx) {
     } else if (a.sink >= STUCK_AT && before < 2) line(c, a.id, `${a.name} har sjunkit ner till magen och kommer inte loss.`);
     else if (sinkSteps(a) > before) line(c, a.id, `${a.name} sjunker. Mossan gungar och suger.`);
   }
+}
+
+// ---------------------------------------------------------------- the peat cutting
+
+/** Start of the hour: the ditches fill, and the machine's row now and next. */
+function telegraphPeat(c: Ctx) {
+  const s = c.s;
+  if (s.turn === 1) narrate(c, 'En motor startar någonstans ute på mossen. En stor maskin rullar ut på torven, och bakom den blänker vatten.');
+  // The cut ditches fill with water, hour by hour.
+  const filled: string[] = [];
+  for (const z of Object.keys(s.peat.ditch)) {
+    const before = s.peat.ditch[z];
+    s.peat.ditch[z] = Math.min(DITCH_FULL, before + 1);
+    if (before < DITCH_FULL && s.peat.ditch[z] >= DITCH_FULL) filled.push(zoneDef(s, z).name);
+  }
+  if (filled.length) narrate(c, `Diket i ${filled.join(' och ')} är fullt av vatten nu. De små kommer inte över.`);
+  const row = machineRow(s);
+  narrate(c, row.length ? `Maskinen skär genom ${row.map((z) => zoneDef(s, z).name).join(' och ')} den här timmen.` : 'Maskinen står still. Föraren dricker kaffe i hytten.');
+  const next = s.turn < s.maxTurn ? machineRow(s, s.turn + 1) : [];
+  if (next.length) narrate(c, `Nästa timme vänder den mot ${next.map((z) => zoneDef(s, z).name).join(' och ')}.`);
+}
+
+/** End of the hour: whoever stands in the machine's row is run over; behind it, the row becomes a ditch. */
+function peatHazards(c: Ctx) {
+  const s = c.s;
+  const row = machineRow(s);
+  if (!row.length) return;
+  for (const a of s.animals.filter((x) => isActive(x) && !x.flying && row.includes(x.zone))) {
+    s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'torvmaskinen' });
+  }
+  for (const z of cutZones(s.peat.rows[s.turn - 1] ?? null)) if (s.peat.ditch[z] === undefined) s.peat.ditch[z] = 0;
 }
 
 // ---------------------------------------------------------------- the cranes
@@ -2737,6 +2772,7 @@ function endTurn(c: Ctx) {
   if (sinks(s)) bogHazards(c);
   if (s.encounterId === 'wisps') wispsHazards(c);
   if (s.encounterId === 'cranes') cranesHazards(c);
+  if (s.encounterId === 'peat') peatHazards(c);
   processHits(c);
 }
 
@@ -2854,6 +2890,7 @@ function processHits(c: Ctx) {
 
 /** How the last moment begins, by what is coming. */
 const LAST_MOMENT: Record<string, string> = {
+  torvmaskinen: 'Maskinens skärblad rullar fram över torven, rakt mot {name}. Ett ögonblick kvar.',
   gölen: 'Det svarta vattnet sluter sig över {name}. Ett ögonblick kvar.',
   gungfly: 'Mossan sluter sig om {name}. Det svarta vattnet når upp till nosen. Ett ögonblick kvar.',
   forsen: 'Strömmen drar {name} mot forsen. Ett ögonblick kvar.',
@@ -2878,7 +2915,7 @@ const TREE_FALL = ['fällaren', 'schaktaren'];
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'traktor', 'bonde'];
 
-const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern', katt: 'Katten', fötter: 'Fötterna', cykel: 'Cykeln', spårvagn: 'Spårvagnen', avloppet: 'Vattnet', råttor: 'Råttorna', gungfly: 'Gungflyet', gölen: 'Gölen' };
+const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern', katt: 'Katten', fötter: 'Fötterna', cykel: 'Cykeln', spårvagn: 'Spårvagnen', avloppet: 'Vattnet', råttor: 'Råttorna', gungfly: 'Gungflyet', gölen: 'Gölen', torvmaskinen: 'Torvmaskinen' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {

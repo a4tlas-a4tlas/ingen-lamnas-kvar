@@ -987,6 +987,27 @@ Design from the milestone 9 interview:
 - **Bot:** 4.76 of 6 with one flock, 4.25 with two.
 - **Save version 35.**
 
+### Step 4: Torvtäkten (done)
+*Torvtäkten* (`src/engine/encounters/peat.ts`, id `peat`, always by day, 8 hours, three steps). Memory: "maskinen vilar ibland" / "de arbetar i skift". It's just a danger, with no tie to Dalen (your choice).
+
+| Row | | | |
+|---|---|---|---|
+| goal | **Tallmon** | | |
+| 3 | Myren, väst | **Torvstacken** | Myren, öst |
+| 2 | Täkten, väst | Täkten | **Torvstacken, öst** |
+| 1 | **Torvstacken, väst** | Torvfältet | Torvfältet, öst |
+| start | **Täktkanten** | | |
+
+- **The machine** (your choice: *it cuts ditches that fill*):
+  - It drives back and forth over the rows, one row an hour, shown this hour and the next.
+  - Whoever stands in its row when the hour goes is run over (it kills, with a last moment).
+  - It never cuts the peat stacks, one in each row and offset, so going stack to stack takes sideways steps.
+- **The ditches:** behind the machine the row becomes a ditch that fills one level an hour. A full ditch stops the small who can neither swim nor fly.
+- **Rests** *(my change after the bot)*: the machine rests every other hour; in shifts (hard), every third hour. The first version (rest every third hour, never in shifts, ditches filling twice as fast) was far too harsh: 3.75 / 1.71.
+- **Voices at a fork:** the beaver wants it; the mice and the fawn don't.
+- **Bot:** 3.86 of 6 normal, 3.75 in shifts.
+- **Save version 36.**
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

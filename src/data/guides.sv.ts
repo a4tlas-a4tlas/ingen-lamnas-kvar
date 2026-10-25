@@ -5,6 +5,7 @@ import { SEWER } from '../engine/encounters/sewer';
 import { BOG } from '../engine/encounters/bog';
 import { WISPS } from '../engine/encounters/wisps';
 import { CRANES } from '../engine/encounters/cranes';
+import { PEAT } from '../engine/encounters/peat';
 import { FIREWORKS } from '../engine/encounters/fireworks';
 import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
@@ -86,6 +87,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   fireworks: {
     day: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
     night: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
+  },
+  peat: {
+    day: 'Maskinen arbetar bara om dagen. Det går inte att vänta på natten.',
+    night: 'Maskinen arbetar bara om dagen. Det går inte att vänta på natten.',
   },
   cranes: {
     day: 'Tranorna dansar bara i gryningen. Det går inte att vänta på natten.',
@@ -441,6 +446,22 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Se var tranorna dansar nästa timme, och gå runt dem.',
       'Håll avstånd i början – ropet visar vägen framåt.',
+    ],
+  },
+  peat: {
+    title: 'Så tar vi oss över torvtäkten',
+    hard: 'Ibland arbetar de i skift: maskinen vilar bara var tredje timme.',
+    goal: `Få alla från Täktkanten till Tallmon – ${PEAT.maxTurn} timmar, om dagen. Över täkten: tre steg.`,
+    dangers: [
+      { icon: '▤', name: 'Maskinen', effect: 'dödar', text: 'Varje timme skär maskinen genom en rad – det syns vilken, och vilken nästa timme. Den som står där när timmen går blir överkörd. Sista stunden. Varannan timme vilar den.' },
+      { icon: '≈', name: 'Dikena', text: 'Där maskinen har skurit blir det ett dike, som fylls med vatten timme för timme. Ett fullt dike kommer de små inte över – utom de som simmar eller flyger.' },
+    ],
+    shelter: [
+      { icon: '▲', name: 'Torvstackarna', text: 'En stack i varje rad – i väster, i öster, i mitten. Dem skär maskinen aldrig.' },
+    ],
+    tips: [
+      'Gå från stack till stack. Det tar längre tid, men maskinen når dig inte där.',
+      'Få över de små innan dikena hinner fyllas.',
     ],
   },
 };

@@ -11,6 +11,7 @@ import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown, underfoot } from '../engine/encounters/street';
 import { TUNNELS, bittenByRats, depthIn, isFound, sweptHere } from '../engine/encounters/sewer';
 import { STUCK_AT, UNDER_AT, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from '../engine/encounters/bog';
+import { DITCH_FULL, ditchLevel, machineRow } from '../engine/encounters/peat';
 import { FIREWORKS, burstsNow, crowdNow, holdsWith, reaches } from '../engine/encounters/fireworks';
 import { SWEEPS_SMALL } from '../engine/encounters/fence';
 import { encounterOf, zoneDef } from '../engine/encounters';
@@ -105,6 +106,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (sinks(s)) out.push(...bogStatuses(s, a));
   if (s.encounterId === 'wisps') out.push(...wispsStatuses(s, a));
   if (s.encounterId === 'cranes') out.push(...cranesStatuses(s, a));
+  if (s.encounterId === 'peat') out.push(...peatStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
     out.push({ key: 'hungry', icon: '✶', label: 'tvivlar', tone: 'warn',
@@ -269,6 +271,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (sinks(s)) out.push(...bogForecast(s, zoneOf));
   if (s.encounterId === 'wisps') out.push(...wispsForecast(s, zoneOf));
   if (s.encounterId === 'cranes') out.push(...cranesForecast(s, zoneOf));
+  if (s.encounterId === 'peat') out.push(...peatForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
     out.push({ text: `${name} väntar ${encounterOf(s).rescue!.trapped} – tillit ${s.rescue.trust}/${s.rescue.need}. Går vi härifrån utan ${name} blir ${name} kvar.`, tone: 'info' });
@@ -529,6 +532,24 @@ function sewerStatuses(s: GameState, a: Animal): Status[] {
   if (sweptHere(s).includes(a)) out.push({ key: 'water', icon: '≈', label: 'vattnet drar', tone: 'bad', explain: `Vattnet står ${d} djupt här när timmen går. Det drar med sig ${a.name}, om ingen stor står bredvid.` });
   else if (d >= SWEEPS_SMALL && a.size !== 'large' && !a.swimmer) out.push({ key: 'water', icon: '■', label: 'håller sig fast', tone: 'good', explain: `Vattnet är djupt, men ${a.name} håller sig i en av de stora.` });
   if (bittenByRats(s, a.zone) === a) out.push({ key: 'rats', icon: '⌇', label: 'bland råttorna', tone: 'bad', explain: `Råttorna håller den här korsningen. Betalar vi ingen tull biter de ${a.name} när timmen går.` });
+  return out;
+}
+
+/** The peat cutting: in the machine's way. */
+function peatStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active' || a.flying || !machineRow(s).includes(a.zone)) return [];
+  return [{ key: 'peat', icon: '▤', label: 'i maskinens väg', tone: 'bad', explain: `Maskinen skär här när timmen går. Står ${a.name} kvar blir ${a.name} överkörd.` }];
+}
+
+/** The peat cutting: whom the machine runs over, and which ditches are full. */
+function peatForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  const row = machineRow(s);
+  const out: ForecastLine[] = [];
+  if (!row.length) out.push({ text: 'Maskinen vilar den här timmen.', tone: 'good' });
+  for (const a of s.animals.filter((x) => isActive(x) && !x.flying && row.includes(where(x)))) out.push({ text: `Maskinen kör över ${a.name} i ${zoneDef(s, where(a)).name}: dödar.`, tone: 'bad' });
+  const full = Object.keys(s.peat.ditch).filter((z) => ditchLevel(s, z) >= DITCH_FULL);
+  if (full.length) out.push({ text: `Fulla diken: ${full.map((z) => zoneDef(s, z).name).join(', ')}. De små som inte simmar kommer inte dit.`, tone: 'info' });
   return out;
 }
 

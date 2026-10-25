@@ -30,6 +30,12 @@ export const MOSSEN: RegionDef = {
   first: bog,
   dangers: [
     {
+      key: 'torvtakten', kind: 'encounter', encounter: 'peat', name: 'Torvtäkten', fogName: 'Ett motorljud över mossen?',
+      memory: { normal: 'maskinen vilar ibland', hard: 'de arbetar i skift' },
+      arrive: 'Här har någon skurit mossen i block. Torvstackar står i rader, och längst bort mullrar en maskin.',
+      note: 'En maskin, och diken som fylls.',
+    },
+    {
       key: 'tranmyren', kind: 'encounter', encounter: 'cranes', name: 'Tranmyren', fogName: 'Rop över mossen?',
       memory: { normal: 'några tranor', hard: 'en hel dans' },
       arrive: 'Dimman ligger låg över en öppen myr. Ur den hörs ett rop som en trumpet – och sedan dansar något grått.',
