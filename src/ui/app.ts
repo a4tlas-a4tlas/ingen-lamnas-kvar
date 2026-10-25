@@ -26,6 +26,7 @@ import {
   cardCost,
   cardTarget,
   handSize,
+  mood,
   cardZones,
   isLethal,
   isPresent,
@@ -59,6 +60,14 @@ import { TIME_NAMES, TIME_NOTES } from '../data/guides.sv';
 import { animalStatuses, forecast, type Status } from './status';
 
 const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
+
+/** The group's mood, by name, and what it does. */
+const MOOD_NAME = { fortvivlan: 'Förtvivlan', oro: 'Oro', tillit: 'Tillit' } as const;
+const MOOD_TIP = {
+  fortvivlan: 'Förtvivlan (0–2): egen vilja redan under 6 tro, en kraft mindre varje timme, inga dåliga drag släpper vid glöden – och vid elden börjar den svagaste tvivla.',
+  oro: 'Oro (3–6): som vanligt. Vid 7 blir det tillit, vid 2 förtvivlan.',
+  tillit: 'Tillit (7–10): alla följer ner till 4 tro, en kraft till varje timme, och ett dåligt drag släpper efter en enda natt vid glöden.',
+} as const;
 const GUIDES_SEEN_KEY = 'ingen-lamnas-kvar/guides-seen';
 
 /** Whether this browser has already been shown the guide for an area; marks it as seen. */
@@ -802,11 +811,12 @@ export class App {
     const hand = handSize(s);
     const low = hand < 5;
     const maxKraft = Math.max(3, s.kraft);
-    const hopeTip = `data-tip-icon="●" data-tip-title="Hopp ${s.hope}/10" data-tip="Gruppens hopp. Sjunker när någon dör eller lämnas, när ett rovdjur jagar och när ett löfte bryts. Under 4 drar vi färre kort varje timme."`;
-    const kraftTip = `data-tip-icon="◆" data-tip-title="Kraft ${s.kraft}" data-tip="Kraft att spela kort och leda djur den här timmen. Fylls på till 3 varje timme – månens vers kan ge eller ta en."`;
+    const m = mood(s);
+    const hopeTip = `data-tip-icon="●" data-tip-title="Hopp ${s.hope}/10 · ${MOOD_NAME[m]}" data-tip="${MOOD_TIP[m]} Vid elden dras den vars tro ligger 3 eller mer från hoppet ett steg mot det. Hoppet sjunker när någon dör eller lämnas, när ett rovdjur jagar och när ett löfte bryts. Under 4 drar vi färre kort varje timme."`;
+    const kraftTip = `data-tip-icon="◆" data-tip-title="Kraft ${s.kraft}" data-tip="Kraft att spela kort och leda djur den här timmen. Fylls på till 3 varje timme${m === 'tillit' ? ', och en till av tilliten' : m === 'fortvivlan' ? ', en mindre i förtvivlan' : ''} – månens vers kan ge eller ta en."`;
     return `
-      <div class="meter hope ${low ? 'low' : ''}" ${hopeTip}>
-        <span class="mlabel">Hopp <b>${s.hope}</b></span>
+      <div class="meter hope mood-${m} ${low ? 'low' : ''}" ${hopeTip}>
+        <span class="mlabel">Hopp <b>${s.hope}</b> · ${MOOD_NAME[m]}</span>
         <span class="mpips">${pips(s.hope, 10, 'hope')}</span>
         ${low ? `<span class="mnote">Lågt hopp – vi drar ${hand} kort</span>` : ''}
       </div>

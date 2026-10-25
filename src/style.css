@@ -1013,3 +1013,7 @@ h2 .skills-btn { margin: 0 0 0 8px; vertical-align: middle; }
 .trait.good { background: rgba(228,192,112,0.18); color: #f0d79a; }
 .trait.bad { background: rgba(140,160,190,0.18); color: #c3cfe0; }
 .trait-list { display: grid; gap: 3px; margin-top: 4px; }
+
+/* The group's mood, in the hope meter. */
+.meter.hope.mood-tillit .mlabel { color: #f0cf96; }
+.meter.hope.mood-fortvivlan .mlabel { color: #9aa4b8; font-style: italic; }

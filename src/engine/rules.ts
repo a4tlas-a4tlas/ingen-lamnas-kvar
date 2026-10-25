@@ -53,6 +53,15 @@ export function canPrey(pred: Animal, prey: Animal): boolean {
   return pred.predator && !prey.predator && SIZE_RANK[prey.size] <= SIZE_RANK[pred.size];
 }
 
+/** The group's mood, from its hope: despair, worry or trust. */
+export type Mood = 'fortvivlan' | 'oro' | 'tillit';
+export const mood = (s: GameState): Mood => moodAt(s.hope);
+export const moodAt = (hope: number): Mood => (hope <= 2 ? 'fortvivlan' : hope >= 7 ? 'tillit' : 'oro');
+/** What the mood adds to each hour's Kraft. */
+export const moodKraft = (s: GameState) => ({ fortvivlan: -1, oro: 0, tillit: 1 })[mood(s)];
+/** At the fire, belief this far from hope drifts one step toward it. */
+export const DRIFT_FROM = 3;
+
 export function handSize(s: GameState): number {
   return s.hope >= 4 ? 5 : s.hope >= 1 ? 4 : 3;
 }

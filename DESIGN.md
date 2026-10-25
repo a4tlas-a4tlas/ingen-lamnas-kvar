@@ -871,6 +871,23 @@ The city stops borrowing story parts from Dalen and Åkrarna. It has six of its 
 - **Harder the later it comes:** the chance that a place is harder than it looks is 0.4, plus 0.15 for each middle region already walked. Today only one middle region is walked per run, so this starts to count with the next region.
 - **Save version 32.**
 
+## Milestone 8 – hope and the group (in progress)
+### Step 1: Hoppet väger – hope with more weight (done)
+Until now hope only changed the hand size. Now it is the group's **mood**, named in the hope meter, and it reaches will, Kraft, belief and traits (your choice: all four, and no new ways to win hope back).
+
+| | Förtvivlan (0–2) | Oro (3–6) | Tillit (7–10) |
+|---|---|---|---|
+| **Own will** begins below | 6 | 5 | 4 |
+| **Kraft each hour** | −1 | ±0 | +1 |
+| **Bad traits by the embers** | never fade; at each fire the weakest who isn't already *Tvivlande* begins to doubt (−1 belief) | fade after 2 nights | fade after 1 night |
+| **Hand size** | 3–4 cards | 5 (4 at hope 3) | 5 |
+
+- **Drift at the fire:** as we sit down, anyone whose belief lies 3 or more from our hope moves one step toward it. High hope lifts the doubting, and despair wears down even the faithful. It comes before the embers' own +1.
+- **The thresholds follow the moods** *(my proposal)*: every Tillit effect starts at 7 and every Förtvivlan effect at 2 or less, so one word in the meter explains it.
+- **The narration** marks a change of mood ("Förtvivlan tar oss." / "Något har lättat. Vi litar på varandra."), and the fire says which way it pulls.
+- **The meter** reads "Hopp 8 · Tillit", tinted by mood. Its tooltip says what this mood does, and the Kraft tooltip names the mood's share.
+- **Bot:** the crude whole-run walker over 150 seeds per group, keeping this share of the group (before → after): Dalens sista 7.6 → 6.8 %, Rovdjurens pakt 7.1 → 6.5 %, De små 7.9 → 8.7 %, Slumpad 11.3 → 9.3 %. That's about the same: the walker sits in despair (hope ~2 at the end), so it feels the costs, and the drift partly makes up for them.
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

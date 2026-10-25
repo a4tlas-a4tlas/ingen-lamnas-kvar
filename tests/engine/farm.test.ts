@@ -120,6 +120,7 @@ describe('Gårdshundarna', () => {
   it('daylight has no moon: the flipped moon verse costs no kraft here', () => {
     const s = farmGame('manen');
     s.verses[0].flipped = true;
+    s.hope = 5;
     const r = pass(s);
     expect(r.kraft).toBe(3);
   });

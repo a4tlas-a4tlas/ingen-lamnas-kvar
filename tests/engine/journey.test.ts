@@ -102,8 +102,11 @@ describe('the journey', () => {
 });
 
 describe('the campfire', () => {
+  /** At the fire, with hope close to everyone's belief: the mood pulls on no one (that is tested in hope.test.ts). */
   function atFire(): GameState {
-    return run(acrossTheRoad(), { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
+    const s = run(acrossTheRoad(), { type: 'travel', to: 'granbacken' }, ...CROW_AWAY);
+    s.hope = 7;
+    return s;
   }
 
   it('pairs by the embers grow closer; whoever has no place sits alone', () => {
@@ -137,6 +140,7 @@ describe('the campfire', () => {
     let s = atFire();
     const fox = get(s, 'fox');
     fox.belief = 1;
+    s.hope = 3;
     s = run(s, { type: 'restAtFire', watch: 'fox', pairs: [], mourning: {} });
     const hunted = s.animals.some((a) => a.id !== 'fox' && (a.injuries.includes('bleeding') || (a.count !== undefined && a.count < 6)));
     const trusted = get(s, 'fox').belief === 3;
