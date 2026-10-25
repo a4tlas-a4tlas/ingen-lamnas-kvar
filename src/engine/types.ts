@@ -1,7 +1,7 @@
 /** Zones are defined per encounter (see encounters/); ids are plain strings. */
 export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
-export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps' | 'cats' | 'street' | 'sewer' | 'fireworks' | 'bog';
+export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps' | 'cats' | 'street' | 'sewer' | 'fireworks' | 'bog' | 'wisps';
 /** Which way the wind carries the mist over the sprayed field. */
 /** Asphalt with cars, or gravel with tractors. */
 export type RoadKind = 'asphalt' | 'gravel';
@@ -128,7 +128,9 @@ export type Intent =
   | { kind: 'leave' }
   | { kind: 'hunt'; target: string }
   /** A hungry predator by the farm goes for the hens instead of one of us. */
-  | { kind: 'raid' };
+  | { kind: 'raid' }
+  /** On the lit bog: drawn toward a light. */
+  | { kind: 'lured'; to: ZoneId };
 
 export interface Animal {
   /** What took this animal, if it died: a hit's source, or how it went. */
@@ -419,7 +421,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 33;
+  version: 34;
   /** The road we cross: asphalt, or Åkrarna's gravel. */
   roadKind: RoadKind;
   /** Which group left the glen. */
@@ -500,6 +502,8 @@ export interface GameState {
   /** New Year's Eve: the bursts and the people, hour by hour – and the hour the child's family stepped aside for us. */
   /** The quaking bog: where each of us stood when the hour began – whoever is still there sinks. */
   bogFrom: Record<string, ZoneId>;
+  /** The lit bog: the lights of each hour, and the one true light. */
+  wisps: { plan: ZoneId[][]; trueAt: number; trueZone: ZoneId; known: boolean };
   fireworks: { plan: { zone: ZoneId; strength: 1 | 2 }[][]; crowdPlan: ZoneId[]; childHour?: number };
   sewer: { kinds: Record<ZoneId, 'low' | 'walk' | 'ledge'>; rats: ZoneId[]; found: ZoneId[]; heard: ZoneId[]; level: number; risePlan: boolean[]; paid: boolean };
   /** Someone trapped in this encounter, not yet one of us: they must come to trust us before we can free them. */

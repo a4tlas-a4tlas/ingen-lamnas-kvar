@@ -3,6 +3,7 @@ import { CATS } from '../engine/encounters/cats';
 import { STREET } from '../engine/encounters/street';
 import { SEWER } from '../engine/encounters/sewer';
 import { BOG } from '../engine/encounters/bog';
+import { WISPS } from '../engine/encounters/wisps';
 import { FIREWORKS } from '../engine/encounters/fireworks';
 import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
@@ -84,6 +85,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   fireworks: {
     day: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
     night: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
+  },
+  wisps: {
+    day: 'Irrblossen syns bara om natten. Det går inte att vänta på dagen.',
+    night: 'Irrblossen syns bara om natten. Det går inte att vänta på dagen.',
   },
   bog: {
     day: 'Vi ser var tuvorna står. Mossan är lika mjuk som alltid.',
@@ -396,6 +401,24 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Flytta de stora först – de sjunker fortast.',
       'Låt de små vänta en timme på mossan om det behövs; de har tid.',
+    ],
+  },
+  wisps: {
+    title: 'Så tar vi oss förbi irrblossen',
+    hard: 'Ibland är mossen full av irrbloss: två eller tre varje timme i stället för ett.',
+    goal: `Få alla från Ljungkanten till Granskogen – ${WISPS.maxTurn} timmar, och bara om natten. Över mossen: tre steg.`,
+    dangers: [
+      { icon: '✧', name: 'Irrblossen', text: 'Varje timme syns var ljusen svävar – över gölarna och den mjuka mossan. Den som har egen vilja och står i eller bredvid ett ljus går mot det när timmen går, i stället för sin egen vilja. Trösta bryter det.' },
+      { icon: '◍', name: 'Gölarna', effect: 'dödar', text: 'Den som står i en göl när timmen går fryser (−1 tro). De små som inte simmar drunknar – sista stunden. Simmare klarar sig.' },
+      { icon: '≋', name: 'Den mjuka mossan', text: 'Som på gungflyet: den som står still en hel timme sjunker, och vid två steg sitter man fast. Stenen, kavelbron och tuvbacken bär.' },
+    ],
+    shelter: [
+      { icon: '✦', name: 'Det sanna ljuset', text: 'En gång i natten svävar ett ljus över fast mark. Den som står där när timmen går får +1 tro. Paddan känner igen det, och kort som ser i mörkret – Känna skakningar, Lyssna i marken, Vittring – visar vilket det är.' },
+      { icon: '♡', name: 'Håll dem nära', text: 'Bara den med egen vilja lockas. Tröst, och hopp, håller dem hos oss.' },
+    ],
+    tips: [
+      'Trösta den som står bredvid ett ljus innan timmen går.',
+      'Led de tvivlande längs stenen och kavelbron, bort från gölarna.',
     ],
   },
 };

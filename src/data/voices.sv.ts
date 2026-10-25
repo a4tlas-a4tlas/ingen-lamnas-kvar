@@ -11,6 +11,7 @@ export interface Leaning {
 export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leaning>>>> = {
   toad: {
     bog: { pull: 1, line: 'Mossen är min. Jag vet var den bär.' },
+    wisps: { pull: 1, line: 'Irrblossen? Jag har sett dem hela mitt liv. Jag vet vilket som är sant.' },
     river: { pull: 1, line: 'Vattnet är mitt hem. Ta ån – jag visar er stenarna.' },
     sprayer: { pull: 1, line: 'Det går en bäck längs det fältet. I vattnet når dimman oss inte.' },
     sewer: { pull: 1, line: 'Vatten och mörker. Där nere hittar jag vägen.' },
@@ -24,6 +25,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     cats: { pull: -1, line: 'Katter. Det finns inget värre än katter. Inte gårdarna, snälla.' },
     street: { pull: -1, line: 'Alla de där fötterna. Vi är för små för en sådan gata.' },
     sewer: { pull: -1, line: 'Råttor. Våra stora, elaka kusiner. Inte under jorden.' },
+    wisps: { pull: -1, line: 'Djupa gölar i mörkret. Vi kan inte simma. Inte där.' },
   },
   fox: {
     farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' },
@@ -38,6 +40,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     farm: { pull: -1, line: 'Jag har sett gården från ovan. Hundarna sover inte så djupt som ni tror.' },
     raptor: { pull: -1, line: 'Där ute är det jag som är bytet. Inte fälten.' },
     lamps: { pull: 1, line: 'Mellan lyktorna är natten min. Jag ser var ljuset inte når.' },
+    wisps: { pull: 1, line: 'Ljusen lurar inte mig. Från ovan ser jag vad som finns under dem.' },
     street: { pull: 1, line: 'Över gatan flyger jag på ett ögonblick. Jag kan se vagnen komma.' },
   },
   hare: {

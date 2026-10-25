@@ -29,6 +29,12 @@ export const MOSSEN: RegionDef = {
   start: { key: 'myrkanten', kind: 'start', name: 'Myrkanten', fogName: 'Myrkanten', arrive: 'Dalen ligger långt bakom oss. Framför oss börjar mossen: vida, tyst och grå. Här finns inga människor. Här finns ingen alls.' },
   first: bog,
   dangers: [
+    {
+      key: 'irrblossen', kind: 'encounter', encounter: 'wisps', name: 'Irrblosskärret', fogName: 'Ljus över mossen?',
+      memory: { normal: 'ett irrbloss', hard: 'många irrbloss' },
+      arrive: 'Kärret ligger svart framför oss. Långt ute över mossen tänds ett litet blått ljus.',
+      note: 'Ljus i mörkret, och djupa gölar.',
+    },
     { ...bog, key: 'gungflyet2', name: 'Den stora mossen', fogName: 'Mer mjuk mark?', arrive: 'Mossen igen, större nu. Tuvorna står glesare.', arriveNight: 'Mossen igen. Någonstans ropar en fågel vi inte känner.' },
     { ...river, key: 'myrbacken', name: 'Myrbäcken', fogName: 'Brunt vatten?', arrive: 'En bäck slingrar sig genom mossen, brun som te.', arriveNight: 'En bäck slingrar sig genom mossen. Vi hör den innan vi ser den.', note: 'Brunt vatten, och stenar.' },
     {

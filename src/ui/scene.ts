@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : id === 'wisps' ? wispsSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -449,6 +449,28 @@ function bogSvg(): string {
   <rect x="${x(36)}" y="${y(23)}" width="${x(28)}" height="10" fill="#6a5438" filter="url(#cut)"/><rect x="${x(36)}" y="${y(23) + 12}" width="${x(28)}" height="4" fill="#4a3826"/>
   <rect y="${y(80)}" width="400" height="${y(20)}" fill="#6a6a44"/>
   <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.5"/>
+</svg>`;
+}
+
+/** Irrblosskärret: the bog at night, two black pools, a stone, a log bridge, and pale lights far out. */
+function wispsSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const tufts: string[] = [];
+  for (let i = 0; i < 50; i++) tufts.push(`<path d="M${(i * 41) % 400} ${y(16) + ((i * 59) % 320)} l-2 -8 m2 8 l0 -10 m0 10 l3 -8"/>`);
+  const glows = [[20, 30], [78, 26], [52, 50], [30, 62]].map(([px, py]) => `<circle cx="${x(px)}" cy="${y(py)}" r="16" fill="#9ad0ff" opacity="0.08"/><circle cx="${x(px)}" cy="${y(py)}" r="3" fill="#cfe8ff" opacity="0.5"/>`).join('');
+  const spruce = [6, 20, 34, 50, 64, 80, 94].map((px, i) => `<path d="M${x(px)} ${y(0)} L${x(px) - 12} ${y(13)} H${x(px) + 12} Z" fill="#0e1612" transform="translate(0 ${i % 2 ? 3 : 0})"/>`).join('');
+  return `
+<svg class="scene-bg wisps" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="500" fill="#1c2420"/>
+  <rect width="400" height="${y(14)}" fill="#141c18"/>${spruce}
+  <ellipse cx="${x(17)}" cy="${y(47)}" rx="58" ry="22" fill="#0a1012"/><ellipse cx="${x(83)}" cy="${y(47)}" rx="58" ry="22" fill="#0a1012"/>
+  <g stroke="#34402e" stroke-width="1.4" fill="none">${tufts.join('')}</g>
+  <ellipse cx="${x(50)}" cy="${y(70)}" rx="30" ry="16" fill="#3a3a36" filter="url(#cut)"/>
+  ${[0, 1, 2, 3, 4, 5].map((i) => `<rect x="${x(37) + i * 18}" y="${y(21)}" width="15" height="${y(9)}" rx="4" fill="#3a2e22"/>`).join('')}
+  ${glows}
+  <rect y="${y(80)}" width="400" height="${y(20)}" fill="#2a2a1e"/>
 </svg>`;
 }
 
