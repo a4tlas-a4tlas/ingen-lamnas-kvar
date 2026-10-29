@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : id === 'wisps' ? wispsSvg() : id === 'cranes' ? cranesSvg() : id === 'peat' ? peatSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : id === 'wisps' ? wispsSvg() : id === 'cranes' ? cranesSvg() : id === 'peat' ? peatSvg() : id === 'fog' ? fogSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -449,6 +449,24 @@ function bogSvg(): string {
   <rect x="${x(36)}" y="${y(23)}" width="${x(28)}" height="10" fill="#6a5438" filter="url(#cut)"/><rect x="${x(36)}" y="${y(23) + 12}" width="${x(28)}" height="4" fill="#4a3826"/>
   <rect y="${y(80)}" width="400" height="${y(20)}" fill="#6a6a44"/>
   <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.5"/>
+</svg>`;
+}
+
+/** Dimman: a grey-white bog where everything beyond arm's length fades. */
+function fogSvg(): string {
+  const y = (p: number) => p * 5;
+  const banks = Array.from({ length: 9 }, (_, i) => `<ellipse cx="${(i * 97) % 400}" cy="${y(14) + i * 38}" rx="${120 + (i % 3) * 30}" ry="${30 + (i % 2) * 12}" fill="#e8ece6" opacity="${0.18 + (i % 3) * 0.07}"/>`).join('');
+  const tufts: string[] = [];
+  for (let i = 0; i < 40; i++) tufts.push(`<path d="M${(i * 47) % 400} ${y(18) + ((i * 67) % 300)} l-2 -7 m2 7 l0 -9 m0 9 l3 -7"/>`);
+  return `
+<svg class="scene-bg fog" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="500" fill="#7a8278"/>
+  <rect width="400" height="${y(14)}" fill="#9aa298"/>
+  <g stroke="#5a6454" stroke-width="1.3" fill="none" opacity="0.6">${tufts.join('')}</g>
+  ${banks}
+  <rect y="${y(80)}" width="400" height="${y(20)}" fill="#6a7262"/>
+  <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.45"/>
 </svg>`;
 }
 

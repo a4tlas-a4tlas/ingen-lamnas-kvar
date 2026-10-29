@@ -6,6 +6,7 @@ import { BOG } from '../engine/encounters/bog';
 import { WISPS } from '../engine/encounters/wisps';
 import { CRANES } from '../engine/encounters/cranes';
 import { PEAT } from '../engine/encounters/peat';
+import { FOG } from '../engine/encounters/fog';
 import { FIREWORKS } from '../engine/encounters/fireworks';
 import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
@@ -87,6 +88,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   fireworks: {
     day: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
     night: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
+  },
+  fog: {
+    day: 'Dimman ligger lika tät om dagen. Det ljusa gör den bara vitare.',
+    night: 'Dimman ligger lika tät om natten. Vi ser lika lite – men vi hör bättre.',
   },
   peat: {
     day: 'Maskinen arbetar bara om dagen. Det går inte att vänta på natten.',
@@ -462,6 +467,24 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Gå från stack till stack. Det tar längre tid, men maskinen når dig inte där.',
       'Få över de små innan dikena hinner fyllas.',
+    ],
+  },
+  fog: {
+    title: 'Så tar vi oss ut ur dimman',
+    hard: 'Ibland är dimman tjock som mjölk: den lättar aldrig, och från fjärde timmen ser och hör vi bara dem som står i samma zon.',
+    goal: `Få alla från Myrranden till Skogsranden – ${FOG.maxTurn} timmar. Genom dimman: tre steg.`,
+    dangers: [
+      { icon: '☁', name: 'Dimman', text: 'Vi ser bara där vi står och precis bredvid. Var tredje timme lättar dimman en stund, och vi ser allt. Under den ligger fast mark, mjuk mossa och djupa gölar – vi vet vilket först när vi kommit nära.' },
+      { icon: '♥', name: 'Bara den som hör någon', text: 'Ett djur kan bara ledas om det hör någon: vem som helst i samma zon, eller någon det har band 2 eller mer med i zonen bredvid. Den som inte hör någon driver en zon åt sidan när timmen går – aldrig ut i en göl.' },
+      { icon: '≋', name: 'Mossan och gölarna', effect: 'dödar', text: 'Som förut: den som står still på mjuk mossa sjunker, och i en djup göl drunknar de små som inte simmar.' },
+    ],
+    shelter: [
+      { icon: '◎', name: 'Håll ihop', text: 'Gå två och två, med dem ni står nära. Den som har någon bredvid sig går inte vilse.' },
+      { icon: '♪', name: 'Den vilsna', text: 'Om vi hittade den vilsna på mossen, ropar den på oss från andra sidan: den sista raden syns alltid, och där är ingen ensam.' },
+    ],
+    tips: [
+      'Låt ingen gå först ensam. Flytta par.',
+      'Använd timmen då dimman lättar till att se var marken bär.',
     ],
   },
 };

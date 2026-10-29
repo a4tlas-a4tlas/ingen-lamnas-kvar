@@ -55,6 +55,8 @@ describe('Den vilsna', () => {
     s = say(s, 'search');
     // The owl and the adder both start at 4; the first of them gets lost a while.
     expect(get(s, 'owl').belief).toBe(owl - 1);
+    // Remembered, for the fog at the end of the bog.
+    expect(s.knowledge).toContain('vilsnaHittad');
     const kind = s.meeting!.kind!;
     const joined = say(s, 'join');
     expect(joined.animals.some((a) => a.species === kind && a.status === 'safe')).toBe(true);

@@ -1,6 +1,7 @@
 // Read-only rule helpers shared by the engine (validation) and the UI (targeting).
 import { isStuck, puller } from './encounters/bog';
 import { blockedByDitch } from './encounters/peat';
+import { LAST_ROW, THICK_FROM, lostOneCalls } from './encounters/fog';
 import { SPECIES } from '../data/animals';
 import { CARDS, type TargetSpec } from '../data/cards';
 import { encounterOf, zoneDef } from './encounters';
@@ -336,9 +337,30 @@ export function canPlay(s: GameState, card: Card): boolean {
   }
 }
 
+/** In the fog, one of us can only be led while it hears someone: anyone in the same zone, or one close to it – a bond of two or more – in the next. Once the fog is thick, only the same zone. If we found the lost one, it calls from the far side, and the last row is never lonely. */
+export function hearsACall(s: GameState, a: Animal): boolean {
+  if (s.encounterId !== 'fog') return true;
+  if (lostOneCalls(s) && LAST_ROW.includes(a.zone)) return true;
+  const thick = s.variant === 'hard' && s.turn >= THICK_FROM;
+  return s.animals.some((o) => o !== a && o.status === 'active' &&
+    (o.zone === a.zone || (!thick && bond(s, a.id, o.id) >= 2 && zoneDistance(s, a.zone, o.zone) === 1)));
+}
+
+/** What we see through the fog: where we stand and just beside it – only where we stand, once the fog is thick. Every third hour, unless it is thick, the fog lifts. */
+export function fogSeen(s: GameState): ZoneId[] {
+  const all = encounterOf(s).zones.map((z) => z.id);
+  if (s.encounterId !== 'fog') return all;
+  const thick = s.variant === 'hard';
+  if (!thick && s.turn % 3 === 0) return all;
+  const ours = s.animals.filter((a) => a.status === 'active').map((a) => a.zone);
+  const near = thick && s.turn >= THICK_FROM ? ours : all.filter((z) => ours.some((o) => zoneDistance(s, o, z) <= 1));
+  const ends = encounterOf(s).zones.filter((z) => z.start || z.goal).map((z) => z.id);
+  return [...new Set([...near, ...ends, ...(lostOneCalls(s) ? LAST_ROW : [])])];
+}
+
 export function leadTargets(s: GameState): string[] {
   return s.animals
-    .filter((a) => canMove(a) && (!isStuck(s, a) || !!puller(s, a)) && leadZones(s, a).length > 0 && leadCost(a, s) <= s.kraft)
+    .filter((a) => canMove(a) && hearsACall(s, a) && (!isStuck(s, a) || !!puller(s, a)) && leadZones(s, a).length > 0 && leadCost(a, s) <= s.kraft)
     .map((a) => a.id);
 }
 

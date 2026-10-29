@@ -36,12 +36,12 @@ function setUp(s: GameState, at: Record<string, ZoneId> = {}, sink: Record<strin
 const pass = (s: GameState) => run(s, { type: 'endTurn' });
 
 describe('Gungflyet', () => {
-  it('is Mossen’s first danger: every map opens with the bog and ends at the bog’s edge', () => {
+  it('is Mossen’s first danger: every map opens with the bog and ends in the fog', () => {
     for (let i = 0; i < 20; i++) {
       const map = generateRegion(MOSSEN, i);
       const start = map.nodes[0];
       expect(map.nodes.find((n) => n.id === start.next[0])?.encounter).toBe('bog');
-      expect(map.nodes[map.nodes.length - 1]).toMatchObject({ kind: 'end', name: 'Mossens slut' });
+      expect(map.nodes[map.nodes.length - 1]).toMatchObject({ kind: 'encounter', encounter: 'fog', name: 'Dimman' });
     }
   });
 

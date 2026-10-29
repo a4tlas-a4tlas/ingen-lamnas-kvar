@@ -1,7 +1,7 @@
 /** Zones are defined per encounter (see encounters/); ids are plain strings. */
 export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
-export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps' | 'cats' | 'street' | 'sewer' | 'fireworks' | 'bog' | 'wisps' | 'cranes' | 'peat';
+export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps' | 'cats' | 'street' | 'sewer' | 'fireworks' | 'bog' | 'wisps' | 'cranes' | 'peat' | 'fog';
 /** Which way the wind carries the mist over the sprayed field. */
 /** Asphalt with cars, or gravel with tractors. */
 export type RoadKind = 'asphalt' | 'gravel';
@@ -431,7 +431,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 37;
+  version: 38;
   /** The road we cross: asphalt, or Åkrarna's gravel. */
   roadKind: RoadKind;
   /** Which group left the glen. */
@@ -518,6 +518,8 @@ export interface GameState {
   cranes: { flocks: ZoneId[][]; called: boolean };
   /** The peat cutting: the machine's row each hour (null when it rests), and how full each cut ditch is. */
   peat: { rows: (number | null)[]; ditch: Record<ZoneId, number> };
+  /** The fog: what lies under it, and the zones we have come close enough to know. */
+  fog: { kinds: Record<ZoneId, 'firm' | 'soft' | 'pool'>; known: ZoneId[] };
   fireworks: { plan: { zone: ZoneId; strength: 1 | 2 }[][]; crowdPlan: ZoneId[]; childHour?: number };
   sewer: { kinds: Record<ZoneId, 'low' | 'walk' | 'ledge'>; rats: ZoneId[]; found: ZoneId[]; heard: ZoneId[]; level: number; risePlan: boolean[]; paid: boolean };
   /** Someone trapped in this encounter, not yet one of us: they must come to trust us before we can free them. */
