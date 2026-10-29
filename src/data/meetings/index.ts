@@ -3,6 +3,7 @@ import { CROW, isHere, type MeetingFrame, type MeetingOption } from './crow.sv';
 import { BARSNAR, FRAMLINGEN, GAMMAL_STIG, GRAVSKOPAN, GRYT, HJORTEN, IHALIGT_TRAD, KOLTRASTEN, KVARNS_TVEKAN, MATEN } from './dalen.sv';
 import { FARAN, HAREN, KRAKFLOCKEN, SKRAMMAN, SPILLSAD, TRAKTORN } from './akrarna.sv';
 import { BARNET, DUVORNA, KOLONILOTTEN, PARKDAMMEN, SOPTUNNAN, STADSRAVEN } from './staden.sv';
+import { BOET, EKOT, EREMITEN, HJORTRON, RYGGSACKEN, TJARNEN, VILSNA } from './mossen.sv';
 import { INTERLUDE } from './interlude.sv';
 import { PROPOSAL } from './proposal.sv';
 import { crowCards } from '../../engine/campfire';
@@ -18,7 +19,7 @@ export interface MeetingDef {
   taker?: string;
 }
 
-export type SceneArt = 'bird' | 'tree' | 'berries' | 'path' | 'den' | 'deer' | 'basket' | 'fox' | 'tracks' | 'toad' | 'ridge' | 'furrow' | 'scarecrow' | 'crows' | 'grain' | 'tractor' | 'hare' | 'pigeons' | 'window' | 'bin' | 'allotment' | 'pond';
+export type SceneArt = 'bird' | 'tree' | 'berries' | 'path' | 'den' | 'deer' | 'basket' | 'fox' | 'tracks' | 'toad' | 'ridge' | 'furrow' | 'scarecrow' | 'crows' | 'grain' | 'tractor' | 'hare' | 'pigeons' | 'window' | 'bin' | 'allotment' | 'pond' | 'mist' | 'hermit' | 'echo' | 'cloudberry' | 'nest' | 'backpack' | 'tarn';
 
 export const MEETINGS: Record<MeetingId, MeetingDef> = {
   crow: { title: 'Kråkan vid elden', art: 'crow', frames: CROW, taker: 'Kråkan' },
@@ -45,6 +46,13 @@ export const MEETINGS: Record<MeetingId, MeetingDef> = {
   soptunnan: { title: 'Soptunnan', art: 'bin', frames: SOPTUNNAN },
   kolonilotten: { title: 'Kolonilotten', art: 'allotment', frames: KOLONILOTTEN },
   parkdammen: { title: 'Parkdammen', art: 'pond', frames: PARKDAMMEN },
+  vilsna: { title: 'Den vilsna', art: 'mist', frames: VILSNA },
+  eremiten: { title: 'Eremiten', art: 'hermit', frames: EREMITEN },
+  ekot: { title: 'Ekot', art: 'echo', frames: EKOT },
+  hjortron: { title: 'Hjortronmyren', art: 'cloudberry', frames: HJORTRON },
+  boet: { title: 'Det tomma boet', art: 'nest', frames: BOET },
+  ryggsacken: { title: 'Ryggsäcken', art: 'backpack', frames: RYGGSACKEN },
+  tjarnen: { title: 'Myrstjärnan', art: 'tarn', frames: TJARNEN },
   interlude: { title: 'Mellan två landskap', art: 'ridge', frames: INTERLUDE },
 };
 

@@ -283,6 +283,47 @@ export function sceneArt(kind: SceneArt): string {
         ${[4, 10, 16, 22].map((x) => `<path d="M${x} 36 L${x} 28 M${x} 30 l-2 -2 M${x} 31 l2 -2" stroke="#5d7b44" stroke-width="1.4"/>`).join('')}
         <path d="M2 30 L30 30 M4 26 L4 36 M28 26 L28 36" stroke="#8a7a5a" stroke-width="1"/>
         <ellipse cx="18" cy="42" rx="12" ry="4" fill="#2f2418"/>`);
+    case 'mist':
+      return svg(`
+        <rect width="64" height="48" fill="#4a5450"/>
+        <ellipse cx="32" cy="30" rx="34" ry="10" fill="#c8ccc4" opacity="0.5"/><ellipse cx="18" cy="22" rx="20" ry="7" fill="#d8dcd4" opacity="0.4"/>
+        <ellipse cx="42" cy="38" rx="6" ry="4" fill="#2a2e2a"/><path d="M45 34 q2 -5 0 -8 q-2 3 -1 8 Z" fill="#2a2e2a"/>
+        <path d="M10 12 q4 -3 8 0 M48 10 q3 -2 6 0" stroke="#e8ece4" stroke-width="0.8" fill="none" opacity="0.6"/>`);
+    case 'hermit':
+      return svg(`
+        <rect width="64" height="48" fill="#3a4440"/>
+        <ellipse cx="32" cy="42" rx="26" ry="7" fill="#5a6a44"/>
+        <path d="M32 40 L32 10 M32 14 L24 20 M32 18 L40 22" stroke="#3a2a1e" stroke-width="2"/>
+        <ellipse cx="32" cy="12" rx="10" ry="6" fill="#2a3a24"/>
+        <ellipse cx="22" cy="38" rx="6" ry="4" fill="#9a9488"/><ellipse cx="18" cy="35" rx="3" ry="2.6" fill="#9a9488"/><path d="M17 33 q-1 -6 1 -7 q2 2 1 7 Z" fill="#9a9488"/>`);
+    case 'echo':
+      return svg(`
+        <rect width="64" height="48" fill="#3a4448"/>
+        ${[8, 14, 20, 26].map((r, i) => `<circle cx="32" cy="26" r="${r}" fill="none" stroke="#c8d4dc" stroke-width="0.8" opacity="${0.6 - i * 0.13}"/>`).join('')}
+        <ellipse cx="32" cy="44" rx="34" ry="6" fill="#4a5440"/>`);
+    case 'cloudberry':
+      return svg(`
+        <path d="M0 36 Q32 30 64 36 L64 48 L0 48 Z" fill="#6a7a44"/>
+        ${[[10, 34], [20, 30], [30, 36], [40, 31], [50, 35], [16, 40], [36, 42], [56, 41], [26, 26], [46, 27]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6" fill="#e8902a"/><path d="M${x} ${y - 2.6} l-1.6 -2 m1.6 2 l1.6 -2" stroke="#4a6a2a" stroke-width="0.8"/>`).join('')}`);
+    case 'nest':
+      return svg(`
+        <rect width="64" height="48" fill="#4a5440"/>
+        <ellipse cx="32" cy="34" rx="24" ry="9" fill="#8a7a54"/><ellipse cx="32" cy="32" rx="17" ry="5.5" fill="#3a2e22"/>
+        <path d="M10 32 q6 -4 12 0 M40 30 q8 -4 14 1" stroke="#a8986a" stroke-width="1.4" fill="none"/>
+        <path d="M44 28 q3 -4 6 -2" stroke="#e8e2d4" stroke-width="1" fill="none"/>`);
+    case 'backpack':
+      return svg(`
+        <path d="M0 40 Q32 34 64 40 L64 48 L0 48 Z" fill="#5a6a44"/>
+        <rect x="20" y="16" width="24" height="26" rx="5" fill="#2a5a8a"/><rect x="24" y="28" width="16" height="9" rx="2" fill="#1e4a72"/>
+        <path d="M26 16 q6 -8 12 0" stroke="#1e4a72" stroke-width="2.4" fill="none"/>
+        <path d="M44 34 L56 38 L52 30 Z" fill="#efe3c8"/><path d="M47 34 l6 1" stroke="#8a7a5a" stroke-width="0.6"/>`);
+    case 'tarn':
+      return svg(`
+        <rect width="64" height="48" fill="#4a5a40"/>
+        <ellipse cx="32" cy="30" rx="26" ry="12" fill="#8aa4c0"/>
+        <ellipse cx="32" cy="30" rx="26" ry="12" fill="none" stroke="#3a4a34" stroke-width="2"/>
+        <circle cx="38" cy="27" r="3.2" fill="#f0e8c8" opacity="0.9"/>
+        <path d="M14 30 q6 -2 10 1 M40 34 q6 -2 10 0" stroke="#e8f0f8" stroke-width="0.6" fill="none" opacity="0.7"/>`);
     case 'pond':
       return svg(`
         <path d="M0 30 L64 30 L64 48 L0 48 Z" fill="#3e5032"/>

@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 9.4)
+## Status (after step 9.5)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 9.4: Torvtäkten, branch `torvtakten`, open for review. Everything through 9.3 (#45) is in `main` and live. |
-| **Save version** | 36 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 413 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 9.5: Mossens berättelser, branch `mossens-berattelser`, open for review. Everything through 9.4 (#46) is in `main` and live. |
+| **Save version** | 37 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 425 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -31,7 +31,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 |---|---|---|
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
 | **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden), the gravel road (Grusvägen) + old dangers in new places; six story parts of its own (`src/data/meetings/akrarna.sv.ts`) | Skördetröskan |
-| **Mossen** (9.1–) | Gungflyet, the quaking bog (`bog`); Irrbloss, the lit bog (`wisps`); Tranorna, the cranes' dance (`cranes`); Torvtäkten, the peat cutting (`peat`) + old dangers (Myrbäcken, Det öppna kärret); story parts borrowed from Dalen; a plain end, *Mossens slut*, until Dimman | – |
+| **Mossen** (9.1–) | Gungflyet, the quaking bog (`bog`); Irrbloss, the lit bog (`wisps`); Tranorna, the cranes' dance (`cranes`); Torvtäkten, the peat cutting (`peat`) + old dangers (Myrbäcken, Det öppna kärret); seven story parts of its own (`src/data/meetings/mossen.sv.ts`); a plain end, *Mossens slut*, until Dimman | – |
 | **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan), the sewer (Avloppet) + old dangers; six story parts of its own (`src/data/meetings/staden.sv.ts`) | Fyrverkerinatten |
 
 **Animals** are species, not characters: badger, toad, fox, owl, adder, mice, hare, and since 7.6 hedgehog, squirrel, mole, beaver and fawn (`SPECIES` in `src/data/animals.ts`, with Swedish grammar fields `en` / `den` / `definite`). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
@@ -80,16 +80,16 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: 9.5, Mossen's story parts
+## Next step: 9.6, Dimman – Mossen's boss
 Mossen (Milestone 9 in `DESIGN.md`) is built like the city: one PR per danger, then the story parts, then the boss.
 - **The interview's plan:**
   1. Gungflyet (done)
   2. Irrbloss (done)
   3. Tranorna (done)
   4. Torvtäkten (done)
-  5. **Mossen's story parts**, in a lost-and-lonely mood
+  5. Mossen's story parts (done), in a lost-and-lonely mood
   6. **Dimman**, the boss: we lose each other. Zones beyond our own are unseen, and only an animal with a bond of 2+ in the same or a next zone can be led.
-- **Ask the design questions first,** as for the city in 6.12: which six parts (three meetings, three finds), and what each does. The mood is lost and lonely: being found, or left. Mossen still borrows Dalen's story parts (`story(...)` in `src/data/regions/mossen.ts`).
+- **Ask the design questions first:** how the fog thickens, what "lost" means for one who drifts (left behind? found again by a call?), and whether a story part (Den vilsna, Ekot) should matter in the boss, as the furrow does for Skördetröskan and the child for Fyrverkerinatten.
 
 ## Open questions and known quirks
 - **Torvtäkten's bot balance (9.4):** a reading bot keeps 3.86 of 6 when the machine rests every other hour and 3.75 in shifts (every third hour). That matches the harder dangers (Diket och grinden 3.7, the fields 3.9), but normal and hard barely differ. The first version (rest every third hour, never in shifts, ditches filling twice as fast) gave 3.75 / 1.71. Most deaths come from the machine, when too many of us stand in one row with too little Kraft to get them all out. Levers: start the machine in hour 2, or let it cut only one zone of its row.

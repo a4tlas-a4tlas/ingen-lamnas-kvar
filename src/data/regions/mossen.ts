@@ -1,12 +1,11 @@
 // Mossen: the great bog beyond the edge of things. No people come here – only water,
-// moss and silence, and it is easy to lose your way, and each other. Its first danger
-// is Gungflyet, the quaking bog; old dangers stand in new places, and borrowed stories
-// meanwhile, until its own come. Its boss will be Dimman.
+// moss and silence, and it is easy to lose your way, and each other. Its dangers are
+// the quaking bog, the lights, the cranes and the peat cutting; old dangers stand in new
+// places; its story parts are about being lost and found. Its boss will be Dimman.
 import type { Template } from './dalen';
 import { DALEN, type RegionDef } from './dalen';
 
 const [, , river] = DALEN.dangers;
-const story = (key: string): Template => [...DALEN.meetings, ...DALEN.finds].find((t) => t.key === key)!;
 
 const bog: Template = {
   key: 'gungflyet', kind: 'encounter', encounter: 'bog', name: 'Gungflyet', fogName: 'Mark som gungar?',
@@ -57,8 +56,17 @@ export const MOSSEN: RegionDef = {
       note: 'Öppet, och himmel. Bara starren att gömma sig i.',
     },
   ],
-  meetings: ['koltrasten', 'hjorten', 'framlingen'].map(story),
-  finds: ['barsnar', 'tradet', 'stigen'].map(story),
+  meetings: [
+    { key: 'vilsna', kind: 'meeting', meeting: 'vilsna', name: 'Dimman över kärret', fogName: 'Ett rop i dimman?', arrive: 'Dimman ligger tät över kärret. Någonstans i den ropar någon.', note: 'Någon är vilse.' },
+    { key: 'eremiten', kind: 'meeting', meeting: 'eremiten', name: 'Den ensamma holmen', fogName: 'En holme med ett träd?', arrive: 'En liten holme, med en enda krokig tall. Någon bor här.', note: 'Någon som valt att vara ensam.' },
+    { key: 'ekot', kind: 'meeting', meeting: 'ekot', name: 'Ekot', fogName: 'Röster över mossen?', arrive: 'Mossen är så stilla att varje ljud kommer tillbaka.', note: 'Röster.' },
+  ],
+  finds: [
+    { key: 'hjortron', kind: 'find', meeting: 'hjortron', name: 'Hjortronmyren', fogName: 'Något orange på myren?', arrive: 'Myren lyser orange.', note: 'Mat, kanske.' },
+    { key: 'boet', kind: 'find', meeting: 'boet', name: 'Det tomma boet', fogName: 'En grop i starren?', arrive: 'Starren är nedtrampad i en stor ring.', note: 'Ett bo, kanske.' },
+    { key: 'ryggsacken', kind: 'find', meeting: 'ryggsacken', name: 'Ryggsäcken', fogName: 'Något blått i starren?', arrive: 'Något blått ligger i starren. Det hör inte hit.', note: 'Något bortglömt.' },
+    { key: 'tjarnen', kind: 'find', meeting: 'tjarnen', name: 'Myrstjärnan', fogName: 'Blankt vatten?', arrive: 'En tjärn, rund och stilla som ett öga.', note: 'Stilla vatten.' },
+  ],
   fire: { key: 'torraHolmen', kind: 'campfire', name: 'Den torra holmen', fogName: 'En holme?', arrive: 'En holme av fast mark mitt i mossen, med ljung och en enda tall. Här kan vi vila.', note: 'Vila, på fast mark.' },
   lastFire: { key: 'underGranen', kind: 'campfire', name: 'Under granen', fogName: 'En gran vid mossens kant?', arrive: 'Under en gammal gran är det torrt. Grenarna hänger ända ner till marken.', note: 'Sista vilan på mossen.' },
   /** The plain end of the bog, until Dimman. */

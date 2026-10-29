@@ -1008,6 +1008,21 @@ Design from the milestone 9 interview:
 - **Bot:** 3.86 of 6 normal, 3.75 in shifts.
 - **Save version 36.**
 
+### Step 5: Mossens berättelser (done)
+Mossen stops borrowing: seven story parts of its own (`src/data/meetings/mossen.sv.ts`), all about being lost and found (your choice: three meetings, all four finds).
+
+| Part | Kind | What happens |
+|---|---|---|
+| **Den vilsna** | meeting | Someone of a kind not with us calls in the mist. **Search:** our weakest gets lost a moment (−1 belief); then the stranger joins us, or we lead it home (+1 hope). **Walk on:** the eldest −1 belief. |
+| **Eremiten** | meeting | An old one alone on an islet asks for company. **The eldest sits with it:** +1 belief, and learns a skill. **The one least sure of us stays:** it leaves us, *Ingen lämnas kvar* breaks, and +2 hope. **Or we go.** |
+| **Ekot** | meeting | Our calls come back in the voices of the dead. The one grieving most **answers** (one grief lets go, +1 belief) or **follows** the voice (all grief lets go; −1 belief, −1 hope). With no one grieving, it only mocks us. |
+| **Hjortronmyren** | find | Cloudberries: +2 hope, everyone +1 belief. But we scatter: at the next fire, no bonds grow (`fireDebt.noBonds`). |
+| **Det tomma boet** | find | A crane's empty nest: the hurt heal; pairs with a bond of 2+ grow closer (+1); whoever has no one close sleeps alone (−1 belief). |
+| **Ryggsäcken** | find | A lost hiker's pack: a map shows the way ahead; the most fearful smells people (−1 belief); the hungriest hunter eats the sandwich (hunger 0). |
+| **Myrstjärnan** | find | A still pool: the grieving let go of one grief each, the rest +1 belief. It costs time: the next place comes at the other time of day. |
+
+- **Save version 37.**
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.
