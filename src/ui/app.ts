@@ -12,14 +12,14 @@ import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown } from '../engine/encounters/street';
 import { SOUND, TUNNELS, bittenByRats, depthIn, isFound } from '../engine/encounters/sewer';
 import { burstsNow, crowdNow, reaches } from '../engine/encounters/fireworks';
-import { isSoft } from '../engine/encounters/bog';
+import { isPool, isSoft } from '../engine/encounters/bog';
 import { DITCH_FULL, ditchLevel, machineRow } from '../engine/encounters/peat';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
 import { Sound } from '../audio/sound';
 import { randomSeed } from '../engine/rng';
-import {
+import { fogSeen,
   animal,
   bond,
   canLure,
@@ -127,7 +127,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 37 && s.phase !== 'over' ? s : null;
+    return s.version === 38 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -1005,8 +1005,10 @@ export class App {
     return encounterOf(s).zones
       .filter((z) => !z.start && !z.goal)
       .map((z) => {
-        const kind = z.pool ? 'pool' : isSoft(s, z.id) ? 'soft' : 'firm';
-        const label = z.pool ? 'djupt vatten · de små drunknar' : kind === 'soft' ? 'mjuk mossa · sjunker' : 'bär';
+        // In the fog: what we can't see is white, and what we have never come close to is unknown.
+        if (s.encounterId === 'fog' && !fogSeen(s).includes(z.id)) return `<div class="fog-cover" style="${box(z.id)}">${s.fog.known.includes(z.id) ? `<em>${({ firm: 'bär', soft: 'mjuk mossa', pool: 'djupt vatten' } as const)[s.fog.kinds[z.id]]}</em>` : ''}</div>`;
+        const kind = isPool(s, z.id) ? 'pool' : isSoft(s, z.id) ? 'soft' : 'firm';
+        const label = kind === 'pool' ? 'djupt vatten · de små drunknar' : kind === 'soft' ? 'mjuk mossa · sjunker' : 'bär';
         const lights = s.encounterId === 'wisps' ? (s.wisps.plan[s.turn - 1] ?? []) : [];
         const light = lights.includes(z.id) ? `<em class="wisp ${knowsTrue(s) && z.id === s.wisps.trueZone ? 'true' : ''}">${knowsTrue(s) && z.id === s.wisps.trueZone ? 'sant ljus · +1 tro' : 'irrbloss · lockar'}</em>` : '';
         return `<div class="bog-mark ${kind}" style="${box(z.id)}"><span>${label}</span>${light}</div>`;
@@ -1120,7 +1122,7 @@ export class App {
     if (s.encounterId === 'cats') return s.phase === 'over' ? '' : this.catsTelegraphHtml(s);
     if (s.encounterId === 'street') return s.phase === 'over' ? '' : this.streetTelegraphHtml(s);
     if (s.encounterId === 'sewer') return s.phase === 'over' ? '' : this.sewerTelegraphHtml(s);
-    if (s.encounterId === 'bog' || s.encounterId === 'wisps') return s.phase === 'over' ? '' : this.bogTelegraphHtml(s);
+    if (s.encounterId === 'bog' || s.encounterId === 'wisps' || s.encounterId === 'fog') return s.phase === 'over' ? '' : this.bogTelegraphHtml(s);
     if (s.encounterId === 'cranes') return s.phase === 'over' ? '' : this.cranesTelegraphHtml(s);
     if (s.encounterId === 'peat') return s.phase === 'over' ? '' : this.peatTelegraphHtml(s);
     if (s.encounterId === 'fireworks') return s.phase === 'over' ? '' : this.fireworksTelegraphHtml(s);

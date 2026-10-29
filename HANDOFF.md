@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 9.5)
+## Status (after step 9.6)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 9.5: Mossens berättelser, branch `mossens-berattelser`, open for review. Everything through 9.4 (#46) is in `main` and live. |
-| **Save version** | 37 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 425 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 9.6: Dimman, branch `dimman`, open for review. Everything through 9.5 (#47) is in `main` and live. |
+| **Save version** | 38 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 435 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -31,7 +31,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 |---|---|---|
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
 | **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden), the gravel road (Grusvägen) + old dangers in new places; six story parts of its own (`src/data/meetings/akrarna.sv.ts`) | Skördetröskan |
-| **Mossen** (9.1–) | Gungflyet, the quaking bog (`bog`); Irrbloss, the lit bog (`wisps`); Tranorna, the cranes' dance (`cranes`); Torvtäkten, the peat cutting (`peat`) + old dangers (Myrbäcken, Det öppna kärret); seven story parts of its own (`src/data/meetings/mossen.sv.ts`); a plain end, *Mossens slut*, until Dimman | – |
+| **Mossen** (9.1–) | Gungflyet, the quaking bog (`bog`); Irrbloss, the lit bog (`wisps`); Tranorna, the cranes' dance (`cranes`); Torvtäkten, the peat cutting (`peat`) + old dangers (Myrbäcken, Det öppna kärret); seven story parts of its own (`src/data/meetings/mossen.sv.ts`) | Dimman (`fog`) |
 | **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan), the sewer (Avloppet) + old dangers; six story parts of its own (`src/data/meetings/staden.sv.ts`) | Fyrverkerinatten |
 
 **Animals** are species, not characters: badger, toad, fox, owl, adder, mice, hare, and since 7.6 hedgehog, squirrel, mole, beaver and fawn (`SPECIES` in `src/data/animals.ts`, with Swedish grammar fields `en` / `den` / `definite`). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
@@ -80,18 +80,23 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: 9.6, Dimman – Mossen's boss
-Mossen (Milestone 9 in `DESIGN.md`) is built like the city: one PR per danger, then the story parts, then the boss.
-- **The interview's plan:**
-  1. Gungflyet (done)
-  2. Irrbloss (done)
-  3. Tranorna (done)
-  4. Torvtäkten (done)
-  5. Mossen's story parts (done), in a lost-and-lonely mood
-  6. **Dimman**, the boss: we lose each other. Zones beyond our own are unseen, and only an animal with a bond of 2+ in the same or a next zone can be led.
-- **Ask the design questions first:** how the fog thickens, what "lost" means for one who drifts (left behind? found again by a call?), and whether a story part (Den vilsna, Ekot) should matter in the boss, as the furrow does for Skördetröskan and the child for Fyrverkerinatten.
+## Next step: ask the user
+Milestone 9 is done: Mossen has four dangers of its own, seven story parts and its boss, Dimman. A run is Dalen → two of the three middle regions → "fortsättning följer".
+**Ask what comes next.** The candidates:
+- **Höglandet** (boss Stormen), the fourth middle region. With four middle regions, the "choose one, skip the other" rule gives at most two per run (see the open questions).
+- **Skogsbrynet and Jägaren,** the last region and the final boss, so a run has a real ending.
+- **Seasons.**
+- **Hope, part 2:** ways to win hope back.
 
 ## Open questions and known quirks
+- **Dimman's bot balance (9.6), the least certain so far.** A convoy bot (it moves up to three animals from one zone together, steps aside when blocked, calm animals, bonds +1 as if grown at the fires) keeps 3.23 of 6 normally and 4.33 when we found the lost one. In thick fog: 2.32 / 2.97.
+  - **Two things were too harsh at first, and I changed them:**
+    - **Drifting:** the lone drifted any way and into pools. Now they drift sideways and never into a pool.
+    - **Hearing:** only bond 2+ counted. Now anyone in the same zone is heard, and bond 2+ is needed only to call to the next zone.
+  - **Ten hours,** not eight: leading six animals three steps each takes all of an 8-hour night's Kraft.
+  - **Hunting:** keeping together brings the hungry predators close to the mice. Without calm animals the bot loses about one animal an hour to hunting.
+  - **Levers:** bond 1 instead of 2 for the next zone; fewer soft zones; or the fog lifting more often.
+- **Zone names in Dimman:** the first row's middle zone is called "dimman", so a drift reads "hamnar i dimman". It could be renamed, e.g. "Starren".
 - **Torvtäkten's bot balance (9.4):** a reading bot keeps 3.86 of 6 when the machine rests every other hour and 3.75 in shifts (every third hour). That matches the harder dangers (Diket och grinden 3.7, the fields 3.9), but normal and hard barely differ. The first version (rest every third hour, never in shifts, ditches filling twice as fast) gave 3.75 / 1.71. Most deaths come from the machine, when too many of us stand in one row with too little Kraft to get them all out. Levers: start the machine in hour 2, or let it cut only one zone of its row.
 - **Tranorna's bot balance (9.3):** a reading bot (heaviest first, sideways only to get out of the dance) keeps 4.76 of 6 with one flock and 4.25 with two. Almost all losses are animals left behind at the end: the dance costs time, never lives. A simpler forward-only bot scored about 3, and it also scores only 2.7 on Gungflyet, so that walker is too weak to judge by. The push goes aside or ahead, never back (my change after the first numbers).
 - **Irrbloss's bot balance (9.2):** the reading bot keeps 4.77 of 6 on a normal night and 4.89 with many lights. More lights barely matter, because only the two or three doubters are ever drawn, and a bot that keeps them off the pools rarely loses them. Levers: the lights also draw those who follow us below belief 6, or a light pulls from two steps away.

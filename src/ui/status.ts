@@ -10,14 +10,14 @@ import { bitten, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown, underfoot } from '../engine/encounters/street';
 import { TUNNELS, bittenByRats, depthIn, isFound, sweptHere } from '../engine/encounters/sewer';
-import { STUCK_AT, UNDER_AT, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from '../engine/encounters/bog';
+import { STUCK_AT, UNDER_AT, isPool, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from '../engine/encounters/bog';
 import { DITCH_FULL, ditchLevel, machineRow } from '../engine/encounters/peat';
 import { FIREWORKS, burstsNow, crowdNow, holdsWith, reaches } from '../engine/encounters/fireworks';
 import { SWEEPS_SMALL } from '../engine/encounters/fence';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
 import { CURRENT, DAM_MAX, aboveTheWater, holdsOnTo, swims } from '../engine/encounters/river';
-import { animal, backZone, boltZone, canFly, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
+import { animal, backZone, boltZone, canFly, hearsACall, huntsAt, isActive, isLethal, swarmLoss, zoneDistance } from '../engine/rules';
 import type { InjuryKind } from '../engine/types';
 import type { Animal, GameState, ZoneId } from '../engine/types';
 
@@ -104,7 +104,8 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'sewer') out.push(...sewerStatuses(s, a));
   if (s.encounterId === 'fireworks') out.push(...fireworksStatuses(s, a));
   if (sinks(s)) out.push(...bogStatuses(s, a));
-  if (s.encounterId === 'wisps') out.push(...wispsStatuses(s, a));
+  if (s.encounterId === 'wisps' || s.encounterId === 'fog') out.push(...wispsStatuses(s, a));
+  if (s.encounterId === 'fog') out.push(...fogStatuses(s, a));
   if (s.encounterId === 'cranes') out.push(...cranesStatuses(s, a));
   if (s.encounterId === 'peat') out.push(...peatStatuses(s, a));
   out.push(...lasting(s, a));
@@ -269,7 +270,8 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'sewer') out.push(...sewerForecast(s, zoneOf));
   if (s.encounterId === 'fireworks') out.push(...fireworksForecast(s, zoneOf));
   if (sinks(s)) out.push(...bogForecast(s, zoneOf));
-  if (s.encounterId === 'wisps') out.push(...wispsForecast(s, zoneOf));
+  if (s.encounterId === 'wisps' || s.encounterId === 'fog') out.push(...wispsForecast(s, zoneOf));
+  if (s.encounterId === 'fog') out.push(...fogForecast(s));
   if (s.encounterId === 'cranes') out.push(...cranesForecast(s, zoneOf));
   if (s.encounterId === 'peat') out.push(...peatForecast(s, zoneOf));
   if (s.rescue) {
@@ -575,10 +577,22 @@ function cranesForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine
   return out;
 }
 
+/** The fog: alone, with no one close enough to call to. */
+function fogStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active' || hearsACall(s, a)) return [];
+  return [{ key: 'fog', icon: '☁', label: 'ensam i dimman', tone: 'bad', explain: `Ingen står i samma zon som ${a.name}, och ingen ${a.name} står nära (band 2 eller mer) är i zonen bredvid. ${a.name} kan inte ledas, och driver en zon åt sidan när timmen går.` }];
+}
+
+/** The fog: who drifts when the hour goes. */
+function fogForecast(s: GameState): ForecastLine[] {
+  const lonely = s.animals.filter((a) => isActive(a) && !hearsACall(s, a) && !isStuck(s, a));
+  return lonely.length ? [{ text: `${lonely.map((a) => a.name).join(' och ')} är ensam${lonely.length > 1 ? 'ma' : ''} i dimman och driver bort en zon.`, tone: 'warn' }] : [{ text: 'Alla har någon nära. Ingen går vilse den här timmen.', tone: 'good' }];
+}
+
 /** The lit bog: standing in a deep pool, or in the true light. */
 function wispsStatuses(s: GameState, a: Animal): Status[] {
   if (a.status !== 'active' || a.flying) return [];
-  if (zoneDef(s, a.zone).pool && !a.swimmer) return [{ key: 'pool', icon: '◍', label: a.size === 'small' ? 'drunknar' : 'fryser', tone: a.size === 'small' ? 'bad' : 'warn', explain: a.size === 'small' ? `${a.name} kan inte simma. Står ${a.name} kvar i gölen när timmen går drunknar ${a.name}.` : `Vattnet är iskallt. Står ${a.name} kvar när timmen går tappar ${a.name} 1 tro.` }];
+  if (isPool(s, a.zone) && !a.swimmer) return [{ key: 'pool', icon: '◍', label: a.size === 'small' ? 'drunknar' : 'fryser', tone: a.size === 'small' ? 'bad' : 'warn', explain: a.size === 'small' ? `${a.name} kan inte simma. Står ${a.name} kvar i gölen när timmen går drunknar ${a.name}.` : `Vattnet är iskallt. Står ${a.name} kvar när timmen går tappar ${a.name} 1 tro.` }];
   return [];
 }
 
@@ -588,7 +602,7 @@ function wispsForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[
   const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
   // Whoever moves this hour and can fly is in the air when the hour goes: the water doesn't reach it.
   const airborne = (a: Animal) => a.flying || (where(a) !== a.zone && canFly(a));
-  for (const a of s.animals.filter((x) => isActive(x) && !airborne(x) && !x.swimmer && zoneDef(s, where(x)).pool)) {
+  for (const a of s.animals.filter((x) => isActive(x) && !airborne(x) && !x.swimmer && isPool(s, where(x)))) {
     out.push(a.size === 'small' ? { text: `${a.name} drunknar i ${zoneDef(s, where(a)).name}: dödar.`, tone: 'bad' } : { text: `${a.name} fryser i ${zoneDef(s, where(a)).name} (−1 tro).`, tone: 'warn' });
   }
   if (knowsTrue(s)) {

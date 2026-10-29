@@ -1,7 +1,7 @@
 // Mossen: the great bog beyond the edge of things. No people come here – only water,
 // moss and silence, and it is easy to lose your way, and each other. Its dangers are
 // the quaking bog, the lights, the cranes and the peat cutting; old dangers stand in new
-// places; its story parts are about being lost and found. Its boss will be Dimman.
+// places; its story parts are about being lost and found. Its boss is Dimman, the fog.
 import type { Template } from './dalen';
 import { DALEN, type RegionDef } from './dalen';
 
@@ -69,6 +69,11 @@ export const MOSSEN: RegionDef = {
   ],
   fire: { key: 'torraHolmen', kind: 'campfire', name: 'Den torra holmen', fogName: 'En holme?', arrive: 'En holme av fast mark mitt i mossen, med ljung och en enda tall. Här kan vi vila.', note: 'Vila, på fast mark.' },
   lastFire: { key: 'underGranen', kind: 'campfire', name: 'Under granen', fogName: 'En gran vid mossens kant?', arrive: 'Under en gammal gran är det torrt. Grenarna hänger ända ner till marken.', note: 'Sista vilan på mossen.' },
-  /** The plain end of the bog, until Dimman. */
-  end: { key: 'mossensSlut', kind: 'end', name: 'Mossens slut', fogName: 'Mossens slut', arrive: 'Mossen tar slut i en skogsbacke. Vi står länge och ser tillbaka.' },
+    /** The boss of the bog: the fog, where we lose each other. */
+  end: {
+    key: 'dimman', kind: 'encounter', encounter: 'fog', name: 'Dimman', fogName: 'Dimman – där vi tappar varandra',
+    memory: { normal: 'dimman lättar ibland', hard: 'tjock som mjölk' },
+    arrive: 'Den sista biten av mossen. Dimman kommer krypande över starren, tills vi knappt ser varandra.',
+    note: 'Sista mossen. Dimman.',
+  },
 };

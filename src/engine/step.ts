@@ -20,10 +20,11 @@ import { DITCH_MAX, FENCE, levelAfter, onTheWire, planFence, sweptIn } from './e
 import { cutting, planHarvest, stubblePrey } from './encounters/harvest';
 import { bitten, lit, planLamps, planWalkers, walkerZone } from './encounters/lamps';
 import { eyesFor, guard, nextHide, placeCats, pounced, scarer } from './encounters/cats';
-import { STUCK_AT, UNDER_AT, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from './encounters/bog';
+import { STUCK_AT, UNDER_AT, isPool, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from './encounters/bog';
 import { planWisps } from './encounters/wisps';
 import { planFlocks } from './encounters/cranes';
 import { DITCH_FULL, cutZones, machineRow, planPeat } from './encounters/peat';
+import { planFogKinds } from './encounters/fog';
 import { burstsNow, crowdNow, holdsWith, planBursts, planCrowd as planParkCrowd, pushOptions, reaches } from './encounters/fireworks';
 import { SOUND, TUNNELS, bittenByRats, foundBy, isFound, levelNow, planKinds, planRats, planRise, sweptHere } from './encounters/sewer';
 import { STAGGER, bikesAt, feetAt, planBikes, planCrowd, planTram, sideOf, tramIn, tramNow, underfoot } from './encounters/street';
@@ -50,6 +51,8 @@ import {
   cardTarget,
   cardZones,
   handSize,
+  fogSeen,
+  hearsACall,
   DRIFT_FROM,
   mood,
   moodAt,
@@ -406,6 +409,9 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.cranes = { flocks: id === 'cranes' ? planFlocks(s, s.maxTurn, hard) : [], called: false };
   // The peat cutting: the machine's rows, and no ditches yet.
   s.peat = { rows: id === 'peat' ? planPeat(s, s.maxTurn, hard) : [], ditch: {} };
+  // The fog: what lies under it, unknown until we come close.
+  s.fog = { kinds: id === 'fog' ? planFogKinds(s) : {}, known: [] };
+  if (id === 'fog' && s.knowledge.includes('vilsnaHittad')) narrate(c, 'Långt bort i dimman ropar någon vi känner igen: den vilsna vi hittade. Den har hittat hem – och ropar på oss nu.');
   // The harvest: the wheat stands, and the harvester's rounds are planned.
   s.harvest = { plan: id === 'harvest' ? planHarvest(s, s.maxTurn) : [], cut: [], shadow: null };
   if (id === 'fireworks' && s.knowledge.includes('barnetSag')) narrate(c, 'Någonstans i parken, bland alla människor, finns barnet från fönstret.');
@@ -1005,6 +1011,7 @@ function respond(c: Ctx, optionId: string, uid?: number) {
     }
     // ------------------------------------------------ Mossen's finds and meetings
     case 'searchLost': {
+      remember('vilsnaHittad');
       const lost = [...present].sort((a, b) => a.belief - b.belief)[0];
       if (lost) {
         changeBelief(c, lost, -1);
@@ -1317,6 +1324,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'wisps') telegraphWisps(c);
   if (s.encounterId === 'cranes') telegraphCranes(c);
   if (s.encounterId === 'peat') telegraphPeat(c);
+  if (s.encounterId === 'fog') telegraphFog(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1986,6 +1994,35 @@ function bogHazards(c: Ctx) {
   }
 }
 
+// ---------------------------------------------------------------- the fog
+
+/** Start of the hour: how thick the fog is, and what we come close enough to know. */
+function telegraphFog(c: Ctx) {
+  const s = c.s;
+  const seen = fogSeen(s);
+  for (const z of seen) if (!s.fog.known.includes(z)) s.fog.known.push(z);
+  const all = seen.length === encounterOf(s).zones.length;
+  if (s.turn === 1) narrate(c, s.variant === 'hard' ? 'Dimman är tjock som mjölk. Vi ser knappt varandra.' : 'Dimman ligger över mossen. Vi ser bara det som är närmast.');
+  else if (all) narrate(c, 'Dimman lättar en stund. Vi ser hela mossen, och varandra.');
+  else if (s.variant === 'hard' && s.turn === 3) narrate(c, 'Dimman tätnar. Nu ser vi bara där vi själva står.');
+  const lonely = s.animals.filter((a) => isActive(a) && !hearsACall(s, a));
+  if (lonely.length) narrate(c, `${lonely.map((a) => a.name).join(' och ')} hör ingen nära. Den som är ensam i dimman driver bort.`);
+}
+
+/** End of the hour, before the bog takes anyone: whoever hears no one drifts one zone aside with the fog – the way is lost, not undone. The water we smell; no one drifts into a pool. */
+function fogDrift(c: Ctx) {
+  const s = c.s;
+  for (const a of s.animals.filter((x) => isActive(x) && !hearsACall(s, x) && !isStuck(s, x))) {
+    const row = (z: ZoneId) => zoneDef(s, z).rect[1];
+    const ways = encounterOf(s).edges.flatMap(([x, y]) => (x === a.zone ? [y] : y === a.zone ? [x] : []))
+      .filter((z) => row(z) === row(a.zone) && !isPool(s, z));
+    if (!ways.length) continue;
+    const z = ways[Math.floor(random(s) * ways.length)];
+    line(c, a.id, `${a.name} ropar, men ingen svarar. ${a.name} går fel i dimman, och hamnar i ${zoneDef(s, z).name}.`);
+    moveAnimal(c, a, z, false);
+  }
+}
+
 // ---------------------------------------------------------------- the peat cutting
 
 /** Start of the hour: the ditches fill, and the machine's row now and next. */
@@ -2075,6 +2112,19 @@ function telegraphWisps(c: Ctx) {
   }
 }
 
+/** End of the hour: the deep pools take the small who can't swim, and chill the rest. */
+function poolHazards(c: Ctx) {
+  const s = c.s;
+  for (const a of s.animals.filter((x) => isActive(x) && !x.flying && isPool(s, x.zone))) {
+    if (a.swimmer) continue;
+    if (a.size === 'small') s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'gölen' });
+    else {
+      changeBelief(c, a, -1);
+      line(c, a.id, `Vattnet i ${zoneDef(s, a.zone).name} är iskallt. ${a.name} huttrar.`);
+    }
+  }
+}
+
 /** After the intents: whoever has a will of their own, and stands in or beside a light, is drawn to it. */
 function lureToLights(c: Ctx) {
   const s = c.s;
@@ -2091,14 +2141,6 @@ function lureToLights(c: Ctx) {
 /** End of the hour: the deep pools take the small and chill the rest; the true light lifts those who reached it. */
 function wispsHazards(c: Ctx) {
   const s = c.s;
-  for (const a of s.animals.filter((x) => isActive(x) && !x.flying && zoneDef(s, x.zone).pool)) {
-    if (a.swimmer) continue;
-    if (a.size === 'small') s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'gölen' });
-    else {
-      changeBelief(c, a, -1);
-      line(c, a.id, `Vattnet i ${zoneDef(s, a.zone).name} är iskallt. ${a.name} huttrar.`);
-    }
-  }
   if (s.turn === s.wisps.trueAt) {
     if (s.darkRevealed) s.wisps.known = true;
     for (const a of s.animals.filter((x) => isActive(x) && x.zone === s.wisps.trueZone)) {
@@ -2858,7 +2900,9 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'street') streetHazards(c);
   if (s.encounterId === 'sewer') sewerHazards(c);
   if (s.encounterId === 'fireworks') fireworksHazards(c);
+  if (s.encounterId === 'fog') fogDrift(c);
   if (sinks(s)) bogHazards(c);
+  if (s.encounterId === 'wisps' || s.encounterId === 'fog') poolHazards(c);
   if (s.encounterId === 'wisps') wispsHazards(c);
   if (s.encounterId === 'cranes') cranesHazards(c);
   if (s.encounterId === 'peat') peatHazards(c);

@@ -28,6 +28,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     wisps: { pull: -1, line: 'Djupa gölar i mörkret. Vi kan inte simma. Inte där.' },
     cranes: { pull: -1, line: 'Så stora fötter. De ser oss inte ens när de trampar.' },
     peat: { pull: -1, line: 'Diken som fylls med vatten. Vi kommer aldrig över.' },
+    fog: { pull: -1, line: 'I dimman tappar vi varandra. Vi är för små för att synas.' },
   },
   fox: {
     farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' },

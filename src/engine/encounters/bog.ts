@@ -57,11 +57,15 @@ export const BOG: EncounterDef = {
 };
 
 /** The moss that gives way. The tussocks hold – but after rain the far ones are soft too. */
-/** The dangers where soft moss sinks us: Gungflyet, and the lit bog. */
-export const sinks = (s: GameState) => s.encounterId === 'bog' || s.encounterId === 'wisps';
+/** The dangers where soft moss sinks us: Gungflyet, the lit bog, and the fog. */
+export const sinks = (s: GameState) => s.encounterId === 'bog' || s.encounterId === 'wisps' || s.encounterId === 'fog';
 export const isSoft = (s: GameState, z: ZoneId) =>
   (s.encounterId === 'bog' && (!!BOG.zones.find((d) => d.id === z)?.soft || (z === 'tuvorna' && s.variant === 'hard'))) ||
-  (s.encounterId === 'wisps' && !!WISPS.zones.find((d) => d.id === z)?.soft);
+  (s.encounterId === 'wisps' && !!WISPS.zones.find((d) => d.id === z)?.soft) ||
+  (s.encounterId === 'fog' && s.fog.kinds[z] === 'soft');
+/** A deep pool, in the lit bog or under the fog: the small who can't swim drown. */
+export const isPool = (s: GameState, z: ZoneId) =>
+  (s.encounterId === 'wisps' && !!WISPS.zones.find((d) => d.id === z)?.pool) || (s.encounterId === 'fog' && s.fog.kinds[z] === 'pool');
 
 /** Sinking is counted in half-steps: stuck at two steps, pulled under at three. */
 export const STUCK_AT = 4;

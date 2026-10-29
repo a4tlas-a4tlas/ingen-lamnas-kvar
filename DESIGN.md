@@ -888,7 +888,7 @@ Until now hope only changed the hand size. Now it is the group's **mood**, named
 - **The meter** reads "Hopp 8 · Tillit", tinted by mood. Its tooltip says what this mood does, and the Kraft tooltip names the mood's share.
 - **Bot:** the crude whole-run walker over 150 seeds per group, keeping this share of the group (before → after): Dalens sista 7.6 → 6.8 %, Rovdjurens pakt 7.1 → 6.5 %, De små 7.9 → 8.7 %, Slumpad 11.3 → 9.3 %. That's about the same: the walker sits in despair (hope ~2 at the end), so it feels the costs, and the drift partly makes up for them.
 
-## Milestone 9 – Mossen (in progress)
+## Milestone 9 – Mossen (done)
 Design from the milestone 9 interview:
 - **The third middle region:** the great bog. No people, only water, moss and silence. Its mood is **lost and lonely**.
 - **Its four dangers:**
@@ -1022,6 +1022,24 @@ Mossen stops borrowing: seven story parts of its own (`src/data/meetings/mossen.
 | **Myrstjärnan** | find | A still pool: the grieving let go of one grief each, the rest +1 belief. It costs time: the next place comes at the other time of day. |
 
 - **Save version 37.**
+
+### Step 6: Dimman – Mossen's boss (done)
+Mossen's end is now its boss, *Dimman* (`src/engine/encounters/fog.ts`, id `fog`, any time of day, 10 hours, three steps). Memory: "dimman lättar ibland" / "tjock som mjölk".
+- **The fog** (your choice: *bonds lead, the alone drift*):
+  - **What we see:** only where we stand and the zones beside it. Normally the fog lifts every third hour and we see everything. Thick fog never lifts, and from the fourth hour shows only our own zones.
+  - **Who can be led:** only an animal that hears someone. That is anyone in the same zone, or one it has a bond of 2+ with in the next zone. In thick fog, from the fourth hour, only the same zone counts.
+  - **The lone drift:** whoever hears no one drifts one zone aside when the hour goes. Never back, and never into a pool.
+- **Under the fog** (your choice: *the bog itself*):
+  - Each row has one firm zone; there are two deep pools, and the rest is soft moss. It is drawn anew every time, so the guide's sketch doesn't give it away.
+  - We learn what a zone is by coming close.
+  - Sinking and drowning work as in the earlier dangers.
+- **Den vilsna remembered** (your choice): if we searched for the lost one on the bog (`vilsnaHittad`), it has found its home and calls to us from the far side. The last row is always seen, and no one there is alone.
+- **My changes after the bot:**
+  - Ten hours instead of eight.
+  - The same zone always hears; bond 2+ only for the next zone.
+  - The lone drift aside and never into pools.
+- **Bot:** a convoy bot keeps 3.23 of 6 (4.33 with the lost one found); in thick fog 2.32 (2.97). It's crude; see HANDOFF.
+- **Save version 38.**
 
 ## Milestone 7 – the animals rethought (done)
 Your direction:
