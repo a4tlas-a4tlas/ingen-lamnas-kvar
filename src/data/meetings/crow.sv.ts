@@ -88,6 +88,9 @@ export type MeetingEffect =
   | 'restNest'
   | 'backpack'
   | 'tarn'
+  // Skogsbrynet's.
+  | 'forestScent'
+  | 'lastBerries'
   // Between two regions.
   | 'lookBack'
   | 'chooseRegion';

@@ -283,6 +283,11 @@ export function sceneArt(kind: SceneArt): string {
         ${[4, 10, 16, 22].map((x) => `<path d="M${x} 36 L${x} 28 M${x} 30 l-2 -2 M${x} 31 l2 -2" stroke="#5d7b44" stroke-width="1.4"/>`).join('')}
         <path d="M2 30 L30 30 M4 26 L4 36 M28 26 L28 36" stroke="#8a7a5a" stroke-width="1"/>
         <ellipse cx="18" cy="42" rx="12" ry="4" fill="#2f2418"/>`);
+    case 'forest':
+      return svg(`
+        <rect width="64" height="48" fill="#3a4a3a"/>
+        ${[4, 14, 24, 34, 44, 54].map((x, i) => `<path d="M${x + 4} ${6 + (i % 2) * 4} L${x - 4} 44 H${x + 12} Z" fill="${i % 2 ? '#1e2e22' : '#24362a'}"/>`).join('')}
+        <path d="M0 44 H64 V48 H0 Z" fill="#4a3a2a"/>`);
     case 'mist':
       return svg(`
         <rect width="64" height="48" fill="#4a5450"/>

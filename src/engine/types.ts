@@ -208,7 +208,7 @@ export interface Dog {
 export type PromiseRule = 'light' | 'current' | 'noneAlone' | 'together' | 'water' | 'farm' | 'night' | 'stay' | 'noCity';
 
 /** The regions of the way: the glen first, the forest's edge last, the others in between in any order. */
-export type RegionId = 'dalen' | 'akrarna' | 'staden' | 'mossen';
+export type RegionId = 'dalen' | 'akrarna' | 'staden' | 'mossen' | 'skogsbrynet';
 
 /** A promise an animal asked of us: who asked, what it binds us to, and – for two – who else it is about. */
 export interface Proposal {
@@ -369,6 +369,9 @@ export type MeetingId =
   | 'boet'
   | 'ryggsacken'
   | 'tjarnen'
+  // Skogsbrynet's.
+  | 'doften'
+  | 'barbusken'
   | 'interlude';
 
 export interface Meeting {

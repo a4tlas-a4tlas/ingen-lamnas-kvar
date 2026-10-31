@@ -5,11 +5,15 @@ import { AKRARNA } from './akrarna';
 import { DALEN, type RegionDef } from './dalen';
 import { STADEN } from './staden';
 import { MOSSEN } from './mossen';
+import { SKOGSBRYNET } from './skogsbrynet';
 
-export const REGIONS: Record<RegionId, RegionDef> = { dalen: DALEN, akrarna: AKRARNA, staden: STADEN, mossen: MOSSEN };
+export const REGIONS: Record<RegionId, RegionDef> = { dalen: DALEN, akrarna: AKRARNA, staden: STADEN, mossen: MOSSEN, skogsbrynet: SKOGSBRYNET };
 
 /** The regions that may come after the glen, in any order. */
 export const MIDDLE_REGIONS: RegionId[] = ['akrarna', 'staden', 'mossen'];
+
+/** Where the way ends, once no middle region is left: the forest edge. */
+export const FINAL_REGION: RegionId = 'skogsbrynet';
 
 /** How many regions we are offered to choose between after each boss. */
 export const OFFERED = 2;

@@ -31,7 +31,7 @@ import { STAGGER, bikesAt, feetAt, planBikes, planCrowd, planTram, sideOf, tramI
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
 import { random, shuffle } from './rng';
 import { OATH_VERSES, buildCast, idFor, makeAnimal, oathVerse, regionJourney } from './setup';
-import { MIDDLE_REGIONS, OFFERED, REGIONS } from '../data/regions';
+import { FINAL_REGION, MIDDLE_REGIONS, OFFERED, REGIONS } from '../data/regions';
 import { CAST_IDS, SPECIES, nameFor } from '../data/animals';
 import { guideHere, guideName, kin } from './roles';
 import { beliefFelt, ownWillBelow, willOf } from './will';
@@ -278,9 +278,14 @@ function travel(c: Ctx, to: string, wait = false) {
 function endRegion(c: Ctx) {
   const s = c.s;
   narrate(c, REGIONS[s.journey.region].epilogue);
-  // The ways on: regions neither walked nor passed by. With none left, we still look back before the story stops.
+  // The forest edge is the end of the way: beyond it, the forest.
+  if (s.journey.region === FINAL_REGION) {
+    narrate(c, 'Vi går in i skogen.');
+    return endRun(c);
+  }
+  // The ways on: regions neither walked nor passed by – and when none are left, the forest edge.
   const left = MIDDLE_REGIONS.filter((r) => !s.run.regions.includes(r) && !s.run.skipped.includes(r));
-  s.run.offered = shuffle(s, left).slice(0, OFFERED);
+  s.run.offered = left.length ? shuffle(s, left).slice(0, OFFERED) : s.run.regions.includes(FINAL_REGION) ? [] : [FINAL_REGION];
   s.phase = 'map';
   s.run.between = true;
   s.meeting = { id: 'interlude', frame: 'start', used: [], told: [] };
@@ -1091,6 +1096,17 @@ function respond(c: Ctx, optionId: string, uid?: number) {
           line(c, a.id, `${a.name} ser något i vattnet och släpper en sorg.`);
         } else changeBelief(c, a, 1);
       }
+      s.clock = otherTime(s.clock);
+      break;
+    // ------------------------------------------------ the forest edge
+    case 'forestScent': {
+      for (const a of present) changeBelief(c, a, 1);
+      if (present.some((a) => a.elder)) changeHope(c, 1, 'laugh');
+      break;
+    }
+    case 'lastBerries':
+      changeHope(c, 2, 'food');
+      for (const a of present) heal(c, a, `${a.name} vilade i lyngen.`);
       s.clock = otherTime(s.clock);
       break;
     case 'lookBack':

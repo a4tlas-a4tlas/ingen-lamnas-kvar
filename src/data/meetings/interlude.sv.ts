@@ -93,6 +93,7 @@ export const INTERLUDE: Record<string, MeetingFrame> = {
     id: 'way',
     speaker: 'story',
     text: (s) => {
+      if (s.run.offered.length === 1 && s.run.offered[0] === 'skogsbrynet') return `${guideName(s)} ser länge ut över landet. ”Det finns bara en väg kvar nu. Mot skogen.”`;
       if (s.run.offered.length < 2) return `${guideName(s)} ser länge ut över landet. ”Jag minns bara en väg härifrån.”`;
       const voices = regionVoices(s).map((v) => ` ${nameOf(s, v.who)}: ”${v.line}”`).join('');
       return `${guideName(s)} ser länge ut över landet. ”Jag minns två vägar härifrån. Men inte vart de leder, inte riktigt. Och vi kan bara gå en av dem.”${voices}`;

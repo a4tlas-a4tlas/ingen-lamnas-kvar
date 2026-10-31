@@ -120,7 +120,10 @@ describe('every region', () => {
       for (const seed of SEEDS.slice(0, 150)) {
         const { nodes } = generateRegion(def, seed);
         expect(nodes[0].id).toBe(def.start.key);
-        expect(nodes.find((n) => n.row === 7)!.id).toBe(def.end.key);
+        const middle = def.middleRows ?? 4;
+        expect(nodes.find((n) => n.row === middle + 3)!.id).toBe(def.end.key);
+        // A short last stretch may be anything along its one row.
+        if (middle < 4) continue;
         for (const way of ways(nodes)) {
           const kinds = way.map((n) => n.kind);
           expect(kinds.filter((k) => k === 'encounter').length).toBeGreaterThanOrEqual(2);
