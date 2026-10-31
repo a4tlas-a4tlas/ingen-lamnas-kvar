@@ -24,9 +24,9 @@ export const FOG: EncounterDef = {
   maxTurn: 10,
   zones: [
     { id: 'myrranden', label: 'Myrranden', name: 'myrranden', rect: [0, 80, 100, 20], start: true },
-    { id: 'dimma1v', label: 'Dimman, väst', name: 'dimman i väster', rect: [0, 58, 34, 22] },
-    { id: 'dimma1m', label: 'Dimman', name: 'dimman', rect: [34, 58, 32, 22] },
-    { id: 'dimma1o', label: 'Dimman, öst', name: 'dimman i öster', rect: [66, 58, 34, 22] },
+    { id: 'dimma1v', label: 'Kärret, väst', name: 'kärret i väster', rect: [0, 58, 34, 22] },
+    { id: 'dimma1m', label: 'Kärret', name: 'kärret', rect: [34, 58, 32, 22] },
+    { id: 'dimma1o', label: 'Kärret, öst', name: 'kärret i öster', rect: [66, 58, 34, 22] },
     { id: 'dimma2v', label: 'Det grå, väst', name: 'det grå i väster', rect: [0, 36, 34, 22] },
     { id: 'dimma2m', label: 'Det grå', name: 'det grå', rect: [34, 36, 32, 22] },
     { id: 'dimma2o', label: 'Det grå, öst', name: 'det grå i öster', rect: [66, 36, 34, 22] },

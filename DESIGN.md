@@ -1087,6 +1087,17 @@ Skogsbrynet's end is the final boss, *Jägaren* (`src/engine/encounters/hunt.ts`
 - **Bot:** 3.81 of 6 normally, 3.26 with a hunting party; with comforted animals, 5.00 / 4.00.
 - **Save version 39.**
 
+## Milestone 11 – the playtest pass (in progress)
+### Step 1: the playtest bot and its report (done)
+- **The careful player** (`tests/playtest/player.ts`) plays whole runs through the real engine.
+  - **Each hour:** it tries every lead and every card it could play on a copy, lets the hour go in the copy, and keeps whichever leaves us best off. That repeats until nothing beats letting the hour go.
+  - **The score:** those alive and with us; minus injuries and the distance to the goal; plus belief and hope; minus a heavy cost for anyone further from the goal than hours remain.
+  - **The rest:** in a last moment it picks the better of a shield and letting go. In meetings it avoids the replies that send one of us away.
+  - **The caveat:** the dice live in the state, so the lookahead sees each hour's rolls. Its numbers are a floor on difficulty.
+- **The report** (`PLAYTEST=1 npx vitest run tests/playtest`, written to `playtest-report.md`): per group, per danger, how we were lost, and where runs fell. A smoke test (one run per group) is in the normal suite.
+- **What it found:** see HANDOFF. In short, a careful player nearly always reaches the forest, and the cost of the way is time, not death. Most bosses barely bite; Dimman and Torvtäkten do.
+- **Small fixes:** Dimman's first row is *Kärret* (no more "hamnar i dimman"), and the hermit's picture no longer shows a hare.
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 10.2)
+## Status (after step 11.1)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 10.2: Jägaren, branch `jagaren`, open for review. Everything through 10.1 (#49) is in `main` and live. |
+| **Latest PR** | Milestone 11.1: the playtest bot, branch `playtest`, open for review. Everything through 10.2 (#50) is in `main` and live. |
 | **Save version** | 39 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 452 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Tests** | 456 Vitest (plus the playtest report, skipped unless `PLAYTEST=1`) (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -81,15 +81,18 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: ask the user
-**The run is complete:** Dalen → two of three middle regions → Skogsbrynet → Jägaren → the forest, with its own ending screen. Ask what comes next. The candidates:
-- **A playtest pass:** play whole runs and tune the bosses, which were balanced only by bots (Dimman in particular).
-- **Höglandet** (boss Stormen), the fourth middle region. It needs a rule for how many middle regions a run holds.
-- **Memories in Jägaren** (left out for now, by your choice): the crows' warning, the city fox, deep bonds.
-- **Seasons.**
-- **Hope, part 2.**
+## Next step: 11.2, tuning (ask first)
+The playtest report (Milestone 11 in `DESIGN.md`) shows where to tune. **Ask which to act on**, then re-run the report and compare.
+- **How to run it:** `PLAYTEST=1 npx vitest run tests/playtest` (about 5 minutes for 50 seeds × 4 groups; `PLAYTEST_SEEDS=10` for a quick look). It writes `playtest-report.md` (git-ignored).
+- **The bot is near-omniscient:** its lookahead simulates the real engine, and the dice live in the state, so it sees each hour's rolls. Read its numbers as a floor on difficulty.
 
 ## Open questions and known quirks
+- **What the playtest report says (11.1), from the careful player, 50 seeds per group:**
+  - **Finishing:** 94–98 % of runs reach the forest. Survivors there: Dalens sista 3.3, Rovdjurens pakt 3.1, De små 4.8, Slumpad 3.8 of 6.
+  - **Losses are time, not death:** 2.3 per run are left behind when an hour runs out, 0.25 leave from doubt, and every cause of death together comes to about 0.3.
+  - **Bosses:** Skördetröskan, Fyrverkerinatten and Jägaren keep about 100 %; Maskinerna keeps 96 %; Dimman keeps 81 %, the only boss that bites.
+  - **Dangers:** Torvtäkten (80 %) and the road in Dalen (88 %) are the harshest.
+  - **Region choice:** Mossen was chosen far less often than the other two (63 of 200 runs). The bot takes the first way offered, so this is about the order offered, not the region.
 - **Jägaren's bot balance (10.2):** a reading bot keeps 3.81 of 6 normally and 3.26 with a hunting party; with calm (comforted) animals, 5.00 / 4.00. Almost all deaths are shots.
   - **The leash:** the dog is leashed for the first hour. Without that, it barked at the road and the hunter shot everyone still there in hour 2, which gave 3.51 / 3.15 calm.
   - **Levers:** the dog's speed (2 steps), whether a bark shows cover, or a row-and-column sight on the normal hunt too.
