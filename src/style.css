@@ -1041,3 +1041,13 @@ h2 .skills-btn { margin: 0 0 0 8px; vertical-align: middle; }
 /* The fog: what we can't see. */
 .fog-cover { position: absolute; pointer-events: none; background: radial-gradient(ellipse at center, rgba(236,240,234,0.92), rgba(220,226,218,0.85)); }
 .fog-cover em { position: absolute; right: 5px; bottom: 4px; font-style: italic; font-size: 0.62em; color: #4a5248; }
+
+/* The hunt: the hunter's sight. */
+.sight-mark { position: absolute; pointer-events: none; border: 2px dashed rgba(200,60,40,0.75); background: rgba(200,60,40,0.10); }
+.sight-mark.barked { border-style: solid; background: rgba(200,60,40,0.22); }
+.sight-mark span { position: absolute; left: 5px; top: 4px; font-size: 0.64em; padding: 1px 6px; border-radius: 2px; background: rgba(90,20,14,0.85); color: var(--paper); }
+
+/* The end: the promises we made. */
+.end-promises { list-style: none; padding: 0; margin: 0 0 1em; }
+.end-promises li { margin: 0.25em 0; font-style: italic; }
+.end-promises li.broken { opacity: 0.75; }

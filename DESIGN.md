@@ -1041,7 +1041,7 @@ Mossen's end is now its boss, *Dimman* (`src/engine/encounters/fog.ts`, id `fog`
 - **Bot:** a convoy bot keeps 3.23 of 6 (4.33 with the lost one found); in thick fog 2.32 (2.97). It's crude; see HANDOFF.
 - **Save version 38.**
 
-## Milestone 10 – Skogsbrynet and Jägaren (in progress)
+## Milestone 10 – Skogsbrynet and Jägaren (done)
 Design from the milestone 10 interview:
 - **A short last stretch, not a full region.**
 - **Jägaren is a hunt with a dog.**
@@ -1063,6 +1063,29 @@ A run is now: Dalen → two of the three middle regions → Skogsbrynet → (Jä
   - **Skogens doft:** we smell the forest; everyone says what they hope for (+1 belief), and the eldest reminds us how many we were (+1 hope).
   - **Den sista bärbusken:** +2 hope, the hurt heal, and the night falls (the clock flips).
 - **For now** the end is a plain *Skogen*. Step 2 makes it Jägaren.
+
+### Step 2: Jägaren, and the ending (done)
+Skogsbrynet's end is the final boss, *Jägaren* (`src/engine/encounters/hunt.ts`, id `hunt`, always by day, 10 hours, three steps). Memory: "en jägare" / "ett jaktlag".
+
+| Row | | | |
+|---|---|---|---|
+| goal | **Skogen** | | |
+| 3 | Vindfället (cover) | Gläntan (open) | Mossbacken |
+| 2 | Granplanteringen (cover) | Stigen (open) | Bäcken (water, breaks scent) |
+| 1 | Ormbunkarna (cover) | Kalhygget (open) | Stenröset (cover) |
+| start | **Vägkanten** | | |
+
+- **The hunter:** each hour he looks over a row or a column, shown this hour and the next. With a hunting party (hard), a row and a column. Whoever stands where he looks when the hour goes is shot (it kills, with a last moment), unless they are hidden or in cover.
+- **The dog** (your choice: *a hunt with a dog*):
+  - It follows our scent with the farm's scent rules, two steps an hour.
+  - Where it finds one of us it barks, and next hour the hunter looks there too, *into cover as well*. Without that, a column of cover would lead safely to the forest.
+  - Water breaks the scent, the fox or the owl can lure it (◆1), and the hidden are never found.
+  - It is leashed for the first hour.
+  - A hunting party has two dogs.
+- **The ending** (your choice: *the forest, and the poem*): past the hunter, "Vi går in i skogen". The end screen is titled *Ingen lämnades kvar* (no one dead or left), *N av oss kom fram*, or *Eden föll*. It shows the survivors, the memorial stone, the poem, and the promises, kept or broken.
+- **No memories** from earlier choices, for now (your choice).
+- **Bot:** 3.81 of 6 normally, 3.26 with a hunting party; with comforted animals, 5.00 / 4.00.
+- **Save version 39.**
 
 ## Milestone 7 – the animals rethought (done)
 Your direction:

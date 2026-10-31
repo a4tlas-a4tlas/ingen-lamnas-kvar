@@ -12,6 +12,7 @@ import { bikesAt, feetAt, tramIn, tramKnown, underfoot } from '../engine/encount
 import { TUNNELS, bittenByRats, depthIn, isFound, sweptHere } from '../engine/encounters/sewer';
 import { STUCK_AT, UNDER_AT, isPool, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from '../engine/encounters/bog';
 import { DITCH_FULL, ditchLevel, machineRow } from '../engine/encounters/peat';
+import { huntDogDestination, watched } from '../engine/encounters/hunt';
 import { FIREWORKS, burstsNow, crowdNow, holdsWith, reaches } from '../engine/encounters/fireworks';
 import { SWEEPS_SMALL } from '../engine/encounters/fence';
 import { encounterOf, zoneDef } from '../engine/encounters';
@@ -106,6 +107,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (sinks(s)) out.push(...bogStatuses(s, a));
   if (s.encounterId === 'wisps' || s.encounterId === 'fog') out.push(...wispsStatuses(s, a));
   if (s.encounterId === 'fog') out.push(...fogStatuses(s, a));
+  if (s.encounterId === 'hunt') out.push(...huntStatuses(s, a));
   if (s.encounterId === 'cranes') out.push(...cranesStatuses(s, a));
   if (s.encounterId === 'peat') out.push(...peatStatuses(s, a));
   out.push(...lasting(s, a));
@@ -272,6 +274,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (sinks(s)) out.push(...bogForecast(s, zoneOf));
   if (s.encounterId === 'wisps' || s.encounterId === 'fog') out.push(...wispsForecast(s, zoneOf));
   if (s.encounterId === 'fog') out.push(...fogForecast(s));
+  if (s.encounterId === 'hunt') out.push(...huntForecast(s, zoneOf));
   if (s.encounterId === 'cranes') out.push(...cranesForecast(s, zoneOf));
   if (s.encounterId === 'peat') out.push(...peatForecast(s, zoneOf));
   if (s.rescue) {
@@ -574,6 +577,28 @@ function cranesForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine
     return { text: `Tranorna knuffar ${a.name} ut ur ${zoneDef(s, where(a)).name} (−1 tro)${trampled ? ` och trampar ${a.name} (chock)` : ''}.`, tone: trampled ? 'bad' : 'warn' };
   });
   if (!hit.length) out.push({ text: `Tranorna dansar på ${now.map((z) => zoneDef(s, z).name).join(' och ')} – ingen av oss är där.`, tone: 'good' });
+  return out;
+}
+
+/** Would the hunter's shot reach one of us standing here this hour? */
+const inSights = (s: GameState, a: Animal, z: ZoneId) => watched(s).includes(z) && !a.hidden && (!zoneDef(s, z).cover || s.hunt.barked.includes(z));
+
+/** The hunt: in the hunter's sights, or found by the dog. */
+function huntStatuses(s: GameState, a: Animal): Status[] {
+  if (a.status !== 'active') return [];
+  if (inSights(s, a, a.zone)) return [{ key: 'hunt', icon: '⌖', label: 'i jägarens sikte', tone: 'bad', explain: `Jägaren spanar hit när timmen går${zoneDef(s, a.zone).cover ? ' – hunden har skällt här, så skyddet hjälper inte' : ''}. Står ${a.name} kvar blir ${a.name} skjuten.` }];
+  return [];
+}
+
+/** The hunt: whom the hunter shoots, and where the dog is heading. */
+function huntForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  const out: ForecastLine[] = s.animals.filter((a) => isActive(a) && inSights(s, a, where(a))).map((a) => ({ text: `Jägaren skjuter ${a.name} i ${zoneDef(s, where(a)).name}: dödar.`, tone: 'bad' as const }));
+  for (const d of s.turn > 1 ? s.dogs : []) {
+    const to = huntDogDestination(d);
+    const found = s.animals.filter((a) => isActive(a) && where(a) === to && !a.hidden && !a.flying);
+    if (found.length) out.push({ text: `${d.name} hittar ${found.map((a) => a.name).join(' och ')} i ${zoneDef(s, to).name}: jägaren spanar dit nästa timme.`, tone: 'warn' });
+  }
   return out;
 }
 

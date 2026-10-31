@@ -1,6 +1,6 @@
 // Skogsbrynet: the last stretch, where the forest begins. Not a whole region – one road,
 // one choice of way, one last fire – and then the forest. Its end is where the hunter
-// waits.
+// waits: Jägaren, the final boss.
 import { DALEN, type RegionDef } from './dalen';
 
 const [, farm, river] = DALEN.dangers;
@@ -36,6 +36,11 @@ export const SKOGSBRYNET: RegionDef = {
   ],
   fire: { key: 'underGranarna', kind: 'campfire', name: 'Under granarna', fogName: 'Granar?', arrive: 'De första granarna. Under dem är det torrt och mjukt av barr.', note: 'Vila, under granarna.' },
   lastFire: { key: 'sistaElden', kind: 'campfire', name: 'Den sista elden', fogName: 'En sista vila?', arrive: 'En glänta strax innanför skogskanten. Vi tänder den sista elden.', note: 'Den sista elden.' },
-  /** The end of the way, until the hunter comes. */
-  end: { key: 'skogen', kind: 'end', name: 'Skogen', fogName: 'Skogen', arrive: 'Vi går in under träden. Skogen tar emot oss.' },
+  /** The final boss, at the edge of the forest: the hunter and his dog. */
+  end: {
+    key: 'jagaren', kind: 'encounter', encounter: 'hunt', name: 'Jägaren', fogName: 'Skogskanten – där jägaren väntar',
+    memory: { normal: 'en jägare', hard: 'ett jaktlag' },
+    arrive: 'Ett sista hygge, och bortom det skogen. Vid skogskanten står någon och väntar, med något långt över armen.',
+    note: 'Den sista faran. Jägaren.',
+  },
 };
