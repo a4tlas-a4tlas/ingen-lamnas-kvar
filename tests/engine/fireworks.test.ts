@@ -175,4 +175,10 @@ describe('Fyrverkerinatten', () => {
     s.darkRevealed = true;
     expect(forecast(s).map((l) => l.text).join(' | ')).not.toMatch(/ eller /);
   });
+
+  it('each burst is a blow, the big ones bigger', () => {
+    const s = setUp(park(), [{ zone: 'gangen', strength: 1 }, { zone: 'dammen', strength: 2 }]);
+    const evs = step(s, { type: 'endTurn' }).events.flatMap((e) => (e.kind === 'blow' ? [`${e.what}@${e.zone}`] : []));
+    expect(evs).toEqual(['burst@gangen', 'bigBurst@dammen']);
+  });
 });

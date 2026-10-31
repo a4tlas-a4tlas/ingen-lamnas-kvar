@@ -20,6 +20,7 @@ import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/e
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
 import { Sound } from '../audio/sound';
+import { TITLE_SCENE, sceneOf } from '../audio/scene';
 import { randomSeed } from '../engine/rng';
 import { fogSeen,
   animal,
@@ -191,6 +192,8 @@ export class App {
   private tip = document.createElement('div');
 
   constructor(private root: HTMLElement) {
+    // With ?debug, the sound's trace can be read from the console (and the browser tests).
+    if (new URLSearchParams(location.search).has('debug')) (window as unknown as { ilkSound: Sound }).ilkSound = this.sound;
     root.addEventListener('click', (e) => this.onClick(e));
     root.addEventListener('pointerdown', (e) => this.onPointerDown(e));
     window.addEventListener('pointermove', (e) => this.onPointerMove(e));
@@ -251,6 +254,10 @@ export class App {
       case 'mute':
         this.sound.setMuted(!this.sound.muted);
         this.sound.start();
+        this.render();
+        break;
+      case 'music':
+        this.sound.setMusic(!this.sound.music);
         this.render();
         break;
       case 'verse-toggle': {
@@ -520,6 +527,7 @@ export class App {
   private dispatch(action: Action) {
     if (!this.state) return;
     const prevKraft = this.state.kraft;
+    const before = this.state;
     const hadMeeting = !!this.state.meeting;
     const r = step(this.state, action);
     const err = r.events.find((e) => e.kind === 'error');
@@ -537,19 +545,45 @@ export class App {
     }
     this.meetingPick = null;
     writeSave(this.state);
+    this.cue(action, before, r.state, hadMeeting);
     this.play(r.events, prevKraft);
+  }
+
+  /** The sounds of what we did, rather than what happened to us: a step, a card, the way on, a meeting, the end. */
+  private cue(action: Action, before: GameState, after: GameState, hadMeeting: boolean) {
+    if (action.type === 'lead') this.sound.step(animal(after, action.target).size);
+    if (action.type === 'play' || action.type === 'payToll') this.sound.card();
+    if (action.type === 'travel') this.sound.travel();
+    if (after.phase === 'play' && before.kraft > 0 && after.kraft === 0) this.sound.empty();
+    if (!hadMeeting && after.meeting) this.sound.meeting(after.journey.nodes.find((n) => n.id === after.journey.at)?.kind === 'find');
+    if (before.phase !== 'over' && after.phase === 'over' && after.outcome) {
+      const o = after.outcome;
+      this.sound.end(o.fallen ? 'fallen' : !o.dead.length && !o.left.length ? 'all' : 'some');
+    }
+    // Belief: one soft note for the way most of it moved.
+    let moved = 0;
+    for (const a of after.animals) {
+      const b = before.animals.find((x) => x.id === a.id);
+      if (b && a.status !== 'dead' && a.status !== 'left') moved += a.belief - b.belief;
+    }
+    if (moved) this.sound.belief(moved);
   }
 
   /** Cars sweep first; the board updates once they have passed. */
   private play(events: GameEvent[], prevKraft: number) {
     const cars = events.filter((e): e is Extract<GameEvent, { kind: 'car' }> => e.kind === 'car');
     const after = () => {
+      let blows = 0;
+      let hope = 0;
       for (const e of events) {
+        if (e.kind === 'blow' && blows < 6) this.sound.blow(e.what, 0.35 * blows++);
+        if (e.kind === 'hope') hope += e.delta;
         if (e.kind === 'hit') this.sound.hit();
         if (e.kind === 'death') this.sound.death();
         if (e.kind === 'flip') this.sound.flip();
         if (e.kind === 'safe') this.sound.safe();
       }
+      this.sound.hope(hope);
       const hurt = new Set(events.flatMap((e) => (e.kind === 'hit' || e.kind === 'death' ? [e.who] : [])));
       this.busy = false;
       this.render(hurt);
@@ -635,6 +669,7 @@ export class App {
   // ------------------------------------------------------------ screens
 
   private renderTitle() {
+    this.sound.setScene(TITLE_SCENE);
     const hasSave = loadSave() !== null;
     this.root.innerHTML = `
       <div class="screen title-screen">
@@ -665,6 +700,7 @@ export class App {
   private render(hurt?: Set<string>) {
     this.tip.hidden = true;
     const s = this.state;
+    this.sound.setScene(sceneOf(s));
     if (!s) return this.renderTitle();
     if (s.phase === 'oath') return this.renderOath(s);
     if (s.phase === 'map') return this.renderMap(s);
@@ -821,6 +857,7 @@ export class App {
         <button class="btn small" data-act="guide-open">Guide</button>
         <button class="btn small" data-act="map-open">Kartan</button>
         <button class="btn small" data-act="mute">${this.sound.muted ? 'Ljud av' : 'Ljud på'}</button>
+        <button class="btn small" data-act="music">${this.sound.music ? 'Musik på' : 'Musik av'}</button>
       </div>`;
   }
 
@@ -1544,6 +1581,7 @@ export class App {
           ${memorialHtml(s)}
           <section class="log between-log">${this.logHtml(s.log.slice(-14))}</section>
           <button class="btn small mute-btn" data-act="mute">${this.sound.muted ? 'Ljud av' : 'Ljud på'}</button>
+          <button class="btn small mute-btn" data-act="music">${this.sound.music ? 'Musik på' : 'Musik av'}</button>
         </aside>
         ${meetingHtml(s, this.meetingPickerHtml(s)) || (this.skillsOpen ? this.skillsHtml(s) : '')}
       </div>`;

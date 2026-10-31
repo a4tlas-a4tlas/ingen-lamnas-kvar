@@ -146,4 +146,13 @@ describe('Jägaren', () => {
   it('the forest’s last row has no cover: the windfall lies open', () => {
     expect(HUNT.zones.find((z) => z.id === 'vindfallet')?.cover).toBeFalsy();
   });
+
+  it('the shot and the bark are blows the sound and the board play out', () => {
+    const s = setUp(hunt(), { fox: 'kalytan' }, ROWS[0]);
+    s.turn = 2;
+    s.hunt.plan[1] = ROWS[0];
+    s.dogs[0].target = 'kalytan';
+    const evs = step(s, { type: 'endTurn' }).events.flatMap((e) => (e.kind === 'blow' ? [e.what] : []));
+    expect(evs).toContain('shot');
+  });
 });

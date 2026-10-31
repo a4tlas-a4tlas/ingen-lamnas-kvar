@@ -92,6 +92,7 @@ import type {
   GameEvent,
   GameState,
   Hit,
+  BlowKind,
   HopeReason,
   InjuryKind,
   Intent,
@@ -1716,6 +1717,7 @@ function machinesHazards(c: Ctx) {
   const fell = s.fellPlan[s.turn - 1];
   const doze = s.dozePlan[s.turn - 1];
   if (fell) {
+    blow(c, 'fell', fell);
     const under = s.animals.filter((a) => isActive(a) && a.zone === fell && (!a.flying || a.climbing));
     if (!under.length) narrate(c, `Träden i ${zoneDef(s, fell).name} faller med ett brak. Ingen av oss var där.`);
     for (const a of under) s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: fell, source: 'fällaren' });
@@ -1725,6 +1727,7 @@ function machinesHazards(c: Ctx) {
     }
   }
   if (doze) {
+    blow(c, 'doze', doze);
     s.closed.push(doze);
     narrate(c, `Schaktaren tar ${zoneDef(s, doze).name}. Där finns bara lera nu.`);
     for (const a of s.animals.filter((x) => isActive(x) && x.zone === doze && (!x.flying || x.climbing))) {
@@ -2027,6 +2030,7 @@ function bogHazards(c: Ctx) {
       s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'gungfly' });
     } else if (a.sink >= STUCK_AT && before < 2) line(c, a.id, `${a.name} har sjunkit ner till magen och kommer inte loss.`);
     else if (sinkSteps(a) > before) line(c, a.id, `${a.name} sjunker. Mossan gungar och suger.`);
+    if (sinkSteps(a) > before && !c.ev.some((e) => e.kind === 'blow' && e.what === 'suck' && e.zone === a.zone)) blow(c, 'suck', a.zone);
   }
 }
 
@@ -2063,6 +2067,7 @@ function huntHazards(c: Ctx) {
   const now = watched(s);
   for (const a of s.animals.filter((x) => isActive(x) && now.includes(x.zone) && !x.hidden)) {
     if (zoneDef(s, a.zone).cover && !s.hunt.barked.includes(a.zone)) continue;
+    if (!c.ev.some((e) => e.kind === 'blow' && e.what === 'shot' && e.zone === a.zone)) blow(c, 'shot', a.zone);
     s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'skott' });
   }
   const barked: ZoneId[] = [];
@@ -2071,7 +2076,7 @@ function huntHazards(c: Ctx) {
     d.zone = huntDogDestination(d);
     const found = s.animals.filter((a) => isActive(a) && a.zone === d.zone && !a.hidden && !a.flying);
     if (!found.length) continue;
-    if (!barked.includes(d.zone)) barked.push(d.zone);
+    if (!barked.includes(d.zone)) { barked.push(d.zone); blow(c, 'bark', d.zone); }
     narrate(c, `${d.name} hittar ${found.map((a) => a.name).join(' och ')} i ${zoneDef(s, d.zone).name} och skäller. Jägaren vänder sig dit.`);
   }
   s.hunt.barked = barked;
@@ -2131,6 +2136,7 @@ function peatHazards(c: Ctx) {
   const s = c.s;
   const row = machineRow(s);
   if (!row.length) return;
+  for (const z of row) blow(c, 'cut', z);
   for (const a of s.animals.filter((x) => isActive(x) && !x.flying && row.includes(x.zone))) {
     s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'torvmaskinen' });
   }
@@ -2161,6 +2167,7 @@ function telegraphCranes(c: Ctx) {
 function cranesHazards(c: Ctx) {
   const s = c.s;
   const now = dancing(s);
+  for (const z of now) blow(c, 'crane', z);
   for (const a of s.animals.filter((x) => isActive(x) && now.includes(x.zone))) {
     changeBelief(c, a, -1);
     if (a.size === 'small' && !a.flying) injure(c, a, 'shock', 'Tranorna dansar rakt över {name}. Långa ben, och vingar överallt.');
@@ -2224,6 +2231,7 @@ function lureToLights(c: Ctx) {
 /** End of the hour: the deep pools take the small and chill the rest; the true light lifts those who reached it. */
 function wispsHazards(c: Ctx) {
   const s = c.s;
+  for (const z of s.wisps.plan[s.turn - 1] ?? []) blow(c, 'light', z);
   if (s.turn === s.wisps.trueAt) {
     if (s.darkRevealed) s.wisps.known = true;
     for (const a of s.animals.filter((x) => isActive(x) && x.zone === s.wisps.trueZone)) {
@@ -2266,6 +2274,7 @@ function telegraphFireworks(c: Ctx) {
 function fireworksHazards(c: Ctx) {
   const s = c.s;
   for (const b of burstsNow(s)) {
+    blow(c, b.strength === 2 ? 'bigBurst' : 'burst', b.zone);
     narrate(c, `Det smäller över ${zoneDef(s, b.zone).name}${b.strength === 2 ? ', så att marken skakar' : ''}.`);
     for (const a of s.animals.filter((x) => isActive(x) && reaches(b, x.zone))) {
       const friend = holdsWith(s, a);
@@ -2370,6 +2379,7 @@ function harvestHazards(c: Ctx) {
     s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'skördetröskan' });
   }
   if (strip.length) narrate(c, `Vetet i ${strip.map((z) => zoneDef(s, z).name).join(' och ')} faller.`);
+  for (const z of strip) blow(c, 'cut', z);
   const z = s.harvest.shadow;
   if (z) {
     const v = stubblePrey(s, z);
@@ -3055,6 +3065,9 @@ function resolveIntents(c: Ctx) {
     }
   }
 }
+
+/** A blow lands: the sound and the board play it out. */
+const blow = (c: Ctx, what: BlowKind, zone: ZoneId) => c.ev.push({ kind: 'blow', what, zone });
 
 function processHits(c: Ctx) {
   const s = c.s;

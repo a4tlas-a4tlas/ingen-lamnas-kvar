@@ -268,8 +268,12 @@ export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory'
 
 export type TimeOfDay = 'day' | 'night';
 
+/** A boss's or a danger's blow landing, for the sound and the board to play out. */
+export type BlowKind = 'fell' | 'doze' | 'cut' | 'burst' | 'bigBurst' | 'shot' | 'bark' | 'suck' | 'crane' | 'light';
+
 /** Side effects the UI and audio react to; the log keeps the readable text. */
 export type GameEvent =
+  | { kind: 'blow'; what: BlowKind; zone: ZoneId }
   | { kind: 'log'; entry: LogEntry }
   | { kind: 'car'; lane: LaneId; vehicle: Strike['vehicle'] }
   | { kind: 'hit'; who: string }

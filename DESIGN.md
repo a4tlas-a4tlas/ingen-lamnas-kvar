@@ -1141,6 +1141,63 @@ Skogsbrynet's end is the final boss, *Jägaren* (`src/engine/encounters/hunt.ts`
 - **Short of half:** the bosses fall short of "half the time" for this bot. Pushing them further would take survivors below 3, because the roads already take about 0.6 per crossing in Dalen. Humans read less perfectly than the bot, so in play the bosses should bite harder.
 - **Save version 40.**
 
+## Milestone 12 – Ljud och känsla (in progress)
+The user's choices:
+- **Music:** the drone follows hope.
+- **Ambience:** by region and time of day.
+- **Effects:** all four groups – the bosses' blows; cards and leading; hope and belief; the map and the end.
+- **Animation:** all four groups – animals walk, blows land, hope and Kraft pulse, the fire and the map.
+
+It comes in two steps. Everything stays synthesised in WebAudio, with no sound files.
+
+### Step 1: Ljudet (done)
+**Three buses under the master** (`src/audio/sound.ts`): music, ambience and effects. The scene comes from the state: `sceneOf(s)` in `src/audio/scene.ts` (phase, region, day/night, mood, boss). `App.render()` sets it every time; only a change does anything, crossfading over a second or two.
+
+**Music: the drone follows hope:**
+
+| Mood | The drone |
+|---|---|
+| Förtvivlan | thin: the low D and a minor third, the filter closed |
+| Oro | as before: D, A and the octave |
+| Tillit | fuller: a fifth and an octave added, the filter open; every 20–40 s a few slow notes of D pentatonic |
+
+- **A shift of mood:** a short chord, rising into trust or falling into despair.
+- **A boss:** a heartbeat under it all, about 50 a minute.
+- **At the fire:** the drone sinks and softens.
+
+**Ambience:** the wind as before, a noise bed shaped per region and time, and life now and then:
+- **Dalen:** chirps by day, an owl at night.
+- **Åkrarna:** larks by day, crickets at night.
+- **The city:** a far hum, a siren at night.
+- **Mossen:** frogs and cranes; drips at night.
+- **Skogsbrynet:** wind in the spruce.
+- **The fire** crackles.
+
+**Effects:**
+- **Blows:** a new engine event `{ kind: 'blow', what, zone }` (`BlowKind` in `src/engine/types.ts`), pushed by the hazards:
+  - the feller and the bulldozer
+  - the harvester and the peat machine (`cut`)
+  - small and big bursts
+  - the shot and the bark
+  - the bog's suck, the cranes and the lights
+
+  They play in order, 0.35 s apart.
+- **Our own acts** (`App.cue`):
+  - a step when we lead (higher for the small, lower for the large)
+  - a card's flick
+  - a hollow chime when Kraft runs out
+  - footsteps on the map
+  - a motif when a meeting opens (brighter for a find)
+- **Hope and belief:** two notes up or down for hope; one soft note for belief.
+- **The end:**
+  - *Ingen lämnades kvar*: a full cadence and the melody
+  - losses: the same, in minor and slower
+  - *Eden föll*: the drone dies away alone
+
+**Settings and debugging:**
+- **"Musik på/av"** beside "Ljud på/av" turns off the music alone. It is kept in `localStorage['ingen-lamnas-kvar/music']`.
+- **`?debug`** exposes `window.ilkSound`; its `trace` lists what played (for the browser test).
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.
