@@ -14,6 +14,7 @@ import { SOUND, TUNNELS, bittenByRats, depthIn, isFound } from '../engine/encoun
 import { burstsNow, crowdNow, reaches } from '../engine/encounters/fireworks';
 import { isPool, isSoft } from '../engine/encounters/bog';
 import { DITCH_FULL, ditchLevel, machineRow } from '../engine/encounters/peat';
+import { watched } from '../engine/encounters/hunt';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
@@ -62,6 +63,22 @@ import { TIME_NAMES, TIME_NOTES } from '../data/guides.sv';
 import { animalStatuses, cranesAt, forecast, knowsTrue, type Status } from './status';
 
 const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
+
+/** How the way ended, in the forest: everyone, some of us, or – if no one came – the oath fell. */
+function forestTitle(s: GameState): string {
+  const o = s.outcome!;
+  if (!o.dead.length && !o.left.length) return 'Ingen lämnades kvar';
+  const n = o.safe.length;
+  const words = ['Ingen', 'En', 'Två', 'Tre', 'Fyra', 'Fem', 'Sex', 'Sju', 'Åtta', 'Nio', 'Tio'];
+  return `${words[n] ?? n} av oss kom fram`;
+}
+
+/** The promises we made on the way: kept, or broken. */
+function promisesHtml(s: GameState): string {
+  const ps = s.verses.filter((v) => v.kind === 'promise');
+  if (!ps.length) return '';
+  return `<h3>Löftena</h3><ul class="end-promises">${ps.map((v) => `<li class="${v.flipped ? 'broken' : 'kept'}">${esc(v.flipped ? v.flippedText ?? v.text : v.text)} <span class="muted">${v.flipped ? '· brutet' : '· hållet'}</span></li>`).join('')}</ul>`;
+}
 
 /** The group's mood, by name, and what it does. */
 const MOOD_NAME = { fortvivlan: 'Förtvivlan', oro: 'Oro', tillit: 'Tillit' } as const;
@@ -127,7 +144,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 38 && s.phase !== 'over' ? s : null;
+    return s.version === 39 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -976,6 +993,17 @@ export class App {
   }
 
   /** The sewer: fog over the tunnels we have not found, and what we hear from them; the depth in those we have; the rats. */
+  /** The hunt: where the hunter looks now (and where a dog barked), and where next hour. */
+  private huntTelegraphHtml(s: GameState): string {
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const now = watched(s);
+    const later = s.turn < s.maxTurn ? watched(s, s.turn + 1) : [];
+    return [
+      ...now.map((z) => `<div class="sight-mark ${s.hunt.barked.includes(z) ? 'barked' : ''}" style="${box(z)}"><span>${s.hunt.barked.includes(z) ? 'Hunden skällde · jägaren ser allt' : zoneDef(s, z).cover ? 'Jägaren spanar · skydd hjälper' : 'Jägaren spanar · dödar'}</span></div>`),
+      ...later.filter((z) => !now.includes(z)).map((z) => `<div class="next-mark" style="${box(z)}"><em>jägaren nästa timme</em></div>`),
+    ].join('');
+  }
+
   /** The peat cutting: the machine's row now and next, and the ditches it has left. */
   private peatTelegraphHtml(s: GameState): string {
     const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
@@ -1073,12 +1101,14 @@ export class App {
 
   /** The dogs stand where they are; asleep, or turned toward a trail. */
   private dogsHtml(s: GameState): string {
-    if (s.encounterId !== 'farm' || s.phase === 'over') return '';
+    if ((s.encounterId !== 'farm' && s.encounterId !== 'hunt') || s.phase === 'over') return '';
     return s.dogs
       .map((d, i) => {
         const [x, y, w, h] = zoneDef(s, d.zone).rect;
         const twin = s.dogs.findIndex((o) => o.zone === d.zone) !== i;
-        const tip = s.dogsAwake
+        const tip = s.encounterId === 'hunt'
+          ? `${d.name} följer vår doft${d.target ? ` mot ${zoneDef(s, d.target).name}` : ''}, två steg i timmen. Hittar den någon av oss skäller den – och nästa timme spanar jägaren just där, även in i skyddet.`
+          : s.dogsAwake
           ? `${d.name} följer den starkaste doften${d.target ? ` mot ${zoneDef(s, d.target).name}` : ''}. Hundarna går upp till två steg i timmen och biter den som står där de stannar: en skada som blöder.`
           : `${d.name} sover vid hundkojan. Hundarna vaknar nästa timme och följer vår doft.`;
         return `<div class="dog ${s.dogsAwake ? 'awake' : 'asleep'}" data-act="zone" data-zone="${d.zone}" style="left:${x + w * (twin ? 0.66 : 0.85)}%;top:${y + h * 0.7}%"
@@ -1125,6 +1155,7 @@ export class App {
     if (s.encounterId === 'bog' || s.encounterId === 'wisps' || s.encounterId === 'fog') return s.phase === 'over' ? '' : this.bogTelegraphHtml(s);
     if (s.encounterId === 'cranes') return s.phase === 'over' ? '' : this.cranesTelegraphHtml(s);
     if (s.encounterId === 'peat') return s.phase === 'over' ? '' : this.peatTelegraphHtml(s);
+    if (s.encounterId === 'hunt') return s.phase === 'over' ? '' : this.huntTelegraphHtml(s);
     if (s.encounterId === 'fireworks') return s.phase === 'over' ? '' : this.fireworksTelegraphHtml(s);
     const out: string[] = [];
     const mid = (z: string) => { const [, y, , h] = zoneDef(s, z).rect; return y + h / 2; };
@@ -1692,8 +1723,8 @@ export class App {
     const last = [...s.log].reverse().filter((e) => e.kind === 'narrate').slice(0, 2).reverse();
     this.root.innerHTML = `
       <div class="screen end-screen">
-        <h2>${o.fallen ? 'Eden föll' : esc(place(s, s.journey.at).kind === 'encounter' ? REGIONS[s.journey.region].beyond : place(s, s.journey.at).name)}</h2>
-        <p class="muted">${esc(castDef(s.cast).name)}</p>
+        <h2>${o.fallen ? 'Eden föll' : o.forest ? esc(forestTitle(s)) : esc(place(s, s.journey.at).kind === 'encounter' ? REGIONS[s.journey.region].beyond : place(s, s.journey.at).name)}</h2>
+        <p class="muted">${esc(castDef(s.cast).name)}${o.forest ? ' · Skogen' : ''}</p>
         ${last.map((e) => `<p class="lead-text">${esc(e.text)}</p>`).join('')}
         ${survivors.length ? `<h3>Vi som gick vidare</h3><ul class="roster">${rosterHtml(s)}</ul>` : ''}
         ${memorialHtml(s)}
@@ -1701,7 +1732,8 @@ export class App {
         <div class="end-poem">
           ${s.verses.filter((v) => v.kind === 'oath').map((v) => `<p>${esc(v.flipped ? v.flippedText! : v.text)}</p>`).join('')}
         </div>
-        ${o.fallen ? '' : '<p class="muted">Fortsättning följer: åkrarna, och skogen långt bortom.</p>'}
+        ${promisesHtml(s)}
+        ${o.fallen || o.forest ? '' : '<p class="muted">Fortsättning följer.</p>'}
         <div class="title-buttons">
           <button class="btn primary" data-act="new">Gå igen</button>
           <button class="btn" data-act="title">Till början</button>

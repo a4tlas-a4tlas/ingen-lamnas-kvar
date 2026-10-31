@@ -7,6 +7,7 @@ import { WISPS } from '../engine/encounters/wisps';
 import { CRANES } from '../engine/encounters/cranes';
 import { PEAT } from '../engine/encounters/peat';
 import { FOG } from '../engine/encounters/fog';
+import { HUNT } from '../engine/encounters/hunt';
 import { FIREWORKS } from '../engine/encounters/fireworks';
 import { HARVEST, STRIPS_PER_HOUR } from '../engine/encounters/harvest';
 import { FENCE, GATE_PUSH, SWEEPS_MEDIUM, SWEEPS_SMALL } from '../engine/encounters/fence';
@@ -88,6 +89,10 @@ export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
   fireworks: {
     day: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
     night: 'Det är nyårsafton. Det går inte att vänta på en annan natt.',
+  },
+  hunt: {
+    day: 'Jakten går i dagsljus. Det går inte att vänta på natten.',
+    night: 'Jakten går i dagsljus. Det går inte att vänta på natten.',
   },
   fog: {
     day: 'Dimman ligger lika tät om dagen. Det ljusa gör den bara vitare.',
@@ -485,6 +490,25 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Låt ingen gå först ensam. Flytta par.',
       'Använd timmen då dimman lättar till att se var marken bär.',
+    ],
+  },
+  hunt: {
+    title: 'Så tar vi oss förbi jägaren',
+    hard: 'Ibland är det ett helt jaktlag: två hundar, och jägarna spanar över både en rad och en kolumn varje timme.',
+    goal: `Få alla från Vägkanten in i Skogen – ${HUNT.maxTurn} timmar. Över hygget: tre steg.`,
+    dangers: [
+      { icon: '⌖', name: 'Jägaren', effect: 'dödar', text: 'Varje timme spanar jägaren över en rad eller en kolumn – det syns var, och var nästa timme. Den som står i det öppna där när timmen går blir skjuten. Sista stunden. Den som flyger syns också.' },
+      { icon: '◉', name: 'Hunden', text: 'Hunden följer vår doft, två steg i timmen. Hittar den någon av oss skäller den – och nästa timme spanar jägaren just där, även in i skyddet.' },
+    ],
+    shelter: [
+      { icon: '♣', name: 'Skydd', text: 'I ormbunkarna, stenröset, granplanteringen och vindfället ser jägaren oss inte – så länge hunden inte har skällt där.' },
+      { icon: '≈', name: 'Bäcken', text: 'Vattnet bryter doften. Där tappar hunden spåret.' },
+      { icon: '◐', name: 'Locka hunden', text: 'Räven eller ugglan kan visa sig och få hunden att vända (◆1).' },
+      { icon: '◌', name: 'Gömma sig', text: 'Den som gömt sig hittar varken hunden eller jägaren.' },
+    ],
+    tips: [
+      'Läs var jägaren tittar nästa timme, och gå runt det.',
+      'Låt inte hunden komma ikapp. Gå genom bäcken om den är nära.',
     ],
   },
 };

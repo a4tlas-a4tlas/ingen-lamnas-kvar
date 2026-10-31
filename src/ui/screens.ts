@@ -43,6 +43,7 @@ function icon(p: Place): string {
       if (p.encounter === 'machines') return MACHINE_ICON;
       // A bird of prey: a V of wings.
       if (p.encounter === 'lamps') return '<path d="M-0.4 2.6 V-1.6 H1.6 M-1.4 2.6 H0.6" stroke="currentColor" stroke-width="0.7" fill="none" /><path d="M0.8 -1.6 L2.4 -1.6 L2 -0.8 L1.2 -0.8 Z" />';
+      if (p.encounter === 'hunt') return '<circle r="2.2" fill="none" stroke="currentColor" stroke-width="0.6" /><path d="M0 -3 V-1 M0 1 V3 M-3 0 H-1 M1 0 H3" stroke="currentColor" stroke-width="0.6" />';
       if (p.encounter === 'fog') return '<path d="M-2.8 -1 Q-1.4 -2 0 -1 Q1.4 0 2.8 -1 M-2.8 0.8 Q-1.4 -0.2 0 0.8 Q1.4 1.8 2.8 0.8 M-2.8 2.6 Q-1.4 1.6 0 2.6 Q1.4 3.6 2.8 2.6" stroke="currentColor" stroke-width="0.6" fill="none" />';
       if (p.encounter === 'peat') return '<rect x="-2.6" y="-1.6" width="3.4" height="2.2" /><rect x="0.6" y="-2.4" width="1.8" height="1.6" /><circle cx="-1.6" cy="1.4" r="0.9" /><circle cx="1.4" cy="1.4" r="0.9" /><path d="M-2.8 2.8 H2.8" stroke="currentColor" stroke-width="0.4" />';
       if (p.encounter === 'cranes') return '<path d="M0 -2.6 L0 -0.4 M-2.8 -1.4 Q-1.4 0.4 0 -0.4 Q1.4 0.4 2.8 -1.4 M-0.6 2.6 L0 -0.4 L0.6 2.6" stroke="currentColor" stroke-width="0.55" fill="none" /><circle cx="0" cy="-2.8" r="0.6" />';

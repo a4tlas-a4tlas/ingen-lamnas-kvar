@@ -368,7 +368,7 @@ export function leadTargets(s: GameState): string[] {
 
 /** The fox and the owl can show themselves to the dogs and draw them away. */
 export function canLure(s: GameState, a: Animal): boolean {
-  return s.encounterId === 'farm' && s.time === 'day' && s.dogsAwake && canMove(a) && (a.species === 'fox' || a.species === 'owl') && !hasInjury(a, 'broken');
+  return ((s.encounterId === 'farm' && s.time === 'day' && s.dogsAwake) || s.encounterId === 'hunt') && canMove(a) && (a.species === 'fox' || a.species === 'owl') && !hasInjury(a, 'broken');
 }
 
 /** Where a lure can be laid: up to two steps away, anywhere on the farm but the wall. */

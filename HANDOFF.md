@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 10.1)
+## Status (after step 10.2)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 10.1: Skogsbrynet, branch `skogsbrynet`, open for review. Everything through 9.6 (#48) is in `main` and live. |
-| **Save version** | 38 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 440 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 10.2: Jägaren, branch `jagaren`, open for review. Everything through 10.1 (#49) is in `main` and live. |
+| **Save version** | 39 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 452 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -23,7 +23,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 3. The region map (the guide's sketch: 6 rows of dangers, meetings, finds and fires, then a boss).
 4. The interlude (looking back, a promise, choosing the way). After Dalen we are offered two of the three middle regions (Åkrarna, the city, Mossen) and choose one; the other is passed by for good (`s.run.skipped`). After that region, the one left is the only way on, so a run holds two middle regions. The animals speak for a way (`regionVoices` in `src/engine/voices.ts`).
 5. The chosen region. Each middle region already walked makes places likelier to be hard (`hardChanceAfter` in `step.ts`: 0.4, then 0.55, then 0.7).
-6. After the middle regions: **Skogsbrynet** (`FINAL_REGION`), a short last stretch with one row to choose in. Beyond it, the forest ends the run.
+6. After the middle regions: **Skogsbrynet** (`FINAL_REGION`), a short last stretch with one row to choose in, ending in the final boss, **Jägaren**. Past the hunter, the forest: an end screen titled by how it went (*Ingen lämnades kvar* / *N av oss kom fram*), with the survivors, the memorial stone, the poem and the promises kept or broken.
 
 **Built so far:**
 
@@ -32,7 +32,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
 | **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden), the gravel road (Grusvägen) + old dangers in new places; six story parts of its own (`src/data/meetings/akrarna.sv.ts`) | Skördetröskan |
 | **Mossen** (9.1–) | Gungflyet, the quaking bog (`bog`); Irrbloss, the lit bog (`wisps`); Tranorna, the cranes' dance (`cranes`); Torvtäkten, the peat cutting (`peat`) + old dangers (Myrbäcken, Det öppna kärret); seven story parts of its own (`src/data/meetings/mossen.sv.ts`) | Dimman (`fog`) |
-| **Skogsbrynet** (10.1) | a short last stretch (`middleRows: 1`): Skogsvägen (the road), the last farm, the forest brook; two story parts (`src/data/meetings/skogsbrynet.sv.ts`) | – (Jägaren in 10.2) |
+| **Skogsbrynet** (10.1) | a short last stretch (`middleRows: 1`): Skogsvägen (the road), the last farm, the forest brook; two story parts (`src/data/meetings/skogsbrynet.sv.ts`) | Jägaren (`hunt`), the final boss |
 | **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan), the sewer (Avloppet) + old dangers; six story parts of its own (`src/data/meetings/staden.sv.ts`) | Fyrverkerinatten |
 
 **Animals** are species, not characters: badger, toad, fox, owl, adder, mice, hare, and since 7.6 hedgehog, squirrel, mole, beaver and fawn (`SPECIES` in `src/data/animals.ts`, with Swedish grammar fields `en` / `den` / `definite`). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
@@ -81,16 +81,18 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: 10.2, Jägaren and the ending
-The plan is approved (Milestone 10 in `DESIGN.md`, and the session's plan file). Skogsbrynet's end is still a plain *Skogen*. 10.2 turns it into the final boss and gives the run its ending:
-- **Jägaren** (`hunt`, by day, 10 hours):
-  - **The hunter** watches a column or a row each hour, telegraphed. A shot kills whoever stands there in the open (last moment); cover and hiding save you, fliers are seen.
-  - **The dog** follows our scent, using the farm's rules, shared. When it finds one of us it barks, and the hunter turns to that zone next hour. Water breaks the scent, and a fox or an owl can lure it.
-  - **Hard** ("ett jaktlag"): two dogs, and a column and a row each hour.
-- **The ending:** reaching the forest gives an end screen that tells the whole run. Its title is *Ingen lämnades kvar*, *N av oss kom fram* or *Eden föll*, and it shows the oath, the promises, the memorial stones by name, and the poem.
-- **No memories** from earlier choices (your choice).
+## Next step: ask the user
+**The run is complete:** Dalen → two of three middle regions → Skogsbrynet → Jägaren → the forest, with its own ending screen. Ask what comes next. The candidates:
+- **A playtest pass:** play whole runs and tune the bosses, which were balanced only by bots (Dimman in particular).
+- **Höglandet** (boss Stormen), the fourth middle region. It needs a rule for how many middle regions a run holds.
+- **Memories in Jägaren** (left out for now, by your choice): the crows' warning, the city fox, deep bonds.
+- **Seasons.**
+- **Hope, part 2.**
 
 ## Open questions and known quirks
+- **Jägaren's bot balance (10.2):** a reading bot keeps 3.81 of 6 normally and 3.26 with a hunting party; with calm (comforted) animals, 5.00 / 4.00. Almost all deaths are shots.
+  - **The leash:** the dog is leashed for the first hour. Without that, it barked at the road and the hunter shot everyone still there in hour 2, which gave 3.51 / 3.15 calm.
+  - **Levers:** the dog's speed (2 steps), whether a bark shows cover, or a row-and-column sight on the normal hunt too.
 - **Dimman's bot balance (9.6), the least certain so far.** A convoy bot (it moves up to three animals from one zone together, steps aside when blocked, calm animals, bonds +1 as if grown at the fires) keeps 3.23 of 6 normally and 4.33 when we found the lost one. In thick fog: 2.32 / 2.97.
   - **Two things were too harsh at first, and I changed them:**
     - **Drifting:** the lone drifted any way and into pools. Now they drift sideways and never into a pool.

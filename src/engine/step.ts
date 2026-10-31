@@ -25,6 +25,7 @@ import { planWisps } from './encounters/wisps';
 import { planFlocks } from './encounters/cranes';
 import { DITCH_FULL, cutZones, machineRow, planPeat } from './encounters/peat';
 import { planFogKinds } from './encounters/fog';
+import { huntDogDestination, huntDogTargets, huntDogs, planHunt, watched } from './encounters/hunt';
 import { burstsNow, crowdNow, holdsWith, planBursts, planCrowd as planParkCrowd, pushOptions, reaches } from './encounters/fireworks';
 import { SOUND, TUNNELS, bittenByRats, foundBy, isFound, levelNow, planKinds, planRats, planRise, sweptHere } from './encounters/sewer';
 import { STAGGER, bikesAt, feetAt, planBikes, planCrowd, planTram, sideOf, tramIn, tramNow, underfoot } from './encounters/street';
@@ -414,6 +415,13 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.cranes = { flocks: id === 'cranes' ? planFlocks(s, s.maxTurn, hard) : [], called: false };
   // The peat cutting: the machine's rows, and no ditches yet.
   s.peat = { rows: id === 'peat' ? planPeat(s, s.maxTurn, hard) : [], ditch: {} };
+  // The hunt: where the hunter looks, hour by hour, and his dogs behind us at the road.
+  if (id === 'hunt') {
+    s.dogs = huntDogs(hard);
+    s.dogsAwake = true;
+    s.scent = { vagkanten: 1 };
+  }
+  s.hunt = { plan: id === 'hunt' ? planHunt(s, def.maxTurn, hard) : [], barked: [] };
   // The fog: what lies under it, unknown until we come close.
   s.fog = { kinds: id === 'fog' ? planFogKinds(s) : {}, known: [] };
   if (id === 'fog' && s.knowledge.includes('vilsnaHittad')) narrate(c, 'Långt bort i dimman ropar någon vi känner igen: den vilsna vi hittade. Den har hittat hem – och ropar på oss nu.');
@@ -458,7 +466,9 @@ function endRun(c: Ctx) {
   const ids = (st: Animal['status'][]) => s.animals.filter((a) => st.includes(a.status)).map((a) => a.id);
   const alive = ids(['active', 'safe']);
   s.phase = 'over';
-  s.outcome = { safe: alive, dead: ids(['dead']), left: ids(['left']), fallen: alive.length === 0 };
+  // Through the hunt, and into the forest: the end of the way.
+  const forest = alive.length > 0 && s.journey.region === FINAL_REGION && place(s, s.journey.at).encounter === 'hunt';
+  s.outcome = { safe: alive, dead: ids(['dead']), left: ids(['left']), fallen: alive.length === 0, ...(forest ? { forest } : {}) };
   narrate(c, `Vi var ${num(s.animals.length)} när vi lämnade dalen. ${capitalize(num(alive.length))} av oss gick vidare.`);
 }
 
@@ -1341,6 +1351,7 @@ function startTurn(c: Ctx) {
   if (s.encounterId === 'cranes') telegraphCranes(c);
   if (s.encounterId === 'peat') telegraphPeat(c);
   if (s.encounterId === 'fog') telegraphFog(c);
+  if (s.encounterId === 'hunt') telegraphHunt(c);
   if (s.turn === s.maxTurn) narrate(c, byTime(s, encounterOf(s).lastHour));
   // Bleeding wounds drain belief, hour after hour, until someone tends them by a fire.
   if (s.turn > 1) {
@@ -1579,8 +1590,9 @@ function lure(c: Ctx, target: string, zone: ZoneId) {
   s.kraft -= 1;
   moveAnimal(c, a, zone, true);
   for (const d of s.dogs) d.target = zone;
-  narrate(c, `${a.name} visar sig i ${zoneDef(s, zone).name}. Hundarna vänder sig mot ${a.name} och skäller.`);
-  raiseAlarm(c, 1);
+  narrate(c, `${a.name} visar sig i ${zoneDef(s, zone).name}. ${s.encounterId === 'hunt' ? 'Hunden vänder sig mot' : 'Hundarna vänder sig mot'} ${a.name} och skäller.`);
+  if (s.encounterId === 'farm') raiseAlarm(c, 1);
+  else s.hunt.lured = true;
 }
 
 /** Someone shows itself on purpose: the dogs turn to it, the birds' shadow glides over it. */
@@ -2008,6 +2020,45 @@ function bogHazards(c: Ctx) {
     } else if (a.sink >= STUCK_AT && before < 2) line(c, a.id, `${a.name} har sjunkit ner till magen och kommer inte loss.`);
     else if (sinkSteps(a) > before) line(c, a.id, `${a.name} sjunker. Mossan gungar och suger.`);
   }
+}
+
+// ---------------------------------------------------------------- the hunt
+
+/** Start of the hour: where the hunter looks now and next, and where the dog follows our scent. */
+function telegraphHunt(c: Ctx) {
+  const s = c.s;
+  if (s.turn === 1) narrate(c, 'Vid skogskanten står en jägare med bössan över armen. Bakom oss, vid vägen, gnäller en hund i koppel. Om en timme släpper han den.');
+  const now = watched(s);
+  narrate(c, `Jägaren spanar över ${now.map((z) => zoneDef(s, z).name).join(', ')}.`);
+  const next = s.turn < s.maxTurn ? s.hunt.plan[s.turn] ?? [] : [];
+  if (next.length) narrate(c, `Nästa timme vänder han blicken mot ${next.map((z) => zoneDef(s, z).name).join(', ')}.`);
+  // A lure, played this hour, holds the dogs' attention; otherwise they follow the strongest scent.
+  if (!s.hunt.lured) {
+    const targets = huntDogTargets(s);
+    s.dogs.forEach((d, i) => (d.target = targets[i]));
+  }
+  s.hunt.lured = false;
+  for (const d of s.dogs) narrate(c, d.target && d.target !== d.zone ? `${d.name} följer vår doft mot ${zoneDef(s, d.target).name}.` : `${d.name} nosar runt ${zoneDef(s, d.zone).name}.`);
+}
+
+/** End of the hour: the hunter shoots into the open where he looks – and into cover, where a dog barked. Then the dogs run, and bark where they find us. */
+function huntHazards(c: Ctx) {
+  const s = c.s;
+  const now = watched(s);
+  for (const a of s.animals.filter((x) => isActive(x) && now.includes(x.zone) && !x.hidden)) {
+    if (zoneDef(s, a.zone).cover && !s.hunt.barked.includes(a.zone)) continue;
+    s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'skott' });
+  }
+  const barked: ZoneId[] = [];
+  // In the first hour the dog is still on its leash: it runs from the second.
+  for (const d of s.turn > 1 ? s.dogs : []) {
+    d.zone = huntDogDestination(d);
+    const found = s.animals.filter((a) => isActive(a) && a.zone === d.zone && !a.hidden && !a.flying);
+    if (!found.length) continue;
+    if (!barked.includes(d.zone)) barked.push(d.zone);
+    narrate(c, `${d.name} hittar ${found.map((a) => a.name).join(' och ')} i ${zoneDef(s, d.zone).name} och skäller. Jägaren vänder sig dit.`);
+  }
+  s.hunt.barked = barked;
 }
 
 // ---------------------------------------------------------------- the fog
@@ -2917,6 +2968,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'sewer') sewerHazards(c);
   if (s.encounterId === 'fireworks') fireworksHazards(c);
   if (s.encounterId === 'fog') fogDrift(c);
+  if (s.encounterId === 'hunt') huntHazards(c);
   if (sinks(s)) bogHazards(c);
   if (s.encounterId === 'wisps' || s.encounterId === 'fog') poolHazards(c);
   if (s.encounterId === 'wisps') wispsHazards(c);
@@ -3039,6 +3091,7 @@ function processHits(c: Ctx) {
 
 /** How the last moment begins, by what is coming. */
 const LAST_MOMENT: Record<string, string> = {
+  skott: 'Jägaren lyfter bössan. Pipan pekar rakt mot {name}. Ett ögonblick kvar.',
   torvmaskinen: 'Maskinens skärblad rullar fram över torven, rakt mot {name}. Ett ögonblick kvar.',
   gölen: 'Det svarta vattnet sluter sig över {name}. Ett ögonblick kvar.',
   gungfly: 'Mossan sluter sig om {name}. Det svarta vattnet når upp till nosen. Ett ögonblick kvar.',
@@ -3064,7 +3117,7 @@ const TREE_FALL = ['fällaren', 'schaktaren'];
 /** Hits from the light: a car's, a truck's, the dark car's, the farmer's flashlight. */
 const LIGHT = ['bil', 'lastbil', 'mörk bil', 'traktor', 'bonde'];
 
-const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern', katt: 'Katten', fötter: 'Fötterna', cykel: 'Cykeln', spårvagn: 'Spårvagnen', avloppet: 'Vattnet', råttor: 'Råttorna', gungfly: 'Gungflyet', gölen: 'Gölen', torvmaskinen: 'Torvmaskinen' };
+const HIT_BY: Record<string, string> = { skördetröskan: 'Skördetröskan', diket: 'Diket', stängslet: 'Stängslet', traktor: 'Traktorn', gift: 'Dimman', vråk: 'Vråken', berguv: 'Berguven', fällaren: 'Trädet', schaktaren: 'Schaktaren', bil: 'Bilen', lastbil: 'Lastbilen', 'mörk bil': 'Den mörka bilen', hund: 'Hunden', forsen: 'Forsen', häger: 'Hägern', katt: 'Katten', fötter: 'Fötterna', cykel: 'Cykeln', spårvagn: 'Spårvagnen', avloppet: 'Vattnet', råttor: 'Råttorna', gungfly: 'Gungflyet', gölen: 'Gölen', torvmaskinen: 'Torvmaskinen', skott: 'Skottet' };
 
 /** Vehicles crush legs and wings; bites tear. Never the same injury twice. */
 function injuryFor(c: Ctx, v: Animal, h: Hit): InjuryKind | null {
@@ -3237,7 +3290,7 @@ function leaveGroup(c: Ctx, a: Animal, cause: 'dawn' | 'doubt' | 'stayed') {
 function finishTurn(c: Ctx) {
   const s = c.s;
   for (const a of s.animals) if (isActive(a) && zoneDef(s, a.zone).slow) a.slowTime++;
-  if (s.encounterId === 'farm') leaveScent(s);
+  if (s.encounterId === 'farm' || s.encounterId === 'hunt') leaveScent(s);
   if (!s.animals.some(isActive)) return endEncounter(c);
   if (s.turn >= s.maxTurn) {
     narrate(c, byTime(s, encounterOf(s).timeUp));

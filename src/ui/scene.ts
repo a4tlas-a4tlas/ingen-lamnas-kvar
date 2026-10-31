@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : id === 'wisps' ? wispsSvg() : id === 'cranes' ? cranesSvg() : id === 'peat' ? peatSvg() : id === 'fog' ? fogSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : id === 'wisps' ? wispsSvg() : id === 'cranes' ? cranesSvg() : id === 'peat' ? peatSvg() : id === 'fog' ? fogSvg() : id === 'hunt' ? huntSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -449,6 +449,24 @@ function bogSvg(): string {
   <rect x="${x(36)}" y="${y(23)}" width="${x(28)}" height="10" fill="#6a5438" filter="url(#cut)"/><rect x="${x(36)}" y="${y(23) + 12}" width="${x(28)}" height="4" fill="#4a3826"/>
   <rect y="${y(80)}" width="400" height="${y(20)}" fill="#6a6a44"/>
   <rect class="night-veil" width="400" height="500" fill="#0c1430" opacity="0.5"/>
+</svg>`;
+}
+
+/** Jägaren: a clear-cut with stumps and ferns, a brook on the right, and the dark forest beyond. */
+function huntSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const spruce = Array.from({ length: 12 }, (_, i) => `<path d="M${i * 36 + 10} ${y(0)} L${i * 36 - 6} ${y(14)} H${i * 36 + 26} Z" fill="${i % 2 ? '#14221a' : '#1a2a20'}"/>`).join('');
+  const stumps = [[44, 64], [58, 70], [48, 44], [60, 50], [40, 24], [56, 30]].map(([px, py]) => `<ellipse cx="${x(px)}" cy="${y(py)}" rx="7" ry="3" fill="#8a7050"/><rect x="${x(px) - 7}" y="${y(py)}" width="14" height="5" fill="#5a4630"/>`).join('');
+  const ferns = [[8, 66], [20, 72], [12, 44], [24, 50], [8, 22], [22, 28]].map(([px, py]) => `<path d="M${x(px)} ${y(py)} q-10 -8 -18 -4 M${x(px)} ${y(py)} q10 -8 18 -4 M${x(px)} ${y(py)} l0 -12" stroke="#4a6a34" stroke-width="3" fill="none"/>`).join('');
+  return `
+<svg class="scene-bg hunt" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="500" fill="#7a7050"/>
+  <rect width="400" height="${y(14)}" fill="#0e1812"/>${spruce}
+  <path d="M${x(70)} ${y(80)} Q${x(84)} ${y(58)} ${x(78)} ${y(36)} T${x(86)} ${y(14)}" stroke="#3a5a6a" stroke-width="22" fill="none" opacity="0.8"/>
+  ${stumps}${ferns}
+  <rect y="${y(80)}" width="400" height="${y(20)}" fill="#5a5a50"/>
 </svg>`;
 }
 
