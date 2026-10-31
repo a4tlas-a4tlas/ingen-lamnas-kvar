@@ -69,6 +69,8 @@ function resolveMoments(s: GameState): GameState {
 export function score(s: GameState): number {
   let v = 0;
   const goal = s.phase === 'play' ? encounterOf(s).zones.find((z) => z.goal)?.id : undefined;
+  const hoursLeft = s.maxTurn - s.turn + 1;
+  let steps = 0;
   for (const a of s.animals) {
     if (a.status === 'dead' || a.status === 'left') continue;
     v += 100 + (a.count ?? 0) * 8;
@@ -77,11 +79,13 @@ export function score(s: GameState): number {
     if (a.status === 'safe') v += 30;
     else if (goal && a.status === 'active') {
       const dist = zoneDistance(s, a.zone, goal);
+      steps += dist;
       // The clock: one still further from the goal than hours are left will be left behind.
-      const hoursLeft = s.maxTurn - s.turn + 1;
       v -= dist * 9 + (a.sink ?? 0) * 6 + Math.max(0, dist - hoursLeft) * 70;
     }
   }
+  // And the Kraft: every step is a lead, and an hour gives about three. More steps than that is someone left behind.
+  if (goal) v -= Math.max(0, steps - (s.kraft + 3 * (hoursLeft - 1))) * 25;
   return v + s.hope * 3;
 }
 

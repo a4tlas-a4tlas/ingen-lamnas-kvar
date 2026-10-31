@@ -1,5 +1,5 @@
 // The bosses alone: the careful player through each region's last danger, from the last
-// fire before it, with the whole group. Run with PLAYTEST=1 (PLAYTEST_SEEDS=n, PLAYTEST_HARD=1,
+// fire before it, with the whole group. Run with PLAYTEST=1 (PLAYTEST_SEEDS=n, PLAYTEST_GROUP=n, PLAYTEST_HARD=1,
 // PLAYTEST_ONLY=dalen,staden).
 import { it } from 'vitest';
 import { REGIONS, type RegionDef } from '../../src/data/regions';
@@ -11,6 +11,8 @@ import { playDanger } from './player';
 declare const process: { env: Record<string, string | undefined> };
 const run = process.env.PLAYTEST ? it : it.skip;
 const SEEDS = Number(process.env.PLAYTEST_SEEDS ?? 100);
+/** How many of us come to the boss: about four, in a whole run. */
+const GROUP = Number(process.env.PLAYTEST_GROUP ?? 4);
 
 /** Standing at the last fire of a region, the whole group with us, and into its boss. */
 function atBoss(def: RegionDef, seed: number, hard: boolean): GameState {
@@ -22,6 +24,8 @@ function atBoss(def: RegionDef, seed: number, hard: boolean): GameState {
   s.journey.truth[end.id] = hard ? 'hard' : 'normal';
   s.journey.guess[end.id] = s.journey.truth[end.id];
   for (const a of s.animals) a.status = 'safe';
+  // Most runs come to a boss with fewer than they set out with: leave the last ones at home.
+  for (const a of s.animals.slice(GROUP)) a.status = 'left';
   s.phase = 'map';
   return step(s, { type: 'travel', to: end.id }).state;
 }
@@ -35,9 +39,10 @@ run('the bosses', () => {
     for (let seed = 1; seed <= SEEDS; seed++) {
       let s = atBoss(REGIONS[id], seed, hard);
       const n = s.animals.filter((a) => a.status === 'active').length;
+      const l0 = s.animals.filter((a) => a.status === 'left').length;
       s = playDanger(s);
       const d = s.animals.filter((a) => a.status === 'dead').length;
-      const l = s.animals.filter((a) => a.status === 'left').length;
+      const l = s.animals.filter((a) => a.status === 'left').length - l0;
       if (d + l > 0) took++;
       dead += d; left += l; kept += n - d - l;
     }
