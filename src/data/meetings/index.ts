@@ -4,6 +4,7 @@ import { BARSNAR, FRAMLINGEN, GAMMAL_STIG, GRAVSKOPAN, GRYT, HJORTEN, IHALIGT_TR
 import { FARAN, HAREN, KRAKFLOCKEN, SKRAMMAN, SPILLSAD, TRAKTORN } from './akrarna.sv';
 import { BARNET, DUVORNA, KOLONILOTTEN, PARKDAMMEN, SOPTUNNAN, STADSRAVEN } from './staden.sv';
 import { BOET, EKOT, EREMITEN, HJORTRON, RYGGSACKEN, TJARNEN, VILSNA } from './mossen.sv';
+import { BARBUSKEN, DOFTEN } from './skogsbrynet.sv';
 import { INTERLUDE } from './interlude.sv';
 import { PROPOSAL } from './proposal.sv';
 import { crowCards } from '../../engine/campfire';
@@ -19,7 +20,7 @@ export interface MeetingDef {
   taker?: string;
 }
 
-export type SceneArt = 'bird' | 'tree' | 'berries' | 'path' | 'den' | 'deer' | 'basket' | 'fox' | 'tracks' | 'toad' | 'ridge' | 'furrow' | 'scarecrow' | 'crows' | 'grain' | 'tractor' | 'hare' | 'pigeons' | 'window' | 'bin' | 'allotment' | 'pond' | 'mist' | 'hermit' | 'echo' | 'cloudberry' | 'nest' | 'backpack' | 'tarn';
+export type SceneArt = 'bird' | 'tree' | 'berries' | 'path' | 'den' | 'deer' | 'basket' | 'fox' | 'tracks' | 'toad' | 'ridge' | 'furrow' | 'scarecrow' | 'crows' | 'grain' | 'tractor' | 'hare' | 'pigeons' | 'window' | 'bin' | 'allotment' | 'pond' | 'mist' | 'hermit' | 'echo' | 'cloudberry' | 'nest' | 'backpack' | 'tarn' | 'forest';
 
 export const MEETINGS: Record<MeetingId, MeetingDef> = {
   crow: { title: 'Kråkan vid elden', art: 'crow', frames: CROW, taker: 'Kråkan' },
@@ -53,6 +54,8 @@ export const MEETINGS: Record<MeetingId, MeetingDef> = {
   boet: { title: 'Det tomma boet', art: 'nest', frames: BOET },
   ryggsacken: { title: 'Ryggsäcken', art: 'backpack', frames: RYGGSACKEN },
   tjarnen: { title: 'Myrstjärnan', art: 'tarn', frames: TJARNEN },
+  doften: { title: 'Skogens doft', art: 'forest', frames: DOFTEN },
+  barbusken: { title: 'Den sista bärbusken', art: 'berries', frames: BARBUSKEN },
   interlude: { title: 'Mellan två landskap', art: 'ridge', frames: INTERLUDE },
 };
 

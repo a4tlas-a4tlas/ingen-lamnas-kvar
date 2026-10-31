@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 9.6)
+## Status (after step 10.1)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 9.6: Dimman, branch `dimman`, open for review. Everything through 9.5 (#47) is in `main` and live. |
+| **Latest PR** | Milestone 10.1: Skogsbrynet, branch `skogsbrynet`, open for review. Everything through 9.6 (#48) is in `main` and live. |
 | **Save version** | 38 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 435 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Tests** | 440 Vitest (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -22,8 +22,8 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 2. The oath.
 3. The region map (the guide's sketch: 6 rows of dangers, meetings, finds and fires, then a boss).
 4. The interlude (looking back, a promise, choosing the way). After Dalen we are offered two of the three middle regions (Åkrarna, the city, Mossen) and choose one; the other is passed by for good (`s.run.skipped`). After that region, the one left is the only way on, so a run holds two middle regions. The animals speak for a way (`regionVoices` in `src/engine/voices.ts`).
-5. The chosen region. Each middle region already walked makes places likelier to be hard (`hardChanceAfter` in `step.ts`: 0.4, then 0.55).
-6. When no way is left: one last look back, then "fortsättning följer".
+5. The chosen region. Each middle region already walked makes places likelier to be hard (`hardChanceAfter` in `step.ts`: 0.4, then 0.55, then 0.7).
+6. After the middle regions: **Skogsbrynet** (`FINAL_REGION`), a short last stretch with one row to choose in. Beyond it, the forest ends the run.
 
 **Built so far:**
 
@@ -32,6 +32,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
 | **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden), the gravel road (Grusvägen) + old dangers in new places; six story parts of its own (`src/data/meetings/akrarna.sv.ts`) | Skördetröskan |
 | **Mossen** (9.1–) | Gungflyet, the quaking bog (`bog`); Irrbloss, the lit bog (`wisps`); Tranorna, the cranes' dance (`cranes`); Torvtäkten, the peat cutting (`peat`) + old dangers (Myrbäcken, Det öppna kärret); seven story parts of its own (`src/data/meetings/mossen.sv.ts`) | Dimman (`fog`) |
+| **Skogsbrynet** (10.1) | a short last stretch (`middleRows: 1`): Skogsvägen (the road), the last farm, the forest brook; two story parts (`src/data/meetings/skogsbrynet.sv.ts`) | – (Jägaren in 10.2) |
 | **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan), the sewer (Avloppet) + old dangers; six story parts of its own (`src/data/meetings/staden.sv.ts`) | Fyrverkerinatten |
 
 **Animals** are species, not characters: badger, toad, fox, owl, adder, mice, hare, and since 7.6 hedgehog, squirrel, mole, beaver and fawn (`SPECIES` in `src/data/animals.ts`, with Swedish grammar fields `en` / `den` / `definite`). Names are drawn per run. There are two roles: the eldest ("Gamla …") and the guide, whose memory the map is.
@@ -80,13 +81,14 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: ask the user
-Milestone 9 is done: Mossen has four dangers of its own, seven story parts and its boss, Dimman. A run is Dalen → two of the three middle regions → "fortsättning följer".
-**Ask what comes next.** The candidates:
-- **Höglandet** (boss Stormen), the fourth middle region. With four middle regions, the "choose one, skip the other" rule gives at most two per run (see the open questions).
-- **Skogsbrynet and Jägaren,** the last region and the final boss, so a run has a real ending.
-- **Seasons.**
-- **Hope, part 2:** ways to win hope back.
+## Next step: 10.2, Jägaren and the ending
+The plan is approved (Milestone 10 in `DESIGN.md`, and the session's plan file). Skogsbrynet's end is still a plain *Skogen*. 10.2 turns it into the final boss and gives the run its ending:
+- **Jägaren** (`hunt`, by day, 10 hours):
+  - **The hunter** watches a column or a row each hour, telegraphed. A shot kills whoever stands there in the open (last moment); cover and hiding save you, fliers are seen.
+  - **The dog** follows our scent, using the farm's rules, shared. When it finds one of us it barks, and the hunter turns to that zone next hour. Water breaks the scent, and a fox or an owl can lure it.
+  - **Hard** ("ett jaktlag"): two dogs, and a column and a row each hour.
+- **The ending:** reaching the forest gives an end screen that tells the whole run. Its title is *Ingen lämnades kvar*, *N av oss kom fram* or *Eden föll*, and it shows the oath, the promises, the memorial stones by name, and the poem.
+- **No memories** from earlier choices (your choice).
 
 ## Open questions and known quirks
 - **Dimman's bot balance (9.6), the least certain so far.** A convoy bot (it moves up to three animals from one zone together, steps aside when blocked, calm animals, bonds +1 as if grown at the fires) keeps 3.23 of 6 normally and 4.33 when we found the lost one. In thick fog: 2.32 / 2.97.

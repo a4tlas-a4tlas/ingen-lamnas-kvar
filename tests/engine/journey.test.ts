@@ -90,7 +90,7 @@ describe('the journey', () => {
     for (const a of s.animals.filter((x) => x.status === 'active')) s = run(s, { type: 'lead', target: a.id, zone: 'stenmuren' });
     expect(s.phase).toBe('map');
     // Every region already walked: no way on. We still look back, and then the story stops.
-    s.run.regions = ['dalen', 'akrarna', 'staden', 'mossen'];
+    s.run.regions = ['dalen', 'akrarna', 'staden', 'mossen', 'skogsbrynet'];
     s = run(s, { type: 'travel', to: 'akrarna' });
     expect(s.run.offered).toEqual([]);
     expect(s.meeting).toMatchObject({ id: 'interlude', frame: 'start' });

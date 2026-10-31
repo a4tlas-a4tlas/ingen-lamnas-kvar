@@ -1041,6 +1041,29 @@ Mossen's end is now its boss, *Dimman* (`src/engine/encounters/fog.ts`, id `fog`
 - **Bot:** a convoy bot keeps 3.23 of 6 (4.33 with the lost one found); in thick fog 2.32 (2.97). It's crude; see HANDOFF.
 - **Save version 38.**
 
+## Milestone 10 – Skogsbrynet and Jägaren (in progress)
+Design from the milestone 10 interview:
+- **A short last stretch, not a full region.**
+- **Jägaren is a hunt with a dog.**
+- **The run ends in the forest, with the poem.**
+- **No memories from earlier choices, for now.**
+
+A run is now: Dalen → two of the three middle regions → Skogsbrynet → (Jägaren) → the forest.
+
+### Step 1: Skogsbrynet, the last stretch (done)
+- **The route:** once no middle region is left, the interlude offers only Skogsbrynet (`FINAL_REGION`): "Det finns bara en väg kvar nu. Mot skogen." Beyond it, "Vi går in i skogen", and the run ends. "Fortsättning följer" is gone from the main path.
+- **A short region:** `RegionDef.middleRows` (Skogsbrynet: 1). The map is the road, one row of 2–3 places to choose between, the last fire, then the end. The fairness rules relax for a single row.
+- **Its places** *(my proposal)*:
+  - **The first danger:** *Skogsvägen*, the road again ("Vi började med en väg. Vi slutar med en.").
+  - **The other dangers:** *Den sista gården*, *Skogsbäcken*.
+  - **The fires:** *Under granarna* and *Den sista elden*.
+  - **Text by where we came from:** `arriveFrom` for each middle region.
+  - **The hard chance:** 0.7, as the third region after the glen.
+- **Two story parts** *(my proposal)*:
+  - **Skogens doft:** we smell the forest; everyone says what they hope for (+1 belief), and the eldest reminds us how many we were (+1 hope).
+  - **Den sista bärbusken:** +2 hope, the hurt heal, and the night falls (the clock flips).
+- **For now** the end is a plain *Skogen*. Step 2 makes it Jägaren.
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

@@ -36,6 +36,8 @@ function paths(rows: Kind[][], edges: number[][][]): Kind[][] {
 
 /** The rules every way through must keep: two dangers at least, something else at least once, never two finds in a row, at most one fire. */
 function fair(kinds: Kind[]): boolean {
+  // A short last stretch – one row to choose in – may be anything along the way.
+  if (kinds.length <= 3) return kinds.filter((k) => k === 'fire').length <= 1;
   const dangers = kinds.filter((k) => k === 'danger').length;
   const story = kinds.filter((k) => k === 'meeting' || k === 'find').length;
   const fires = kinds.filter((k) => k === 'fire').length;
@@ -103,12 +105,13 @@ function choosePlaces(h: RngHolder, def: RegionDef, rows: Kind[][], edges: numbe
 /** Draw a region's map for this run. The later the region, the likelier a place is harder than it looks. */
 export function generateRegion(def: RegionDef, seed: number, hardChance = 0.4): RegionMap {
   const h: RngHolder = { rng: (seed ^ 0x2545f491) | 0 };
-  // Rows of kinds: the first danger, four rows to choose between, the last fire.
+  // Rows of kinds: the first danger, rows to choose between (four, or fewer for a short stretch), the last fire.
+  const middle = MIDDLE.slice(0, def.middleRows ?? MIDDLE.length);
   let rows: Kind[][] = [];
   let edges: number[][][] = [];
   let places: Template[][] | null = null;
   for (let attempt = 0; attempt < 200; attempt++) {
-    rows = [['danger'], ...MIDDLE.map((r) => Array.from({ length: random(h) < 0.5 ? 2 : 3 }, () => rollKind(h, r))), ['fire']];
+    rows = [['danger'], ...middle.map((r) => Array.from({ length: random(h) < 0.5 ? 2 : 3 }, () => rollKind(h, r))), ['fire']];
     edges = rows.slice(0, -1).map((row, i) => connect(h, row.length, rows[i + 1].length));
     if (paths(rows, edges).every(fair) && (places = choosePlaces(h, def, rows, edges))) break;
   }
