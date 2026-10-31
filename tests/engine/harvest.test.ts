@@ -135,4 +135,11 @@ describe('Skördetröskan', () => {
     s = run(s, { type: 'endTurn' });
     expect(get(s, 'fox').status).toBe('active');
   });
+
+  it('each strip cut is a blow the sound and the board play out', () => {
+    const s = pass(harvest());
+    const strip = s.harvest.plan[s.turn - 1];
+    const evs = step(s, { type: 'endTurn' }).events.flatMap((e) => (e.kind === 'blow' ? [`${e.what}@${e.zone}`] : []));
+    expect(evs).toEqual(strip.map((z) => `cut@${z}`));
+  });
 });
