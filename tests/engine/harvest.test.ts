@@ -22,6 +22,8 @@ function harvest(seed = 5): GameState {
   s = run(s, { type: 'travel', to: end.id });
   calm(s);
   s.kraft = 99;
+  // No feint: the harvester goes the way it was planned, and we know it.
+  s.feint = [];
   return s;
 }
 
@@ -48,12 +50,18 @@ describe('Skördetröskan', () => {
     expect(s.time).toBe('day');
   });
 
-  it('cuts every stand of wheat, two an hour from the second, around the edge', () => {
+  it('cuts every stand of wheat, two an hour from the first, round the edge one way or the other', () => {
     for (let seed = 1; seed <= 50; seed++) {
-      const plan = planHarvest({ rng: seed }, 8);
+      const { plan, feint } = planHarvest({ rng: seed }, 5);
       expect(plan.slice(0, FIRST_CUT - 1).flat()).toEqual([]);
       expect(plan.flat().sort()).toEqual([...WHEAT].sort());
       for (const h of plan.filter((x) => x.length)) expect(h).toHaveLength(STRIPS_PER_HOUR);
+      // The way it didn't take: wheat still standing, never the real strip.
+      const cut = new Set<ZoneId>();
+      plan.forEach((h, i) => {
+        for (const z of feint[i]) { expect(cut.has(z)).toBe(false); expect(h).not.toContain(z); }
+        h.forEach((z) => cut.add(z));
+      });
     }
     expect(harvest().harvest.plan).toEqual(harvest().harvest.plan);
   });
@@ -115,5 +123,16 @@ describe('Skördetröskan', () => {
   it('every hour plays out the same for the same state', () => {
     const s = pass(harvest());
     expect(step(s, { type: 'endTurn' }).state).toEqual(step(s, { type: 'endTurn' }).state);
+  });
+
+  it('until we know which way it turns, the forecast names both; only the real strip is cut', () => {
+    let s = pass(harvest());
+    const strip = s.harvest.plan[s.turn - 1];
+    const other = WHEAT.filter((z) => !s.harvest.cut.includes(z) && !strip.includes(z)).slice(0, 2);
+    s.feint[s.turn - 1] = other;
+    put(s, { fox: other[0] });
+    expect(forecast(s).map((l) => l.text).join(' | ')).toMatch(/Skördetröskan skär .* – eller .*: Rost kan bli överkörda/);
+    s = run(s, { type: 'endTurn' });
+    expect(get(s, 'fox').status).toBe('active');
   });
 });

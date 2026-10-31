@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 11.1)
+## Status (after step 11.2)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 11.1: the playtest bot, branch `playtest`, open for review. Everything through 10.2 (#50) is in `main` and live. |
-| **Save version** | 39 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 456 Vitest (plus the playtest report, skipped unless `PLAYTEST=1`) (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
+| **Latest PR** | Milestone 11.2: Avvägningen, branch `tuning`, open for review. Everything through 11.1 (#51) is in `main` and live. |
+| **Save version** | 40 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 462 Vitest (plus the playtest report, skipped unless `PLAYTEST=1`) (`npm test`), 4 Playwright (`npx playwright test`, 2 runs × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -81,13 +81,28 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: 11.2, tuning (ask first)
-The playtest report (Milestone 11 in `DESIGN.md`) shows where to tune. **Ask which to act on**, then re-run the report and compare.
-- **How to run it:** `PLAYTEST=1 npx vitest run tests/playtest` (about 5 minutes for 50 seeds × 4 groups; `PLAYTEST_SEEDS=10` for a quick look). It writes `playtest-report.md` (git-ignored).
-- **The bot is near-omniscient:** its lookahead simulates the real engine, and the dice live in the state, so it sees each hour's rolls. Read its numbers as a floor on difficulty.
+## Next step (ask first)
+11.2 is done (Milestone 11, step 2 in `DESIGN.md`). **Ask what's next.** Candidates:
+- **Play it:** see whether the half-hidden bosses feel fair. The bot is a near-perfect reader, so people will lose more there.
+- **The roads:** they are the biggest source of loss (time). The user chose to leave them in 11.2.
+- **Höglandet,** a fourth middle region, or other new content.
+
+**Measuring:**
+- **Whole runs:** `PLAYTEST=1 npx vitest run tests/playtest/playtest.test.ts` (about 9 minutes for 50 seeds × 4 groups). It writes `playtest-report.md`.
+- **The bosses alone:** `PLAYTEST=1 PLAYTEST_SEEDS=60 npx vitest run tests/playtest/bosses.test.ts`, with `PLAYTEST_ONLY=dalen,…`, `PLAYTEST_GROUP=4` and `PLAYTEST_HARD=1`.
+- **Noise:** a "Timeout calling onTaskUpdate" error at the end of long runs is Vitest's, not the game's.
 
 ## Open questions and known quirks
-- **What the playtest report says (11.1), from the careful player, 50 seeds per group:**
+- **After 11.2, from the blind careful player, 50 seeds per group:**
+  - **Survivors at the forest:** Dalens sista 2.77, Rovdjurens pakt 2.71, De små 3.82, Slumpad 3.13. 90–100 % of runs reach the forest.
+  - **Losses:** still mostly time (about 2.6 left behind per run, most on roads); deaths are up at the bosses.
+  - **Bosses, took someone:**
+    - Åsen 26 %, Vetefältet 16 %, Jägaren 17 %: half-hidden blows now.
+    - Stadsparken 3 %: never kills, by design.
+    - Dimman 63 %, untouched.
+  - **The roads:** the first road in Dalen takes someone 42 % of the time (0.6 per crossing, all by time). The user chose to keep it.
+  - **Levers if the bosses should bite more:** shorter clocks (the harness at 6 of us gives 40–60 % at 5 hours), or a feint every hour for the bulldozer too.
+- **What the playtest report said (11.1), with the old seeing bot, 50 seeds per group:**
   - **Finishing:** 94–98 % of runs reach the forest. Survivors there: Dalens sista 3.3, Rovdjurens pakt 3.1, De små 4.8, Slumpad 3.8 of 6.
   - **Losses are time, not death:** 2.3 per run are left behind when an hour runs out, 0.25 leave from doubt, and every cause of death together comes to about 0.3.
   - **Bosses:** Skördetröskan, Fyrverkerinatten and Jägaren keep about 100 %; Maskinerna keeps 96 %; Dimman keeps 81 %, the only boss that bites.

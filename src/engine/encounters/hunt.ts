@@ -31,7 +31,7 @@ export const HUNT: EncounterDef = {
     { id: 'granplanteringen', label: 'Granplanteringen', name: 'granplanteringen', rect: [0, 36, 34, 22], cover: true },
     { id: 'stigen', label: 'Stigen', name: 'stigen', rect: [34, 36, 32, 22], exposed: true },
     { id: 'backen', label: 'Bäcken', name: 'bäcken', rect: [66, 36, 34, 22], water: true, breaksScent: true },
-    { id: 'vindfallet', label: 'Vindfället', name: 'vindfället', rect: [0, 14, 34, 22], cover: true },
+    { id: 'vindfallet', label: 'Vindfället', name: 'vindfället', rect: [0, 14, 34, 22] },
     { id: 'glantan', label: 'Gläntan', name: 'gläntan', rect: [34, 14, 32, 22], exposed: true },
     { id: 'mossbacken', label: 'Mossbacken', name: 'mossbacken', rect: [66, 14, 34, 22] },
     { id: 'skogen', label: 'Skogen', name: 'skogen', rect: [0, 0, 100, 14], goal: true },
@@ -77,6 +77,15 @@ export function planHunt(h: RngHolder, maxTurn: number): ZoneId[][] {
     out.push([...new Set([...line, ...other])]);
   }
   return out;
+}
+
+/** Where the hunter might look instead, hour by hour: another row and column – we see him turn, but not which way. */
+export function planHuntFeint(h: RngHolder, plan: ZoneId[][]): ZoneId[][] {
+  return plan.map((real) => {
+    const key = [...real].sort().join();
+    const crosses = ROWS.flatMap((r) => COLUMNS.map((c) => [...new Set([...r, ...c])])).filter((x) => [...x].sort().join() !== key);
+    return crosses[Math.floor(random(h) * crosses.length)];
+  });
 }
 
 /** The hunter's dogs: one, or two with a hunting party. They start at the road, behind us. */

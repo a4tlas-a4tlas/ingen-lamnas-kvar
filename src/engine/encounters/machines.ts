@@ -19,7 +19,7 @@ export const MACHINES: EncounterDef = {
     day: 'Schaktaren är nästan framme. Det här är sista timmen.',
     night: 'Schaktaren är nästan framme. Det här är sista timmen.',
   },
-  maxTurn: 5,
+  maxTurn: 6,
   zones: [
     { id: 'glantan', label: 'Gläntan', name: 'gläntan', rect: [0, 76, 100, 24], start: true, exposed: true },
     { id: 'bjorkdungen', label: 'Björkdungen', name: 'björkdungen', rect: [0, 46, 34, 30], cover: true, trees: true },
@@ -46,7 +46,7 @@ export const MACHINES: EncounterDef = {
 /** Where trees stand: the felling machine wants them, and they hide us from the roar. */
 export const TREES: ZoneId[] = MACHINES.zones.filter((z) => z.trees).map((z) => z.id);
 /** The bulldozer takes the ground behind us at the end of these hours. */
-export const DOZE_HOURS = [2, 4, 5];
+export const DOZE_HOURS = [2, 4, 6];
 
 /**
  * The morning is decided up front, so it can be telegraphed – and read from the tracks:
@@ -54,7 +54,7 @@ export const DOZE_HOURS = [2, 4, 5];
  * The bulldozer takes the clearing first, then the birches and the stones in either order;
  * the clear-cut, where both ways up meet, is left to the end.
  */
-export function planMachines(h: RngHolder, maxTurn: number): { fellPlan: ZoneId[]; dozePlan: (ZoneId | null)[] } {
+export function planMachines(h: RngHolder, maxTurn: number): { fellPlan: ZoneId[]; dozePlan: (ZoneId | null)[]; feint: ZoneId[][] } {
   const first = pick(h, ['bjorkdungen', 'stenroset'] as ZoneId[]);
   const order: ZoneId[] = ['glantan', first, first === 'bjorkdungen' ? 'stenroset' : 'bjorkdungen'];
   const dozePlan: (ZoneId | null)[] = Array.from({ length: maxTurn }, (_, i) => {
@@ -62,19 +62,24 @@ export function planMachines(h: RngHolder, maxTurn: number): { fellPlan: ZoneId[
     return k >= 0 ? order[k] : null;
   });
   const fellPlan: ZoneId[] = [];
+  const feint: ZoneId[][] = [];
   const gone = new Set<ZoneId>();
   for (let t = 1; t <= maxTurn; t++) {
     const standing = TREES.filter((z) => !gone.has(z) && z !== fellPlan[t - 2]);
-    fellPlan.push(pick(h, standing.length ? standing : TREES.filter((z) => !gone.has(z))));
+    const fell = pick(h, standing.length ? standing : TREES.filter((z) => !gone.has(z)));
+    fellPlan.push(fell);
+    // Where it turns, but won't cut: another tree still standing – a spruce line if one is, for every way up passes one.
+    const other = TREES.filter((z) => !gone.has(z) && z !== fell);
+    const spruce = other.filter((z) => z.startsWith('gran'));
+    feint.push(other.length ? [pick(h, spruce.length ? spruce : other)] : []);
     const dozed = dozePlan[t - 1];
     if (dozed) gone.add(dozed);
   }
-  return { fellPlan, dozePlan };
+  return { fellPlan, dozePlan, feint };
 }
 
 /** Zones beside the felling: the roar reaches in – unless trees stand around us and take it. */
-export function roarZones(s: GameState): ZoneId[] {
-  const fell = s.fellPlan[s.turn - 1];
+export function roarZones(s: GameState, fell: ZoneId | undefined = s.fellPlan[s.turn - 1]): ZoneId[] {
   if (!fell) return [];
   const near = new Set(MACHINES.edges.flatMap(([a, b]) => (a === fell ? [b] : b === fell ? [a] : [])));
   const zone = (id: ZoneId) => MACHINES.zones.find((z) => z.id === id)!;

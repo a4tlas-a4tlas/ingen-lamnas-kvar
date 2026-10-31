@@ -5,6 +5,7 @@
 // who stand together. At midnight the whole sky goes up at once.
 import { random, type RngHolder } from '../rng';
 import type { Animal, GameState, ZoneId } from '../types';
+import { feintNow } from './feint';
 import type { EncounterDef } from './types';
 
 export const FIREWORKS: EncounterDef = {
@@ -21,7 +22,7 @@ export const FIREWORKS: EncounterDef = {
     day: 'Folk räknar ner. Det här är sista timmen – midnatt.',
     night: 'Folk räknar ner. Det här är sista timmen – midnatt.',
   },
-  maxTurn: 5,
+  maxTurn: 8,
   zones: [
     { id: 'parkgrinden', label: 'Parkgrinden', name: 'parkgrinden', rect: [0, 80, 100, 20], start: true, cover: true },
     { id: 'buskarna', label: 'Buskarna', name: 'buskarna', rect: [0, 52, 34, 28], cover: true },
@@ -74,17 +75,26 @@ export function parkDistance(a: ZoneId, b: ZoneId): number {
   return Math.abs(ra - rb) + Math.abs(ca - cb);
 }
 
-/** The night's bursts, hour by hour: one each hour, three heavy ones at midnight – and from the fourth hour one more when the whole city fires. */
+/** The night's bursts, hour by hour: one at first, two from the fifth hour, three heavy ones at midnight – and from the fourth hour one more when the whole city fires. */
 export function planBursts(h: RngHolder, maxTurn: number, hard: boolean): Burst[][] {
   return Array.from({ length: maxTurn }, (_, i) => {
     const hour = i + 1;
     const midnight = hour === maxTurn;
-    const n = (midnight ? 3 : 1) + (hard && hour >= 4 ? 1 : 0);
+    const n = (midnight ? 3 : hour >= 5 ? 2 : 1) + (hard && hour >= 4 ? 1 : 0);
     const pool = [...PARK];
     return Array.from({ length: Math.min(n, pool.length) }, () => ({
       zone: pool.splice(Math.floor(random(h) * pool.length), 1)[0],
       strength: (midnight || (hour >= 2 && random(h) < 0.5) ? 2 : 1) as 1 | 2,
     }));
+  });
+}
+
+/** Where each rocket might go instead, hour by hour: for every burst before midnight, another place in the park. We see them rise, not where they will burst. */
+export function planBurstFeint(h: RngHolder, plan: Burst[][]): ZoneId[][] {
+  return plan.map((bursts, i) => {
+    if (i === plan.length - 1) return [];
+    const pool = PARK.filter((z) => !bursts.some((b) => b.zone === z));
+    return bursts.map(() => pool.splice(Math.floor(random(h) * pool.length), 1)[0]);
   });
 }
 
@@ -97,6 +107,12 @@ export function planCrowd(h: RngHolder, maxTurn: number): ZoneId[] {
 
 /** This hour's bursts. */
 export const burstsNow = (s: GameState): Burst[] => s.fireworks.plan[s.turn - 1] ?? [];
+/** The bursts as far as we can tell: each rocket at both places it might burst, until we know which. */
+export const possibleBursts = (s: GameState): Burst[] => {
+  const decoys = feintNow(s);
+  return burstsNow(s).flatMap((b, i) => (decoys[i] ? [b, { ...b, zone: decoys[i] }] : [b]));
+};
+
 /** Where the people walk this hour – unless it is the hour the child's family stepped aside for us. */
 export const crowdNow = (s: GameState): ZoneId | null => (s.fireworks.childHour === s.turn ? null : s.fireworks.crowdPlan[s.turn - 1] ?? null);
 

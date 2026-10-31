@@ -1051,3 +1051,6 @@ h2 .skills-btn { margin: 0 0 0 8px; vertical-align: middle; }
 .end-promises { list-style: none; padding: 0; margin: 0 0 1em; }
 .end-promises li { margin: 0.25em 0; font-style: italic; }
 .end-promises li.broken { opacity: 0.75; }
+
+/* A half-hidden blow: two places, one real. Both are drawn alike, dashed and fainter, until we know which. */
+.fell-mark.maybe, .tractor-mark.maybe, .sight-mark.maybe, .burst-mark.maybe { outline: 2px dashed rgba(255,255,255,0.55); outline-offset: -5px; opacity: 0.82; }

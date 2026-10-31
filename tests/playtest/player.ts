@@ -6,6 +6,7 @@ import { meetingOptions } from '../../src/data/meetings';
 import { CARDS } from '../../src/data/cards';
 import { defaultPlan } from '../../src/engine/campfire';
 import { encounterOf } from '../../src/engine/encounters';
+import { feintKnown } from '../../src/engine/encounters/feint';
 import { cardTarget, isActive, lastMomentShields, leadTargets, leadZones, zoneDistance } from '../../src/engine/rules';
 import { createGame } from '../../src/engine/setup';
 import { step } from '../../src/engine/step';
@@ -103,11 +104,46 @@ function lookahead(s: GameState): number {
   let sum = 0;
   for (let i = 0; i < FUTURES; i++) {
     futureSeed = (Math.imul(futureSeed, 1103515245) + 12345) | 0;
-    const t = attempt({ ...s, rng: futureSeed }, { type: 'endTurn' });
+    // Nor does it know which of a boss's two places is real: in half the futures, the other one is.
+    const f = (futureSeed >>> 16) & 1 ? swapFeint(s) : s;
+    const t = attempt({ ...f, rng: futureSeed }, { type: 'endTurn' });
     if (!t) return -Infinity;
     sum += score(resolveMoments(t));
   }
   return sum / FUTURES;
+}
+
+/** The same hour, with a boss's real and false places swapped – what the player can't tell apart until it knows. */
+function swapFeint(s: GameState): GameState {
+  const i = s.turn - 1;
+  const decoy = s.feint[i] ?? [];
+  if (!decoy.length || feintKnown(s)) return s;
+  const feint = [...s.feint];
+  if (s.encounterId === 'machines') {
+    const fellPlan = [...s.fellPlan];
+    feint[i] = [fellPlan[i]];
+    fellPlan[i] = decoy[0];
+    return { ...s, fellPlan, feint };
+  }
+  if (s.encounterId === 'harvest') {
+    const plan = [...s.harvest.plan];
+    feint[i] = plan[i];
+    plan[i] = decoy;
+    return { ...s, harvest: { ...s.harvest, plan }, feint };
+  }
+  if (s.encounterId === 'fireworks') {
+    const plan = [...s.fireworks.plan];
+    feint[i] = plan[i].map((b) => b.zone);
+    plan[i] = plan[i].map((b, j) => ({ ...b, zone: decoy[j] ?? b.zone }));
+    return { ...s, fireworks: { ...s.fireworks, plan }, feint };
+  }
+  if (s.encounterId === 'hunt') {
+    const plan = [...s.hunt.plan];
+    feint[i] = plan[i];
+    plan[i] = decoy;
+    return { ...s, hunt: { ...s.hunt, plan }, feint };
+  }
+  return s;
 }
 
 /** Everything the player could do now in a danger. */

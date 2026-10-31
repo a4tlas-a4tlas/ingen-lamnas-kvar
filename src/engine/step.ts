@@ -13,11 +13,12 @@ import { LOADOUT, allSkills } from '../data/skills';
 import { planRoad } from './encounters/road';
 import { forkVoices, regionVoices, voiceStake, type Voice } from './voices';
 import { CURRENT, DAM, DAM_MAX, FLOOD_DAM_CREAK, FLOOD_HOURS, FLOOD_HOURS_TOTAL, STONES, aboveTheWater, carriedAway, holdsOnTo, planRiver, swims } from './encounters/river';
+import { eitherOf, feintNow } from './encounters/feint';
 import { planMachines, roarZones } from './encounters/machines';
 import { exposedIn, prey, shadowOptions } from './encounters/raptor';
 import { CROP, drift, nightMist, planSprayer, rowZones, sprayed } from './encounters/sprayer';
 import { DITCH_MAX, FENCE, levelAfter, onTheWire, planFence, sweptIn } from './encounters/fence';
-import { cutting, planHarvest, stubblePrey } from './encounters/harvest';
+import { WHEAT, cutting, planHarvest, stubblePrey } from './encounters/harvest';
 import { bitten, lit, planLamps, planWalkers, walkerZone } from './encounters/lamps';
 import { eyesFor, guard, nextHide, placeCats, pounced, scarer } from './encounters/cats';
 import { STUCK_AT, UNDER_AT, isPool, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from './encounters/bog';
@@ -25,8 +26,8 @@ import { planWisps } from './encounters/wisps';
 import { planFlocks } from './encounters/cranes';
 import { DITCH_FULL, cutZones, machineRow, planPeat } from './encounters/peat';
 import { planFogKinds } from './encounters/fog';
-import { huntDogDestination, huntDogTargets, huntDogs, planHunt, watched } from './encounters/hunt';
-import { burstsNow, crowdNow, holdsWith, planBursts, planCrowd as planParkCrowd, pushOptions, reaches } from './encounters/fireworks';
+import { huntDogDestination, huntDogTargets, huntDogs, planHunt, planHuntFeint, watched } from './encounters/hunt';
+import { PARK, burstsNow, crowdNow, holdsWith, planBurstFeint, planBursts, planCrowd as planParkCrowd, pushOptions, reaches } from './encounters/fireworks';
 import { SOUND, TUNNELS, bittenByRats, foundBy, isFound, levelNow, planKinds, planRats, planRise, sweptHere } from './encounters/sewer';
 import { STAGGER, bikesAt, feetAt, planBikes, planCrowd, planTram, sideOf, tramIn, tramNow, underfoot } from './encounters/street';
 import { AWAKE_ALARM, HEN_HOUSE, SCENT_MAX, alarmMax, dogDestination, dogTargets, newDogs } from './encounters/farm';
@@ -382,9 +383,10 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.damCreak = id === 'river' && hard ? FLOOD_DAM_CREAK : 0;
   s.closed = [];
   s.heron = null;
-  const machines = id === 'machines' ? planMachines(s, s.maxTurn) : { fellPlan: [], dozePlan: [] };
+  const machines = id === 'machines' ? planMachines(s, s.maxTurn) : { fellPlan: [], dozePlan: [], feint: [] };
   s.fellPlan = machines.fellPlan;
   s.dozePlan = machines.dozePlan;
+  s.feint = machines.feint;
   // Over the fields one bird circles – or, where Kvarn's memory was too kind, a pair.
   s.raptors = id === 'raptor' ? Array.from({ length: hard ? 2 : 1 }, () => ({ zone: null, maybe: [] })) : [];
   // The sprayed field: by day the tractor's plan, by night the mist the day left behind.
@@ -409,6 +411,7 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   if (id === 'sewer') findTunnels(s);
   // New Year's Eve: the night's bursts and the people on the paths – more of both when the whole city fires.
   s.fireworks = id === 'fireworks' ? { plan: planBursts(s, s.maxTurn, hard), crowdPlan: planParkCrowd(s, s.maxTurn) } : { plan: [], crowdPlan: [] };
+  if (id === 'fireworks') s.feint = planBurstFeint(s, s.fireworks.plan);
   // The lit bog: the night's lights, false and true.
   s.wisps = id === 'wisps' ? planWisps(s, s.maxTurn, hard) : { plan: [], trueAt: 0, trueZone: '', known: false };
   // The cranes' dawn: where each flock dances, hour by hour.
@@ -422,11 +425,14 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
     s.scent = { vagkanten: 1 };
   }
   s.hunt = { plan: id === 'hunt' ? planHunt(s, def.maxTurn) : [], barked: [] };
+  if (id === 'hunt') s.feint = planHuntFeint(s, s.hunt.plan);
   // The fog: what lies under it, unknown until we come close.
   s.fog = { kinds: id === 'fog' ? planFogKinds(s) : {}, known: [] };
   if (id === 'fog' && s.knowledge.includes('vilsnaHittad')) narrate(c, 'Långt bort i dimman ropar någon vi känner igen: den vilsna vi hittade. Den har hittat hem – och ropar på oss nu.');
   // The harvest: the wheat stands, and the harvester's rounds are planned.
-  s.harvest = { plan: id === 'harvest' ? planHarvest(s, s.maxTurn) : [], cut: [], shadow: null };
+  const harvest = id === 'harvest' ? planHarvest(s, s.maxTurn) : { plan: [], feint: [] };
+  s.harvest = { plan: harvest.plan, cut: [], shadow: null };
+  if (id === 'harvest') s.feint = harvest.feint;
   if (id === 'fireworks' && s.knowledge.includes('barnetSag')) narrate(c, 'Någonstans i parken, bland alla människor, finns barnet från fönstret.');
   if (id === 'harvest' && s.knowledge.includes('faranHjalpt')) narrate(c, 'Någonstans i vetet tänker vi på den vi hjälpte upp ur fåran.');
   s.fence = id === 'fence' ? { ...planFence(s, s.maxTurn), level: hard ? 1 : 0, gateOpen: false } : { level: 0, risePlan: [], pulsePlan: [], gateOpen: false };
@@ -1697,7 +1703,9 @@ function telegraphMachines(c: Ctx) {
     line(c, a.id, `${a.name} tar sig upp ur leran, till ${zoneDef(s, a.zone).name}.`);
   }
   const fell = s.fellPlan[s.turn - 1];
-  if (fell) narrate(c, `Fällaren vänder sig mot ${zoneDef(s, fell).name}. När timmen går faller träden där.`);
+  const either = fell ? eitherOf(s, [fell], encounterOf(s).zones.map((z) => z.id)) : [];
+  if (either.length > 1) narrate(c, `Fällaren vänder sig mot ${either.map((z) => zoneDef(s, z).name).join(' eller ')}. Vi ser inte vilken – men där den går in faller träden när timmen går.`);
+  else if (fell) narrate(c, `Fällaren vänder sig mot ${zoneDef(s, fell).name}. När timmen går faller träden där.`);
   const doze = s.dozePlan[s.turn - 1];
   if (doze) narrate(c, `Schaktaren rullar mot ${zoneDef(s, doze).name}. När timmen går är den marken borta.`);
 }
@@ -2029,8 +2037,16 @@ function telegraphHunt(c: Ctx) {
   const s = c.s;
   if (s.turn === 1) narrate(c, 'Vid skogskanten står en jägare med bössan över armen. Bakom oss, vid vägen, gnäller en hund i koppel. Om en timme släpper han den.');
   const now = watched(s);
-  narrate(c, `Jägaren spanar över ${now.map((z) => zoneDef(s, z).name).join(', ')}.`);
-  const next = s.turn < s.maxTurn ? s.hunt.plan[s.turn] ?? [] : [];
+  const names = (zs: ZoneId[]) => zs.map((z) => zoneDef(s, z).name).join(', ');
+  const decoy = feintNow(s);
+  if (decoy.length) {
+    // Which comes first tells nothing: the two ways in the map's own order.
+    const [a, b] = [s.hunt.plan[s.turn - 1] ?? [], decoy].sort((x, y) => names(x).localeCompare(names(y)));
+    narrate(c, `Jägaren vänder sig, men vi ser inte åt vilket håll: han spanar över ${names(a)} – eller över ${names(b)}.`);
+    if (s.hunt.barked.length) narrate(c, `Dit hunden skällde ser han säkert: ${names(s.hunt.barked)}.`);
+  } else narrate(c, `Jägaren spanar över ${names(now)}.`);
+  // Where he looks next we only see when there is no doubt about it.
+  const next = s.turn < s.maxTurn && !(s.feint[s.turn] ?? []).length ? s.hunt.plan[s.turn] ?? [] : [];
   if (next.length) narrate(c, `Nästa timme vänder han blicken mot ${next.map((z) => zoneDef(s, z).name).join(', ')}.`);
   // A lure, played this hour, holds the dogs' attention; otherwise they follow the strongest scent.
   if (!s.hunt.lured) {
@@ -2235,7 +2251,14 @@ function telegraphFireworks(c: Ctx) {
   s.closed = crowd ? [crowd] : [];
   if (crowd) narrate(c, `Folk med tomtebloss trängs i ${zoneDef(s, crowd).name}. Dit kommer ingen.`);
   if (s.turn === s.maxTurn) narrate(c, 'Tio, nio, åtta … Hela parken räknar ner. Snart brinner himlen.');
-  for (const b of burstsNow(s)) narrate(c, `En raket stiger mot ${zoneDef(s, b.zone).name}${b.strength === 2 ? ' – en stor, den hörs vida omkring' : ''}.`);
+  const decoys = feintNow(s);
+  burstsNow(s).forEach((b, i) => {
+    const big = b.strength === 2 ? ' – en stor, den hörs vida omkring' : '';
+    const other = decoys[i];
+    // Which of the two comes first tells nothing: the park's own order.
+    const [x, y] = [b.zone, other].sort((p, q) => PARK.indexOf(p) - PARK.indexOf(q));
+    narrate(c, other ? `En raket stiger${big}. Den smäller över ${zoneDef(s, x).name} eller ${zoneDef(s, y).name} – vi ser inte vilket.` : `En raket stiger mot ${zoneDef(s, b.zone).name}${big}.`);
+  });
   if (s.turn === s.maxTurn - 1) narrate(c, 'Nästa timme är det midnatt.');
 }
 
@@ -2322,7 +2345,12 @@ function payToll(c: Ctx, uid: number) {
 function telegraphHarvest(c: Ctx) {
   const s = c.s;
   const strip = cutting(s);
-  narrate(c, strip.length
+  const other = feintNow(s);
+  const both = (zs: ZoneId[]) => zs.map((z) => zoneDef(s, z).name).join(' och ');
+  // Which way round it goes we cannot tell: the two ways in the field's own order.
+  const ways = [strip, other].sort((a, b) => WHEAT.indexOf(a[0]) - WHEAT.indexOf(b[0]));
+  if (strip.length && other.length) narrate(c, `Skördetröskan vänder vid kanten. Den kommer genom ${both(ways[0])} – eller genom ${both(ways[1])}. Vi ser inte vilket håll den tar.`);
+  else narrate(c, strip.length
     ? `Skördetröskan kommer genom ${strip.map((z) => zoneDef(s, z).name).join(' och ')}.`
     : s.harvest.cut.length ? 'Skördetröskan har skurit allt. Bara stubben är kvar.' : 'Långt borta startar en motor. Skördetröskan är på väg.');
   s.harvest.shadow = null;

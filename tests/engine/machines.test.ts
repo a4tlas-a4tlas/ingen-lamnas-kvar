@@ -25,6 +25,8 @@ function morning(fell: ZoneId[] = ['granOst', 'granOst', 'granOst', 'granOst', '
   calm(s);
   s.fellPlan = fell;
   s.dozePlan = [null, 'glantan', null, 'stenroset', null, 'bjorkdungen', null, null];
+  // No feint: the feller goes where we say, and we know it.
+  s.feint = [];
   s.kraft = 99;
   return s;
 }
@@ -39,7 +41,7 @@ describe('Dalens sista morgon', () => {
     const m = run(s, { type: 'travel', to: 'asen' });
     expect(m.encounterId).toBe('machines');
     expect(m.time).toBe('day');
-    expect(m.maxTurn).toBe(5);
+    expect(m.maxTurn).toBe(6);
     expect(m.animals.filter((a) => a.status === 'active').every((a) => a.zone === 'glantan')).toBe(true);
   });
 
@@ -126,5 +128,31 @@ describe('Dalens sista morgon', () => {
     expect(forecast(s).some((l) => l.text.includes('nästa timme'))).toBe(false);
     s.knowledge = ['machines'];
     expect(forecast(s).some((l) => l.text.includes('björkdungen'))).toBe(true);
+  });
+
+  it('the feller shows two places, only one real: another standing tree, a spruce line when one stands', () => {
+    for (let seed = 1; seed < 200; seed++) {
+      const { fellPlan, dozePlan, feint } = planMachines({ rng: seed }, 6);
+      const gone = new Set<ZoneId>();
+      feint.forEach(([z], i) => {
+        expect(z).toBeDefined();
+        expect(z).not.toBe(fellPlan[i]);
+        expect(TREES).toContain(z);
+        expect(gone.has(z)).toBe(false);
+        const d = dozePlan[i];
+        if (d) gone.add(d);
+      });
+    }
+  });
+
+  it('until we know, the forecast names both places; only the real one falls; the tracks tell which', () => {
+    const s = put(morning(['granOst', 'granOst', 'granOst', 'granOst', 'granOst', 'granOst']), 'granVast', 'toad');
+    s.feint = [['granVast'], ['granVast'], [], [], [], []];
+    const text = forecast(s).map((l) => l.text).join(' | ');
+    expect(text).toMatch(/Fällaren går in i (västra|östra) granridån eller (västra|östra) granridån: .*kan dö/);
+    const r = pass(s);
+    expect(get(r, 'toad').status).toBe('active');
+    s.knowledge.push('machines');
+    expect(forecast(s).map((l) => l.text).join(' | ')).not.toMatch(/ eller /);
   });
 });
