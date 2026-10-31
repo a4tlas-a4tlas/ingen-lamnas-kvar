@@ -84,10 +84,12 @@ function pencilPines(): string {
 }
 
 /** The guide's pencil map of the region. What lies ahead shows only what kind of place it is; the details are in fog. */
-export function mapSvg(s: GameState, interactive: boolean): string {
+export function mapSvg(s: GameState, interactive: boolean, fresh = false): string {
   const visited = new Set(s.journey.visited);
   const here = s.journey.at;
   const nodes = s.journey.nodes;
+  // The way we just came: the latest visited place with a path to here. It draws itself once.
+  const cameFrom = fresh ? [...s.journey.visited].reverse().find((id) => nodes.find((n) => n.id === id)?.next.includes(here)) : undefined;
   const next = new Set(pathsFrom(s, here).map((p) => p.to));
   const reachable = interactive && s.phase === 'map' && !s.meeting ? next : new Set<string>();
   const byId = new Map(nodes.map((p) => [p.id, p]));
@@ -102,7 +104,8 @@ export function mapSvg(s: GameState, interactive: boolean): string {
           return `<ellipse cx="${x + (i % 2 ? 0.6 : -0.6)}" cy="${y}" rx="0.4" ry="0.55" />`;
         }).join('')
       : '';
-    return `<path d="${c.d}" class="${walked ? 'walked' : 'unwalked'}" />${paws ? `<g class="paws">${paws}</g>` : ''}`;
+    const isFresh = walked && a.id === cameFrom && b.id === here;
+    return `<path d="${c.d}" class="${walked ? 'walked' : 'unwalked'}${isFresh ? ' fresh' : ''}" ${isFresh ? 'pathLength="1"' : ''} />${paws ? `<g class="paws${isFresh ? ' fresh' : ''}">${paws}</g>` : ''}`;
   })).join('');
   // The pigeons' way over the roofs: from here to places no path leads to.
   const from = byId.get(here);
@@ -280,6 +283,8 @@ export function fireSceneSvg(s: GameState, seats: Seats, o: { crow?: boolean; pi
   const gone = (['ember0', 'ember1'] as Seat[]).filter((seat) => seatCapacity(s, seat) === 0);
   return `
     <div class="fire-scene ${o.picked ? 'picking' : ''}">
+      <div class="fire-glow" aria-hidden="true"></div>
+      <div class="sparks" aria-hidden="true">${Array.from({ length: 8 }, (_, k) => `<i style="--k:${k}"></i>`).join('')}</div>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <defs>
           <radialGradient id="glow" cx="50%" cy="64%" r="45%"><stop offset="0" stop-color="#f3b45c" stop-opacity="0.55" /><stop offset="1" stop-color="#f3b45c" stop-opacity="0" /></radialGradient>

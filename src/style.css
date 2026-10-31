@@ -1054,3 +1054,88 @@ h2 .skills-btn { margin: 0 0 0 8px; vertical-align: middle; }
 
 /* A half-hidden blow: two places, one real. Both are drawn alike, dashed and fainter, until we know which. */
 .fell-mark.maybe, .tractor-mark.maybe, .sight-mark.maybe, .burst-mark.maybe { outline: 2px dashed rgba(255,255,255,0.55); outline-offset: -5px; opacity: 0.82; }
+
+/* ---------------------------------------------------------------- feel (12.2) */
+
+/* Walking: the silhouette bobs while the token glides; pushed, it sways and slides slower. */
+.token.walking .sil { animation: walk-bob 0.7s ease-in-out; }
+.token.pushed { transition-duration: 0.9s, 0.9s, 1.2s, 0.3s; }
+.token.pushed .sil { animation: pushed-sway 0.9s ease-out; }
+.token.airborne.walking .sil { animation: fly-arc 0.7s ease-in-out; }
+@keyframes walk-bob { 0%, 100% { translate: 0 0; } 20%, 60% { translate: 0 -5px; } 40%, 80% { translate: 0 0; } }
+@keyframes pushed-sway { 0% { rotate: 0deg; } 25% { rotate: -9deg; } 55% { rotate: 6deg; } 100% { rotate: 0deg; } }
+@keyframes fly-arc { 0%, 100% { translate: 0 0; } 50% { translate: 0 -16px; } }
+
+/* Blows land on their zone, one after another. */
+.blow { position: absolute; pointer-events: none; overflow: hidden; }
+.blow i { position: absolute; display: block; }
+.blow-fell i { bottom: 8%; width: 7%; height: 80%; background: linear-gradient(#2f3d2a, #1d241a); transform-origin: 50% 100%; animation: topple 0.9s cubic-bezier(0.5, 0, 0.9, 0.5) forwards; }
+.blow-fell i:nth-child(1) { left: 20%; } .blow-fell i:nth-child(2) { left: 48%; animation-delay: 0.08s; } .blow-fell i:nth-child(3) { left: 74%; animation-delay: 0.16s; }
+.blow-fell::after { content: ''; position: absolute; inset: 40% 0 0; background: radial-gradient(ellipse at 50% 90%, rgba(196,170,130,0.75), transparent 70%); opacity: 0; animation: dust 1.2s 0.6s ease-out forwards; }
+@keyframes topple { to { transform: rotate(84deg); opacity: 0.3; } }
+@keyframes dust { 20% { opacity: 1; } 100% { opacity: 0; transform: scale(1.3); } }
+.blow-doze i:first-child { inset: 0; background: linear-gradient(0deg, rgba(92,64,38,0.95), rgba(120,86,52,0.75) 60%, transparent); transform: translateY(100%); animation: mudwave 1.1s ease-out forwards; }
+@keyframes mudwave { 60% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(0); opacity: 0; } }
+.blow-cut i:first-child { top: 0; bottom: 0; width: 30%; background: linear-gradient(90deg, transparent, rgba(240,226,170,0.85), transparent); animation: mow 1s ease-in-out forwards; }
+@keyframes mow { from { left: -30%; } to { left: 100%; } }
+.blow-burst i, .blow-bigBurst i { left: 50%; top: 50%; width: 30%; aspect-ratio: 1; margin: -15% 0 0 -15%; border-radius: 50%; border: 3px solid rgba(255,236,190,0.95); box-shadow: 0 0 18px 4px rgba(255,200,120,0.7); opacity: 0; animation: burst-ring 1s 0.55s ease-out forwards; }
+.blow-burst i:nth-child(n+2) { display: none; }
+.blow-bigBurst i:nth-child(2) { animation-delay: 0.7s; border-color: rgba(255,160,160,0.9); }
+.blow-bigBurst i:nth-child(3) { animation-delay: 0.85s; border-color: rgba(180,220,255,0.9); }
+@keyframes burst-ring { 0% { opacity: 1; transform: scale(0.2); } 100% { opacity: 0; transform: scale(2.4); } }
+.blow-shot i:first-child { inset: 0; background: radial-gradient(circle at 50% 50%, rgba(255,250,230,0.95), rgba(255,240,200,0.3) 25%, transparent 50%); animation: flash 0.5s ease-out forwards; }
+.blow-shot i:nth-child(2) { left: 50%; top: 50%; width: 20%; aspect-ratio: 1; margin: -10% 0 0 -10%; border-radius: 50%; border: 2px solid rgba(255,250,230,0.8); animation: burst-ring 0.8s 0.1s ease-out forwards; opacity: 0; }
+@keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+.blow-bark i { left: 50%; top: 50%; width: 22%; aspect-ratio: 1; margin: -11% 0 0 -11%; border-radius: 50%; border: 3px solid rgba(232,190,120,0.85); border-left-color: transparent; border-bottom-color: transparent; opacity: 0; animation: burst-ring 0.8s ease-out forwards; }
+.blow-bark i:nth-child(2) { animation-delay: 0.15s; } .blow-bark i:nth-child(3) { animation-delay: 0.3s; }
+.blow-suck i:first-child { left: 50%; top: 50%; width: 70%; aspect-ratio: 1; margin: -35% 0 0 -35%; border-radius: 50%; border: 4px solid rgba(40,52,34,0.85); animation: suck 0.9s ease-in forwards; }
+@keyframes suck { from { transform: scale(1); opacity: 0.9; } to { transform: scale(0.1); opacity: 0; } }
+.blow-crane i { top: 30%; width: 26%; height: 18%; background: radial-gradient(ellipse at 50% 100%, rgba(225,225,215,0.9), transparent 70%); border-radius: 50% 50% 0 0; animation: wings 1s ease-in-out forwards; opacity: 0; }
+.blow-crane i:nth-child(2) { top: 55%; animation-delay: 0.15s; } .blow-crane i:nth-child(3) { display: none; }
+@keyframes wings { 0% { left: -20%; opacity: 0; } 30% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
+.blow-light i:first-child { inset: 10%; border-radius: 50%; background: radial-gradient(circle, rgba(150,200,255,0.75), transparent 65%); animation: glow-once 1.1s ease-in-out forwards; opacity: 0; }
+@keyframes glow-once { 50% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; } }
+
+/* Hope and Kraft pulse when they change; the mood's name fades in. */
+.meter.hope.up .pip.on { animation: pip-up 0.9s ease-out; }
+.meter.hope.down { animation: shake 0.45s ease-in-out; }
+.meter.hope.down .pip:not(.on) { animation: pip-down 0.9s ease-out; }
+.mood-name.shift { animation: mood-in 1.4s ease-out; display: inline-block; }
+.meter.kraft.spent .pip:not(.on) { animation: pip-down 0.6s ease-out; }
+.meter.kraft.refill .pip.on { animation: pip-up 0.7s ease-out; }
+@keyframes pip-up { 0% { transform: scale(1); } 35% { transform: scale(1.45); filter: brightness(1.5); } 100% { transform: scale(1); } }
+@keyframes pip-down { 0% { opacity: 1; transform: scale(1.25); background: #c0503c; } 100% { opacity: 1; transform: scale(1); } }
+@keyframes shake { 20%, 60% { translate: -3px 0; } 40%, 80% { translate: 3px 0; } }
+@keyframes mood-in { 0% { opacity: 0; letter-spacing: 0.25em; } 100% { opacity: 1; letter-spacing: normal; } }
+.token .belief.b-up { animation: belief-up 1s ease-out; display: inline-block; }
+.token .belief.b-down { animation: belief-down 1s ease-out; display: inline-block; }
+@keyframes belief-up { 30% { transform: scale(1.6) translateY(-3px); color: #fff3b0; } }
+@keyframes belief-down { 30% { transform: scale(1.4) translateY(3px); color: #ff9c86; } }
+
+/* The fire: its light breathes, and sparks rise. */
+.fire-glow, .sparks { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.fire-glow { background: radial-gradient(ellipse 34% 28% at 50% 62%, rgba(247,190,100,0.28), transparent 70%); animation: fire-breathe 2.3s ease-in-out infinite; mix-blend-mode: screen; }
+@keyframes fire-breathe { 0%, 100% { opacity: 0.7; transform: scale(1); } 23% { opacity: 1; transform: scale(1.04); } 51% { opacity: 0.8; } 77% { opacity: 0.95; transform: scale(1.02); } }
+.sparks i { position: absolute; left: calc(47% + var(--k) * 0.9%); top: 58%; width: 3px; height: 3px; border-radius: 50%; background: #ffd27a; box-shadow: 0 0 4px #ffb347; opacity: 0; animation: spark 3.2s ease-out infinite; animation-delay: calc(var(--k) * 0.41s); }
+.sparks i:nth-child(odd) { --drift: -14px; } .sparks i:nth-child(even) { --drift: 12px; }
+@keyframes spark { 0% { opacity: 0; transform: translate(0, 0); } 10% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--drift), -110px); } }
+.fire-scene > svg { z-index: 0; }
+.fire-scene .fire-token, .fire-scene .fire-slot { z-index: 2; }
+
+/* The map: the way we just came draws itself. */
+.map-svg .trail path.walked.fresh { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw-path 1.6s ease-in-out forwards; }
+.trail .paws.fresh ellipse { opacity: 0; animation: paw-in 0.3s ease-out forwards; }
+.trail .paws.fresh ellipse:nth-child(1) { animation-delay: 0.4s; } .trail .paws.fresh ellipse:nth-child(2) { animation-delay: 0.65s; }
+.trail .paws.fresh ellipse:nth-child(3) { animation-delay: 0.9s; } .trail .paws.fresh ellipse:nth-child(4) { animation-delay: 1.15s; }
+.trail .paws.fresh ellipse:nth-child(5) { animation-delay: 1.4s; }
+@keyframes draw-path { to { stroke-dashoffset: 0; } }
+@keyframes paw-in { to { opacity: 1; } }
+
+/* Reduced motion: no bobbing, toppling or sparks – a blow is a brief, still highlight. */
+@media (prefers-reduced-motion: reduce) {
+  .sparks { display: none; }
+  .blow i, .blow::after { display: none !important; }
+  .blow { background: rgba(255,240,200,0.28); outline: 2px solid rgba(255,240,200,0.6); outline-offset: -4px; }
+  .map-svg .trail path.walked.fresh { stroke-dasharray: none; }
+  .trail .paws.fresh ellipse { opacity: 1; }
+}

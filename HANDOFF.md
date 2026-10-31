@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 12.1)
+## Status (after step 12.2)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 12.1: Ljudet, branch `ljudet`, open for review. Everything through 11.2 (#52) is in `main` and live. |
+| **Latest PR** | Milestone 12.2: Känslan, branch `kanslan`, open for review. Everything through 12.1 (#53) is in `main` and live. |
 | **Save version** | 40 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 470 Vitest (plus the playtest report, skipped unless `PLAYTEST=1`) (`npm test`), 6 Playwright (`npx playwright test`: the smoke runs and the sound test, × desktop + phone) – all green |
+| **Tests** | 470 Vitest (plus the playtest report, skipped unless `PLAYTEST=1`) (`npm test`), 10 Playwright (`npx playwright test`: the smoke runs, the sound test and the feel tests, × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -82,13 +82,12 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step: 12.2 Känslan (planned, no need to ask)
-The plan is Milestone 12 in `DESIGN.md` and the session plan file:
-- **Animals walk:** FLIP-animate tokens between renders, keyed by animal id.
-- **Blows land:** overlays per `blow` event on the `.sweeps` layer, in order, before the board updates and before any last moment. `busy` must cover them.
-- **Hope and Kraft:** the dots and diamonds pulse on change; the mood label crossfades; belief chips flash.
-- **The fire and the map:** flickering firelight and sparks; the travelled path draws itself.
-- **Reduced motion:** all of it respects `prefers-reduced-motion`.
+## Next step (ask first)
+Milestone 12 (sound and feel) is done. **Ask what's next.** Candidates:
+- **Höglandet,** a fourth middle region.
+- **The roads,** the biggest source of loss.
+- **Playtest polish:** what a human player meets first – the first road, the guides, the forecasts.
+- **A settings screen,** e.g. volume sliders and animation speed.
 
 **Measuring:**
 - **Whole runs:** `PLAYTEST=1 npx vitest run tests/playtest/playtest.test.ts` (about 9 minutes for 50 seeds × 4 groups). It writes `playtest-report.md`.

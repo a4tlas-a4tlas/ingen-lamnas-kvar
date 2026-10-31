@@ -65,6 +65,10 @@ import { TIME_NAMES, TIME_NOTES } from '../data/guides.sv';
 import { animalStatuses, cranesAt, forecast, knowsTrue, type Status } from './status';
 
 const SAVE_KEY = 'ingen-lamnas-kvar/save-v1';
+/** Milliseconds between one blow landing and the next. */
+const BLOW_GAP = 650;
+/** A belief that moved since the last render flashes once, up or down. */
+const beliefMove = (was: number | undefined, now: number) => (was === undefined || was === now ? '' : now > was ? ' b-up' : ' b-down');
 
 /** How the way ended, in the forest: everyone, some of us, or – if no one came – the oath fell. */
 function forestTitle(s: GameState): string {
@@ -189,6 +193,14 @@ export class App {
   private busy = false;
   private hint = '';
   private sound = new Sound();
+  /** For the feel: where each animal stood at the last render, its belief, and the meters – to animate what changed. */
+  private lastZone = new Map<string, ZoneId>();
+  private lastBelief = new Map<string, number>();
+  private lastHud: { hope: number; kraft: number; mood: string } | null = null;
+  /** How the next moves came about: our own act (a walk) or the hour going (a push). */
+  private moveKind: 'walking' | 'pushed' = 'walking';
+  /** The map path we last drew fresh, so it draws itself only once. */
+  private drawnPath = '';
   private tip = document.createElement('div');
 
   constructor(private root: HTMLElement) {
@@ -546,7 +558,8 @@ export class App {
     this.meetingPick = null;
     writeSave(this.state);
     this.cue(action, before, r.state, hadMeeting);
-    this.play(r.events, prevKraft);
+    this.moveKind = action.type === 'endTurn' || action.type === 'lastMoment' ? 'pushed' : 'walking';
+    this.play(r.events, prevKraft, before.encounterId);
   }
 
   /** The sounds of what we did, rather than what happened to us: a step, a card, the way on, a meeting, the end. */
@@ -569,14 +582,21 @@ export class App {
     if (moved) this.sound.belief(moved);
   }
 
-  /** Cars sweep first; the board updates once they have passed. */
-  private play(events: GameEvent[], prevKraft: number) {
+  /** Has the way to here been drawn yet? The first time the map shows a new place, it draws itself. */
+  private freshPath(s: GameState): boolean {
+    const key = `${s.journey.region}:${s.journey.at}`;
+    if (key === this.drawnPath) return false;
+    this.drawnPath = key;
+    return true;
+  }
+
+  /** Cars sweep first, then the blows land one by one; the board updates once they have played out. */
+  private play(events: GameEvent[], prevKraft: number, encounterId: GameState['encounterId']) {
     const cars = events.filter((e): e is Extract<GameEvent, { kind: 'car' }> => e.kind === 'car');
+    const blows = events.filter((e): e is Extract<GameEvent, { kind: 'blow' }> => e.kind === 'blow').slice(0, 6);
     const after = () => {
-      let blows = 0;
       let hope = 0;
       for (const e of events) {
-        if (e.kind === 'blow' && blows < 6) this.sound.blow(e.what, 0.35 * blows++);
         if (e.kind === 'hope') hope += e.delta;
         if (e.kind === 'hit') this.sound.hit();
         if (e.kind === 'death') this.sound.death();
@@ -589,7 +609,10 @@ export class App {
       this.render(hurt);
       this.speak(events, prevKraft);
     };
-    if (!cars.length || !this.mounted) return after();
+    if ((!cars.length && !blows.length) || !this.mounted) {
+      blows.forEach((b, i) => this.sound.blow(b.what, 0.35 * i));
+      return after();
+    }
     this.busy = true;
     const actions = this.root.querySelector('.actions');
     if (actions && this.state) actions.innerHTML = this.actionsHtml(this.state);
@@ -604,7 +627,24 @@ export class App {
         window.setTimeout(() => el.remove(), 1500);
       }, i * 350);
     });
-    window.setTimeout(after, 900 + (cars.length - 1) * 350);
+    const carTime = cars.length ? 900 + (cars.length - 1) * 350 : 0;
+    // Each blow on its own zone, seen and heard together.
+    const zones = ENCOUNTERS[encounterId]?.zones ?? [];
+    blows.forEach((b, i) => {
+      window.setTimeout(() => {
+        this.sound.blow(b.what);
+        const rect = zones.find((z) => z.id === b.zone)?.rect;
+        if (!layer || !rect) return;
+        const [x, y, w, h] = rect;
+        const el = document.createElement('div');
+        el.className = `blow blow-${b.what}`;
+        el.style.cssText = `left:${x}%;top:${y}%;width:${w}%;height:${h}%`;
+        el.innerHTML = '<i></i><i></i><i></i>';
+        layer.appendChild(el);
+        window.setTimeout(() => el.remove(), 1300);
+      }, carTime + i * BLOW_GAP);
+    });
+    window.setTimeout(after, carTime + (blows.length ? (blows.length - 1) * BLOW_GAP + 900 : 0));
   }
 
   /** When hope moves, or kraft runs out, an animal says something about it. */
@@ -810,6 +850,9 @@ export class App {
         <div class="modal-root"></div>
       </div>`;
     this.mounted = true;
+    // A new board: no one walked here yet.
+    this.lastZone.clear();
+    this.lastHud = null;
   }
 
   private renderGame(s: GameState, hurt?: Set<string>) {
@@ -869,16 +912,22 @@ export class App {
     const low = hand < 5;
     const maxKraft = Math.max(3, s.kraft);
     const m = mood(s);
+    // What moved since the last render pulses once.
+    const was = this.lastHud;
+    this.lastHud = { hope: s.hope, kraft: s.kraft, mood: m };
+    const hopeMove = was && s.hope !== was.hope ? (s.hope > was.hope ? ' up' : ' down') : '';
+    const moodMove = was && m !== was.mood ? ' shift' : '';
+    const kraftMove = was && s.kraft !== was.kraft ? (s.kraft > was.kraft ? ' refill' : ' spent') : '';
     const hopeTip = `data-tip-icon="●" data-tip-title="Hopp ${s.hope}/10 · ${MOOD_NAME[m]}" data-tip="${MOOD_TIP[m]} Vid elden dras den vars tro ligger 3 eller mer från hoppet ett steg mot det. Hoppet sjunker när någon dör eller lämnas, när ett rovdjur jagar och när ett löfte bryts. Under 4 drar vi färre kort varje timme."`;
     const kraftTip = `data-tip-icon="◆" data-tip-title="Kraft ${s.kraft}" data-tip="Kraft att spela kort och leda djur den här timmen. Fylls på till 3 varje timme${m === 'tillit' ? ', och en till av tilliten' : m === 'fortvivlan' ? ', en mindre i förtvivlan' : ''} – månens vers kan ge eller ta en."`;
     return `
-      <div class="meter hope mood-${m} ${low ? 'low' : ''}" ${hopeTip}>
-        <span class="mlabel">Hopp <b>${s.hope}</b> · ${MOOD_NAME[m]}</span>
+      <div class="meter hope mood-${m} ${low ? 'low' : ''}${hopeMove}" ${hopeTip}>
+        <span class="mlabel">Hopp <b>${s.hope}</b> · <span class="mood-name${moodMove}">${MOOD_NAME[m]}</span></span>
         <span class="mpips">${pips(s.hope, 10, 'hope')}</span>
         ${low ? `<span class="mnote">Lågt hopp – vi drar ${hand} kort</span>` : ''}
       </div>
       ${s.encounterId === 'farm' ? this.alarmHtml(s) : s.encounterId === 'river' ? this.damHtml(s) : s.encounterId === 'machines' ? this.dozerHtml(s) : ''}
-      <div class="meter kraft ${s.kraft === 0 ? 'empty' : ''}" ${kraftTip}>
+      <div class="meter kraft ${s.kraft === 0 ? 'empty' : ''}${kraftMove}" ${kraftTip}>
         <span class="mlabel">Kraft <b>${s.kraft}</b></span>
         <span class="mpips">${pips(s.kraft, maxKraft, 'kraft')}</span>
       </div>`;
@@ -1249,6 +1298,15 @@ export class App {
         layer.appendChild(el);
       }
       if (isPresent(a)) {
+        const was = this.lastZone.get(a.id);
+        if (was && was !== a.zone) {
+          el.classList.remove('walking', 'pushed');
+          void el.offsetWidth;
+          el.classList.add(this.moveKind);
+          const kind = this.moveKind;
+          window.setTimeout(() => el?.classList.remove(kind), 900);
+        }
+        this.lastZone.set(a.id, a.zone);
         const group = byZone.get(a.zone)!;
         const i = group.indexOf(a);
         const { x, y } = slotIn(zoneDef(s, a.zone), i, group.length);
@@ -1275,7 +1333,8 @@ export class App {
         <span class="chips">${statuses.map((st) => chipHtml(st, false)).join('')}</span>
         ${silhouette(a.species)}
         <span class="tname">${esc(a.name)}${a.count !== undefined ? ` <i>×${a.count}</i>` : ''}</span>
-        <span class="tstats"><span class="belief" title="Tro">✶${a.belief}</span></span>`;
+        <span class="tstats"><span class="belief${beliefMove(this.lastBelief.get(a.id), a.belief)}" title="Tro">✶${a.belief}</span></span>`;
+      this.lastBelief.set(a.id, a.belief);
     }
   }
 
@@ -1541,7 +1600,7 @@ export class App {
     const known = (id: string) => s.journey.visited.includes(id);
     this.root.innerHTML = `
       <div class="screen between map-screen">
-        <div class="map-paper">${mapSvg(s, true)}</div>
+        <div class="map-paper">${mapSvg(s, true, this.freshPath(s))}</div>
         <aside class="between-side">
           <p class="muted small">${esc(guideName(s))}s minne av vägen · ${esc(REGIONS[s.journey.region].name)}</p>
           <h2>${esc(here.name)}</h2>
