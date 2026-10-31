@@ -27,21 +27,27 @@ function report(runs: RunRecord[]): string {
     out.push(`| ${CASTS.find((c) => c.id === cast)?.name ?? cast} | ${pct(forest.length, rs.length)} | ${avg(forest.map((r) => r.state.outcome!.safe.length))} | ${pct(forest.filter((r) => !r.state.outcome!.dead.length && !r.state.outcome!.left.length).length, rs.length)} | ${pct(rs.filter((r) => r.state.outcome?.fallen).length, rs.length)} | ${avg(rs.map((r) => r.state.hope))} | ${rs.filter((r) => r.error).length} |`);
   }
 
-  out.push('', '## Per danger', '', 'How many of us went in, on average, and how many came out. Bosses are in bold.', '', '| Region | Danger | Times | In | Out | Kept |', '|---|---|---|---|---|---|');
-  const byDanger = new Map<string, { region: string; name: string; boss: boolean; ins: number[]; outs: number[] }>();
+  out.push('', '## Per danger', '', 'How many of us went in, on average, and how many came out. Bosses are in bold.', '', '| Region | Danger | Times | In | Out | Kept | Took someone | Dead | Left |', '|---|---|---|---|---|---|---|---|---|');
+  const byDanger = new Map<string, { region: string; name: string; boss: boolean; ins: number[]; outs: number[]; dead: number[]; left: number[] }>();
   for (const r of runs) for (const d of r.dangers) {
     const k = `${d.region}|${d.encounter}|${d.boss}`;
-    const e = byDanger.get(k) ?? { region: d.region, name: d.boss ? d.name : d.encounter, boss: d.boss, ins: [], outs: [] };
+    const e = byDanger.get(k) ?? { region: d.region, name: d.boss ? d.name : d.encounter, boss: d.boss, ins: [], outs: [], dead: [], left: [] };
     e.ins.push(d.in);
     e.outs.push(d.out);
+    e.dead.push(d.dead);
+    e.left.push(d.left);
     byDanger.set(k, e);
   }
   const order = ['dalen', 'akrarna', 'staden', 'mossen', 'skogsbrynet'];
   for (const e of [...byDanger.values()].sort((a, b) => order.indexOf(a.region) - order.indexOf(b.region) || Number(a.boss) - Number(b.boss))) {
     const kept = e.outs.reduce((a, b) => a + b, 0) / e.ins.reduce((a, b) => a + b, 0);
     const name = e.boss ? `**${e.name}**` : e.name;
-    out.push(`| ${REGIONS[e.region as keyof typeof REGIONS]?.name ?? e.region} | ${name} | ${e.ins.length} | ${avg(e.ins)} | ${avg(e.outs)} | ${Math.round(kept * 100)} % |`);
+    const took = e.ins.filter((x, i) => e.outs[i] < x).length;
+    out.push(`| ${REGIONS[e.region as keyof typeof REGIONS]?.name ?? e.region} | ${name} | ${e.ins.length} | ${avg(e.ins)} | ${avg(e.outs)} | ${Math.round(kept * 100)} % | ${pct(took, e.ins.length)} | ${avg(e.dead)} | ${avg(e.left)} |`);
   }
+
+  out.push('', '## Which middle regions were walked', '', '| Region | Runs |', '|---|---|');
+  for (const id of ['akrarna', 'staden', 'mossen']) out.push(`| ${REGIONS[id as keyof typeof REGIONS].name} | ${runs.filter((r) => r.state.run.regions.includes(id as never)).length} |`);
 
   out.push('', '## How we were lost', '', '| Cause | Count | Per run |', '|---|---|---|');
   const causes = new Map<string, number>();

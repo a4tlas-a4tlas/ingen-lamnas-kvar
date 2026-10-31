@@ -6,6 +6,7 @@ import { meetingOptions } from '../../src/data/meetings';
 import { CARDS } from '../../src/data/cards';
 import { defaultPlan } from '../../src/engine/campfire';
 import { encounterOf } from '../../src/engine/encounters';
+import { feintKnown } from '../../src/engine/encounters/feint';
 import { cardTarget, isActive, lastMomentShields, leadTargets, leadZones, zoneDistance } from '../../src/engine/rules';
 import { createGame } from '../../src/engine/setup';
 import { step } from '../../src/engine/step';
@@ -19,6 +20,9 @@ export interface DangerRecord {
   boss: boolean;
   in: number;
   out: number;
+  /** Of those who went in: how many died, and how many were left or left us. */
+  dead: number;
+  left: number;
 }
 
 export interface RunRecord {
@@ -35,6 +39,7 @@ export interface RunRecord {
 /** Replies that send one of us away, or break the oath: the careful player avoids them when it can. */
 const UNKIND = new Set(['miceStay', 'hareStays', 'foxTempts', 'stayHermit', 'leaveFurrow', 'leaveLost', 'chaseFox']);
 
+const count = (s: GameState, st: 'dead' | 'left') => s.animals.filter((a) => a.status === st).length;
 const alive = (s: GameState) => s.animals.filter((a) => a.status === 'active' || a.status === 'safe');
 
 /** Try an action; undefined if the engine refuses it. The log is left out of copies: it only slows them. */
@@ -65,6 +70,8 @@ function resolveMoments(s: GameState): GameState {
 export function score(s: GameState): number {
   let v = 0;
   const goal = s.phase === 'play' ? encounterOf(s).zones.find((z) => z.goal)?.id : undefined;
+  const hoursLeft = s.maxTurn - s.turn + 1;
+  let steps = 0;
   for (const a of s.animals) {
     if (a.status === 'dead' || a.status === 'left') continue;
     v += 100 + (a.count ?? 0) * 8;
@@ -73,18 +80,70 @@ export function score(s: GameState): number {
     if (a.status === 'safe') v += 30;
     else if (goal && a.status === 'active') {
       const dist = zoneDistance(s, a.zone, goal);
+      steps += dist;
       // The clock: one still further from the goal than hours are left will be left behind.
-      const hoursLeft = s.maxTurn - s.turn + 1;
       v -= dist * 9 + (a.sink ?? 0) * 6 + Math.max(0, dist - hoursLeft) * 70;
     }
   }
+  // And the Kraft: every step is a lead, and an hour gives about three. More steps than that is someone left behind.
+  if (goal) v -= Math.max(0, steps - (s.kraft + 3 * (hoursLeft - 1))) * 25;
   return v + s.hope * 3;
 }
 
 /** After an action, let the hour go in the copy and see where we stand. */
+/** How many futures the blind lookahead imagines for each choice. */
+const FUTURES = 3;
+let futureSeed = 1;
+
+/**
+ * Let the hour go in the copy and see where we stand. The dice live in the state, so a
+ * plain copy would see the hour's real rolls; instead each future gets dice of its own,
+ * and the choice is judged by the average – as a player who can't see the dice would.
+ */
 function lookahead(s: GameState): number {
-  const t = attempt(s, { type: 'endTurn' });
-  return t ? score(resolveMoments(t)) : -Infinity;
+  let sum = 0;
+  for (let i = 0; i < FUTURES; i++) {
+    futureSeed = (Math.imul(futureSeed, 1103515245) + 12345) | 0;
+    // Nor does it know which of a boss's two places is real: in half the futures, the other one is.
+    const f = (futureSeed >>> 16) & 1 ? swapFeint(s) : s;
+    const t = attempt({ ...f, rng: futureSeed }, { type: 'endTurn' });
+    if (!t) return -Infinity;
+    sum += score(resolveMoments(t));
+  }
+  return sum / FUTURES;
+}
+
+/** The same hour, with a boss's real and false places swapped – what the player can't tell apart until it knows. */
+function swapFeint(s: GameState): GameState {
+  const i = s.turn - 1;
+  const decoy = s.feint[i] ?? [];
+  if (!decoy.length || feintKnown(s)) return s;
+  const feint = [...s.feint];
+  if (s.encounterId === 'machines') {
+    const fellPlan = [...s.fellPlan];
+    feint[i] = [fellPlan[i]];
+    fellPlan[i] = decoy[0];
+    return { ...s, fellPlan, feint };
+  }
+  if (s.encounterId === 'harvest') {
+    const plan = [...s.harvest.plan];
+    feint[i] = plan[i];
+    plan[i] = decoy;
+    return { ...s, harvest: { ...s.harvest, plan }, feint };
+  }
+  if (s.encounterId === 'fireworks') {
+    const plan = [...s.fireworks.plan];
+    feint[i] = plan[i].map((b) => b.zone);
+    plan[i] = plan[i].map((b, j) => ({ ...b, zone: decoy[j] ?? b.zone }));
+    return { ...s, fireworks: { ...s.fireworks, plan }, feint };
+  }
+  if (s.encounterId === 'hunt') {
+    const plan = [...s.hunt.plan];
+    feint[i] = plan[i];
+    plan[i] = decoy;
+    return { ...s, hunt: { ...s.hunt, plan }, feint };
+  }
+  return s;
 }
 
 /** Everything the player could do now in a danger. */
@@ -111,7 +170,7 @@ function candidates(s: GameState): Action[] {
 }
 
 /** One hour of a danger: the best actions, one by one, until letting the hour go is best. */
-function playHour(s: GameState): GameState {
+export function playHour(s: GameState): GameState {
   for (let n = 0; n < 8 && s.phase === 'play'; n++) {
     const lean = { ...s, log: [] };
     let best: GameState | undefined;
@@ -135,7 +194,12 @@ function playHour(s: GameState): GameState {
 
 /** A meeting: the first reply that keeps us together, or any that the engine takes. */
 function answer(s: GameState): GameState {
-  const opts = meetingOptions(s);
+  let opts = meetingOptions(s);
+  // At a crossroads, any way: the replies always list the regions in the same order, so taking the first would skew the runs.
+  if (s.meeting?.id === 'interlude' && s.meeting.frame === 'way' && opts.length > 1) {
+    const k = Math.abs(s.seed * 31 + s.run.regions.length) % opts.length;
+    opts = [opts[k], ...opts.filter((_, i) => i !== k)];
+  }
   const ordered = [...opts.filter((o) => !o.effect || !UNKIND.has(o.effect)), ...opts.filter((o) => o.effect && UNKIND.has(o.effect))];
   const uids = [undefined, ...[...s.draw, ...s.hand, ...s.discard].map((c) => c.uid)];
   for (const o of ordered) for (const uid of o.pickCard ? uids.slice(1) : [undefined]) {
@@ -143,6 +207,16 @@ function answer(s: GameState): GameState {
     if (t) return t;
   }
   throw new Error(`fastnade i mötet ${s.meeting?.id}/${s.meeting?.frame}`);
+}
+
+/** One whole danger, from its first hour to its end: hours, last moments, and any meeting that comes up on the way. */
+export function playDanger(s: GameState): GameState {
+  for (let n = 0; n < 200 && (s.phase === 'play' || s.phase === 'lastMoment'); n++) {
+    if (s.meeting) s = answer(s);
+    else if (s.phase === 'play') s = playHour(s);
+    else s = resolveMoments(s);
+  }
+  return s;
 }
 
 /** On the map: toward a fire if we can, then a story part, else the first way. */
@@ -168,7 +242,7 @@ export function playRun(cast: CastId, seed: number, verse: VerseId = 'ingenLamna
       rec.steps = n;
       if (s.phase === 'play' && !open) {
         const p = s.journey.nodes.find((x) => x.id === s.journey.at)!;
-        open = { region: s.journey.region, encounter: s.encounterId, name: p.name, boss: p.next.length === 0, in: alive(s).length, out: 0 };
+        open = { region: s.journey.region, encounter: s.encounterId, name: p.name, boss: p.next.length === 0, in: alive(s).length, out: 0, dead: count(s, 'dead'), left: count(s, 'left') };
       }
       if (s.meeting) s = answer(s);
       else if (s.phase === 'play') s = playHour(s);
@@ -177,6 +251,8 @@ export function playRun(cast: CastId, seed: number, verse: VerseId = 'ingenLamna
       else if (s.phase === 'map') s = travel(s);
       if (open && s.phase !== 'play' && s.phase !== 'lastMoment') {
         open.out = alive(s).length;
+        open.dead = count(s, 'dead') - open.dead;
+        open.left = count(s, 'left') - open.left;
         rec.dangers.push(open);
         if (open.out === 0) rec.fellAt = `${open.region} · ${open.name}`;
         open = undefined;

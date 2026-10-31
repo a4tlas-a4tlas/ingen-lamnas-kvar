@@ -22,7 +22,7 @@ export const HUNT: EncounterDef = {
     day: 'Det här är sista timmen. Skogen är nära.',
     night: 'Det här är sista timmen. Skogen är nära.',
   },
-  maxTurn: 10,
+  maxTurn: 6,
   zones: [
     { id: 'vagkanten', label: 'Vägkanten', name: 'vägkanten', rect: [0, 80, 100, 20], start: true },
     { id: 'ormbunkarna', label: 'Ormbunkarna', name: 'ormbunkarna', rect: [0, 58, 34, 22], cover: true },
@@ -31,7 +31,7 @@ export const HUNT: EncounterDef = {
     { id: 'granplanteringen', label: 'Granplanteringen', name: 'granplanteringen', rect: [0, 36, 34, 22], cover: true },
     { id: 'stigen', label: 'Stigen', name: 'stigen', rect: [34, 36, 32, 22], exposed: true },
     { id: 'backen', label: 'Bäcken', name: 'bäcken', rect: [66, 36, 34, 22], water: true, breaksScent: true },
-    { id: 'vindfallet', label: 'Vindfället', name: 'vindfället', rect: [0, 14, 34, 22], cover: true },
+    { id: 'vindfallet', label: 'Vindfället', name: 'vindfället', rect: [0, 14, 34, 22] },
     { id: 'glantan', label: 'Gläntan', name: 'gläntan', rect: [34, 14, 32, 22], exposed: true },
     { id: 'mossbacken', label: 'Mossbacken', name: 'mossbacken', rect: [66, 14, 34, 22] },
     { id: 'skogen', label: 'Skogen', name: 'skogen', rect: [0, 0, 100, 14], goal: true },
@@ -64,8 +64,8 @@ export const ROWS: ZoneId[][] = [['ormbunkarna', 'kalytan', 'stenroset'], ['gran
 export const COLUMNS: ZoneId[][] = [0, 1, 2].map((i) => ROWS.map((r) => r[i]));
 const LINES = [...ROWS, ...COLUMNS];
 
-/** Where the hunter looks, hour by hour: a row or a column – and with a whole hunting party, a row and a column. Never the same twice running. */
-export function planHunt(h: RngHolder, maxTurn: number, hard: boolean): ZoneId[][] {
+/** Where the hunter looks, hour by hour: a row and a column at once. Never the same line twice running. */
+export function planHunt(h: RngHolder, maxTurn: number): ZoneId[][] {
   const out: ZoneId[][] = [];
   let last = -1;
   for (let i = 0; i < maxTurn; i++) {
@@ -73,11 +73,19 @@ export function planHunt(h: RngHolder, maxTurn: number, hard: boolean): ZoneId[]
     if (k === last) k = (k + 1) % LINES.length;
     last = k;
     const line = LINES[k];
-    if (!hard) { out.push(line); continue; }
     const other = k < 3 ? COLUMNS[Math.floor(random(h) * 3)] : ROWS[Math.floor(random(h) * 3)];
     out.push([...new Set([...line, ...other])]);
   }
   return out;
+}
+
+/** Where the hunter might look instead, hour by hour: another row and column – we see him turn, but not which way. */
+export function planHuntFeint(h: RngHolder, plan: ZoneId[][]): ZoneId[][] {
+  return plan.map((real) => {
+    const key = [...real].sort().join();
+    const crosses = ROWS.flatMap((r) => COLUMNS.map((c) => [...new Set([...r, ...c])])).filter((x) => [...x].sort().join() !== key);
+    return crosses[Math.floor(random(h) * crosses.length)];
+  });
 }
 
 /** The hunter's dogs: one, or two with a hunting party. They start at the road, behind us. */

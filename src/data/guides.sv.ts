@@ -212,14 +212,14 @@ export const GUIDES: Record<EncounterId, Guide> = {
     title: 'Så tar vi oss upp på åsen',
     goal: `Få alla från Gläntan upp på Åsen – ${MACHINES.maxTurn} timmar. Varje väg upp är tre steg, och marken bakom oss försvinner.`,
     dangers: [
-      { icon: '⚒', name: 'Fällaren', effect: 'dödar', text: 'Varje timme vänder den sig mot en zon med träd – Björkdungen eller en av granridåerna – och fäller allt där när timmen går. Zonen märks ”Fällaren · dödar”. Sista stunden: någon intill kan kasta sig emellan.' },
+      { icon: '⚒', name: 'Fällaren', effect: 'dödar', text: 'Varje timme vänder den sig mot en zon med träd – Björkdungen eller en av granridåerna – och fäller allt där när timmen går. Vi ser två ställen den kan gå in på, märkta ”Fällaren? · dödar kanske”, men bara ett är det rätta. Sista stunden: någon intill kan kasta sig emellan. Ett kort som ser det dolda – Spana från ovan, Lyssna i marken, Känna skakningar, Vittring – visar vilken som är den rätta, den timmen.' },
       { icon: '▰', name: 'Schaktaren', effect: 'dödar', text: `Tar marken bakom oss: Gläntan efter timme ${DOZE_HOURS[0]}, sedan Björkdungen och Stenröset – en efter timme ${DOZE_HOURS[1]}, den andra efter timme ${DOZE_HOURS[2]}. Den som står där då hinner knappt undan. Marken är borta sedan dess.` },
       { icon: '≋', name: 'Bruset', text: 'Den som står i det öppna bredvid där träden faller får chock. Bland träden hörs det mindre – men det är träden fällaren vill ha.' },
     ],
     shelter: [
       { icon: '♣', name: 'Träden', text: 'Björkdungen och granridåerna stänger ute bruset. Men de är just det fällaren tar: läs vart den vänder sig.' },
       { icon: '⌂', name: 'Hygget och Stenröset', text: 'Inga träd att fälla – men öppet för bruset, och schaktaren kommer.' },
-      { icon: '⌇', name: 'Grävskopans spår', text: 'Har vi läst spåren vet vi i vilken ordning maskinerna tar dalen: vi ser fällarens nästa timme, och hela schaktarens väg.' },
+      { icon: '⌇', name: 'Grävskopans spår', text: 'Har vi läst spåren vet vi i vilken ordning maskinerna tar dalen: vi ser vart fällaren går in varje timme – och nästa – och hela schaktarens väg.' },
       { icon: '⇡', name: 'Ugglan flyger', text: 'Ugglan är i luften: träden når inte dit, och bruset inte heller.' },
     ],
     tips: [
@@ -295,7 +295,7 @@ export const GUIDES: Record<EncounterId, Guide> = {
     title: 'Så tar vi oss genom vetet',
     goal: `Få alla från Fältkanten till Häcken – ${HARVEST.maxTurn} timmar. Genom vetet: tre steg.`,
     dangers: [
-      { icon: '▤', name: 'Skördetröskan', effect: 'dödar', text: `Från andra timmen skär den ${STRIPS_PER_HOUR} delar av vetet i timmen, runt kanten – det syns i förväg var. Den som står där när timmen går blir överkörd (sista stunden). Bara de som flyger kommer undan.` },
+      { icon: '▤', name: 'Skördetröskan', effect: 'dödar', text: `Från första timmen skär den ${STRIPS_PER_HOUR} delar av vetet i timmen, runt kanten. Vid varje kant kan den vända: vi ser båda vägarna den kan ta, men inte vilken. Den som står där den skär när timmen går blir överkörd (sista stunden). Bara de som flyger kommer undan. Ett kort som ser det dolda – Spana från ovan, Lyssna i marken, Känna skakningar, Vittring – visar vilken som är den rätta, den timmen.` },
       { icon: '◒', name: 'Vråken', effect: 'dödar', text: 'Den följer skördetröskan och jagar i stubben. Skuggan visar var den slår ner: den tar den minsta där – en liten bärs bort (sista stunden), en mellanstor får klorna i sig. De stora tar den inte.' },
     ],
     shelter: [
@@ -390,7 +390,7 @@ export const GUIDES: Record<EncounterId, Guide> = {
     hard: 'Ibland skjuter hela stan: från fjärde timmen en raket till varje timme.',
     goal: `Få alla från Parkgrinden till Banvallen – ${FIREWORKS.maxTurn} timmar, och den sista är midnatt. Genom parken: tre steg.`,
     dangers: [
-      { icon: '✸', name: 'Smällarna', text: 'Varje timme syns var raketerna ska smälla. En liten smäll når bara sin egen zon, en stor även zonerna bredvid. Den som nås när timmen går far iväg en zon bort från smällen – aldrig upp på banvallen – och tappar 1 tro. Ingen dör av smällarna, men tiden går.' },
+      { icon: '✸', name: 'Smällarna', text: 'Varje timme ser vi raketerna stiga, och två ställen var och en kan smälla på – bara ett är det rätta. Vid midnatt vet vi var. Ett kort som ser det dolda – Spana från ovan, Lyssna i marken, Känna skakningar, Vittring – visar vilken som är den rätta, den timmen. En liten smäll når bara sin egen zon, en stor även zonerna bredvid. Den som nås när timmen går far iväg en zon bort från smällen – aldrig upp på banvallen – och tappar 1 tro. Ingen dör av smällarna, men tiden går.' },
       { icon: '⁂', name: 'Folkmassan', text: 'Folk med tomtebloss fyller en zon varje timme – det syns var, och var nästa timme. Dit kan ingen gå, men den som redan är där kan gå därifrån.' },
       { icon: '☾', name: 'Midnatt', text: 'Den sista timmen smäller tre stora raketer på en gång. Var över, eller i skydd, innan dess.' },
     ],
@@ -494,14 +494,14 @@ export const GUIDES: Record<EncounterId, Guide> = {
   },
   hunt: {
     title: 'Så tar vi oss förbi jägaren',
-    hard: 'Ibland är det ett helt jaktlag: två hundar, och jägarna spanar över både en rad och en kolumn varje timme.',
+    hard: 'Ibland är det ett helt jaktlag: två hundar i stället för en.',
     goal: `Få alla från Vägkanten in i Skogen – ${HUNT.maxTurn} timmar. Över hygget: tre steg.`,
     dangers: [
-      { icon: '⌖', name: 'Jägaren', effect: 'dödar', text: 'Varje timme spanar jägaren över en rad eller en kolumn – det syns var, och var nästa timme. Den som står i det öppna där när timmen går blir skjuten. Sista stunden. Den som flyger syns också.' },
+      { icon: '⌖', name: 'Jägaren', effect: 'dödar', text: 'Varje timme spanar jägaren över en rad och en kolumn. Vi ser honom vända sig, och två håll han kan spana åt – men inte vilket. Den som står i det öppna där när timmen går blir skjuten. Sista stunden. Den som flyger syns också. Dit hunden skällde ser han säkert. Ett kort som ser det dolda – Spana från ovan, Lyssna i marken, Känna skakningar, Vittring – visar vilken som är den rätta, den timmen.' },
       { icon: '◉', name: 'Hunden', text: 'Hunden följer vår doft, två steg i timmen. Hittar den någon av oss skäller den – och nästa timme spanar jägaren just där, även in i skyddet.' },
     ],
     shelter: [
-      { icon: '♣', name: 'Skydd', text: 'I ormbunkarna, stenröset, granplanteringen och vindfället ser jägaren oss inte – så länge hunden inte har skällt där.' },
+      { icon: '♣', name: 'Skydd', text: 'I ormbunkarna, stenröset och granplanteringen ser jägaren oss inte – så länge hunden inte har skällt där. Närmast skogen finns inget skydd: vindfället ligger öppet, med stammarna ner.' },
       { icon: '≈', name: 'Bäcken', text: 'Vattnet bryter doften. Där tappar hunden spåret.' },
       { icon: '◐', name: 'Locka hunden', text: 'Räven eller ugglan kan visa sig och få hunden att vända (◆1).' },
       { icon: '◌', name: 'Gömma sig', text: 'Den som gömt sig hittar varken hunden eller jägaren.' },

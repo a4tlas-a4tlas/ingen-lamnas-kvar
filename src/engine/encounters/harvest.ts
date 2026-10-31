@@ -19,7 +19,7 @@ export const HARVEST: EncounterDef = {
     day: 'Solen står lågt över stubben. Det här är sista timmen.',
     night: 'Solen står lågt över stubben. Det här är sista timmen.',
   },
-  maxTurn: 8,
+  maxTurn: 5,
   zones: [
     { id: 'faltkanten', label: 'Fältkanten', name: 'fältkanten', rect: [0, 78, 100, 22], start: true, cover: true },
     { id: 'vete1v', label: 'Vetet, väst', name: 'vetet i väster', rect: [0, 50, 34, 28], cover: true },
@@ -52,17 +52,46 @@ export const HARVEST: EncounterDef = {
 export const WHEAT: ZoneId[] = ['vete1v', 'vete1m', 'vete1o', 'vete2o', 'vete2m', 'vete2v'];
 /** Strips cut each hour, and the hour the cutting starts. */
 export const STRIPS_PER_HOUR = 2;
-export const FIRST_CUT = 2;
+export const FIRST_CUT = 1;
 
-/** Which wheat falls in each hour: from a random corner, one way or the other round. */
-export function planHarvest(h: RngHolder, maxTurn: number): ZoneId[][] {
-  const start = Math.floor(random(h) * WHEAT.length);
-  const way = random(h) < 0.5 ? 1 : -1;
-  const order = WHEAT.map((_, i) => WHEAT[(start + way * i + WHEAT.length * 2) % WHEAT.length]);
-  return Array.from({ length: maxTurn }, (_, i) => {
-    const k = i + 1 - FIRST_CUT;
-    return k < 0 ? [] : order.slice(k * STRIPS_PER_HOUR, (k + 1) * STRIPS_PER_HOUR);
-  });
+/**
+ * Which wheat falls in each hour. It starts at a random place on the edge; then, each
+ * hour, it goes on round one way or turns and goes the other – a real choice, made by
+ * the driver. The feint is the way it didn't take: we see it turn, not which way.
+ */
+export function planHarvest(h: RngHolder, maxTurn: number): { plan: ZoneId[][]; feint: ZoneId[][] } {
+  const n = WHEAT.length;
+  const at = (i: number) => WHEAT[((i % n) + n) % n];
+  const plan: ZoneId[][] = [];
+  const feint: ZoneId[][] = [];
+  // The arc already cut: from lo to hi, round the edge.
+  let lo = 0;
+  let hi = -1;
+  for (let t = 1; t <= maxTurn; t++) {
+    const left = n - (hi - lo + 1);
+    if (t < FIRST_CUT || left <= 0) { plan.push([]); feint.push([]); continue; }
+    const k = Math.min(STRIPS_PER_HOUR, left);
+    if (hi < lo) {
+      // The first cut: a random place on the edge – and it could as well have been the far side.
+      const start = Math.floor(random(h) * n);
+      const real = Array.from({ length: k }, (_, j) => at(start + j));
+      const far = Array.from({ length: k }, (_, j) => at(start + n / 2 + j));
+      plan.push(real);
+      feint.push(far);
+      lo = start;
+      hi = start + k - 1;
+      continue;
+    }
+    const ahead = Array.from({ length: k }, (_, j) => at(hi + 1 + j));
+    const back = Array.from({ length: k }, (_, j) => at(lo - 1 - j));
+    const same = [...ahead].sort().join() === [...back].sort().join();
+    const forward = random(h) < 0.5;
+    plan.push(forward ? ahead : back);
+    feint.push(same ? [] : forward ? back : ahead);
+    if (forward) hi += k;
+    else lo -= k;
+  }
+  return { plan, feint };
 }
 
 /** The strip the harvester cuts this hour. */

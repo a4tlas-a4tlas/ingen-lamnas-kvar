@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { STADEN } from '../../src/data/regions/staden';
-import { PARK, parkDistance, planBursts, planCrowd, reaches } from '../../src/engine/encounters/fireworks';
+import { PARK, parkDistance, planBurstFeint, planBursts, planCrowd, reaches } from '../../src/engine/encounters/fireworks';
 import { generateRegion } from '../../src/engine/regions';
 import { bondKey } from '../../src/engine/rules';
 import { createGame, regionJourney } from '../../src/engine/setup';
@@ -33,6 +33,7 @@ function calm(s: GameState) {
 
 /** Everyone at the gate except those named; this hour's bursts and crowd as we say; no bonds. */
 function setUp(s: GameState, bursts: { zone: ZoneId; strength: 1 | 2 }[], at: Record<string, ZoneId> = {}, crowd: ZoneId | null = null): GameState {
+  s.feint = [];
   for (const a of s.animals) if (a.status === 'active') a.zone = 'parkgrinden';
   for (const [id, z] of Object.entries(at)) get(s, id).zone = z;
   s.fireworks.plan[s.turn - 1] = bursts;
@@ -154,5 +155,24 @@ describe('Fyrverkerinatten', () => {
   it('every hour plays out the same for the same state', () => {
     const s = setUp(park('hard'), [{ zone: 'gangen', strength: 2 }, { zone: 'lekplatsen', strength: 2 }], { toad: 'gangen', fox: 'dammen', mice: 'grasplanen' });
     expect(step(s, { type: 'endTurn' }).state).toEqual(step(s, { type: 'endTurn' }).state);
+  });
+
+  it('each rocket before midnight shows two places; it bursts only at the real one; a far-seeing card tells which', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const plan = planBursts({ rng: seed }, 8, false);
+      const feint = planBurstFeint({ rng: seed }, plan);
+      plan.forEach((bursts, i) => {
+        if (i === plan.length - 1) return expect(feint[i]).toEqual([]);
+        expect(feint[i]).toHaveLength(bursts.length);
+        for (const z of feint[i]) expect(bursts.map((b) => b.zone)).not.toContain(z);
+      });
+    }
+    const s = setUp(park(), [{ zone: 'gangen', strength: 1 }], { toad: 'dammen' });
+    s.feint = [['dammen']];
+    expect(forecast(s).map((l) => l.text).join(' | ')).toMatch(/smäll över gången eller dammen kan driva iväg/);
+    const r = pass(s);
+    expect(get(r, 'toad').zone).toBe('dammen');
+    s.darkRevealed = true;
+    expect(forecast(s).map((l) => l.text).join(' | ')).not.toMatch(/ eller /);
   });
 });

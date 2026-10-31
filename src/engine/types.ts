@@ -436,7 +436,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 39;
+  version: 40;
   /** The road we cross: asphalt, or Åkrarna's gravel. */
   roadKind: RoadKind;
   /** Which group left the glen. */
@@ -493,6 +493,8 @@ export interface GameState {
   // The machines.
   /** The trees that fall at the end of each hour. */
   fellPlan: ZoneId[];
+  /** A boss's false blow, hour by hour: where it might strike, but won't. Shown with the real one until a card or a find tells which. */
+  feint: ZoneId[][];
   /** Zones where hunters back off this hour: someone stands there and threatens. */
   warded: ZoneId[];
   /** The ground the bulldozer takes at the end of each hour, if any. */
