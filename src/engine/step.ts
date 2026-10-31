@@ -421,7 +421,7 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
     s.dogsAwake = true;
     s.scent = { vagkanten: 1 };
   }
-  s.hunt = { plan: id === 'hunt' ? planHunt(s, def.maxTurn, hard) : [], barked: [] };
+  s.hunt = { plan: id === 'hunt' ? planHunt(s, def.maxTurn) : [], barked: [] };
   // The fog: what lies under it, unknown until we come close.
   s.fog = { kinds: id === 'fog' ? planFogKinds(s) : {}, known: [] };
   if (id === 'fog' && s.knowledge.includes('vilsnaHittad')) narrate(c, 'Långt bort i dimman ropar någon vi känner igen: den vilsna vi hittade. Den har hittat hem – och ropar på oss nu.');

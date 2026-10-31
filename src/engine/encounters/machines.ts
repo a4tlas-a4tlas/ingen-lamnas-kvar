@@ -19,7 +19,7 @@ export const MACHINES: EncounterDef = {
     day: 'Schaktaren är nästan framme. Det här är sista timmen.',
     night: 'Schaktaren är nästan framme. Det här är sista timmen.',
   },
-  maxTurn: 8,
+  maxTurn: 5,
   zones: [
     { id: 'glantan', label: 'Gläntan', name: 'gläntan', rect: [0, 76, 100, 24], start: true, exposed: true },
     { id: 'bjorkdungen', label: 'Björkdungen', name: 'björkdungen', rect: [0, 46, 34, 30], cover: true, trees: true },
@@ -46,7 +46,7 @@ export const MACHINES: EncounterDef = {
 /** Where trees stand: the felling machine wants them, and they hide us from the roar. */
 export const TREES: ZoneId[] = MACHINES.zones.filter((z) => z.trees).map((z) => z.id);
 /** The bulldozer takes the ground behind us at the end of these hours. */
-export const DOZE_HOURS = [3, 5, 7];
+export const DOZE_HOURS = [2, 4, 5];
 
 /**
  * The morning is decided up front, so it can be telegraphed – and read from the tracks:

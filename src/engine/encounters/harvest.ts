@@ -19,7 +19,7 @@ export const HARVEST: EncounterDef = {
     day: 'Solen står lågt över stubben. Det här är sista timmen.',
     night: 'Solen står lågt över stubben. Det här är sista timmen.',
   },
-  maxTurn: 8,
+  maxTurn: 5,
   zones: [
     { id: 'faltkanten', label: 'Fältkanten', name: 'fältkanten', rect: [0, 78, 100, 22], start: true, cover: true },
     { id: 'vete1v', label: 'Vetet, väst', name: 'vetet i väster', rect: [0, 50, 34, 28], cover: true },
@@ -52,7 +52,7 @@ export const HARVEST: EncounterDef = {
 export const WHEAT: ZoneId[] = ['vete1v', 'vete1m', 'vete1o', 'vete2o', 'vete2m', 'vete2v'];
 /** Strips cut each hour, and the hour the cutting starts. */
 export const STRIPS_PER_HOUR = 2;
-export const FIRST_CUT = 2;
+export const FIRST_CUT = 1;
 
 /** Which wheat falls in each hour: from a random corner, one way or the other round. */
 export function planHarvest(h: RngHolder, maxTurn: number): ZoneId[][] {

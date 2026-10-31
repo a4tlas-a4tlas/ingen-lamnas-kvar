@@ -45,12 +45,15 @@ describe('Jägaren', () => {
     expect(hunt().time).toBe('day');
   });
 
-  it('the hunter looks over a row or a column each hour – a row and a column with a whole party', () => {
+  it('the hunter looks over a row and a column each hour', () => {
     for (let seed = 1; seed <= 30; seed++) {
-      const lines = [...ROWS, ...COLUMNS].map((l) => l.join());
-      for (const look of planHunt({ rng: seed }, 10, false)) expect(lines).toContain(look.join());
-      for (const look of planHunt({ rng: seed }, 10, true)) expect(look.length).toBe(5);
+      for (const look of planHunt({ rng: seed }, 6)) {
+        expect(look.length).toBe(5);
+        expect(ROWS.some((r) => r.every((z) => look.includes(z)))).toBe(true);
+        expect(COLUMNS.some((c) => c.every((z) => look.includes(z)))).toBe(true);
+      }
     }
+    expect(hunt().maxTurn).toBe(6);
   });
 
   it('shoots whoever stands in the open where he looks, with a last moment; cover and the hidden are safe', () => {

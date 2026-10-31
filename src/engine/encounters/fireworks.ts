@@ -21,7 +21,7 @@ export const FIREWORKS: EncounterDef = {
     day: 'Folk räknar ner. Det här är sista timmen – midnatt.',
     night: 'Folk räknar ner. Det här är sista timmen – midnatt.',
   },
-  maxTurn: 8,
+  maxTurn: 5,
   zones: [
     { id: 'parkgrinden', label: 'Parkgrinden', name: 'parkgrinden', rect: [0, 80, 100, 20], start: true, cover: true },
     { id: 'buskarna', label: 'Buskarna', name: 'buskarna', rect: [0, 52, 34, 28], cover: true },
@@ -74,12 +74,12 @@ export function parkDistance(a: ZoneId, b: ZoneId): number {
   return Math.abs(ra - rb) + Math.abs(ca - cb);
 }
 
-/** The night's bursts, hour by hour: one at first, two from the fifth hour, three heavy ones at midnight – and from the fourth hour one more when the whole city fires. */
+/** The night's bursts, hour by hour: one each hour, three heavy ones at midnight – and from the fourth hour one more when the whole city fires. */
 export function planBursts(h: RngHolder, maxTurn: number, hard: boolean): Burst[][] {
   return Array.from({ length: maxTurn }, (_, i) => {
     const hour = i + 1;
     const midnight = hour === maxTurn;
-    const n = (midnight ? 3 : hour >= 5 ? 2 : 1) + (hard && hour >= 4 ? 1 : 0);
+    const n = (midnight ? 3 : 1) + (hard && hour >= 4 ? 1 : 0);
     const pool = [...PARK];
     return Array.from({ length: Math.min(n, pool.length) }, () => ({
       zone: pool.splice(Math.floor(random(h) * pool.length), 1)[0],

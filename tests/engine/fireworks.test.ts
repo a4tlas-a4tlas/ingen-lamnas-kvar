@@ -57,21 +57,19 @@ describe('Fyrverkerinatten', () => {
     expect(park().fireworks).toEqual(s.fireworks);
   });
 
-  it('the bursts build: one at first, two from the fifth hour, three heavy ones at midnight – one more from the fourth hour when the whole city fires', () => {
+  it('the bursts build: one each hour, three heavy ones at midnight – one more from the fourth hour when the whole city fires', () => {
     for (let seed = 1; seed <= 40; seed++) {
-      const plan = planBursts({ rng: seed }, 8, false);
+      const plan = planBursts({ rng: seed }, 5, false);
       expect(plan[0]).toHaveLength(1);
       expect(plan[0][0].strength).toBe(1);
       for (const h of plan.slice(1, 4)) expect(h).toHaveLength(1);
-      for (const h of plan.slice(4, 7)) expect(h).toHaveLength(2);
-      expect(plan[7]).toHaveLength(3);
-      expect(plan[7].every((b) => b.strength === 2)).toBe(true);
+      expect(plan[4]).toHaveLength(3);
+      expect(plan[4].every((b) => b.strength === 2)).toBe(true);
       for (const h of plan) expect(new Set(h.map((b) => b.zone)).size).toBe(h.length);
-      const hard = planBursts({ rng: seed }, 8, true);
+      const hard = planBursts({ rng: seed }, 5, true);
       expect(hard[2]).toHaveLength(1);
       expect(hard[3]).toHaveLength(2);
-      expect(hard[4]).toHaveLength(3);
-      expect(hard[7]).toHaveLength(4);
+      expect(hard[4]).toHaveLength(4);
     }
   });
 

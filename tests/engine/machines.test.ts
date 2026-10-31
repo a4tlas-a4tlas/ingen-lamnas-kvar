@@ -39,7 +39,7 @@ describe('Dalens sista morgon', () => {
     const m = run(s, { type: 'travel', to: 'asen' });
     expect(m.encounterId).toBe('machines');
     expect(m.time).toBe('day');
-    expect(m.maxTurn).toBe(8);
+    expect(m.maxTurn).toBe(5);
     expect(m.animals.filter((a) => a.status === 'active').every((a) => a.zone === 'glantan')).toBe(true);
   });
 

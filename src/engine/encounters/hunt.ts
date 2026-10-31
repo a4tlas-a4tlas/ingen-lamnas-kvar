@@ -22,7 +22,7 @@ export const HUNT: EncounterDef = {
     day: 'Det här är sista timmen. Skogen är nära.',
     night: 'Det här är sista timmen. Skogen är nära.',
   },
-  maxTurn: 10,
+  maxTurn: 6,
   zones: [
     { id: 'vagkanten', label: 'Vägkanten', name: 'vägkanten', rect: [0, 80, 100, 20], start: true },
     { id: 'ormbunkarna', label: 'Ormbunkarna', name: 'ormbunkarna', rect: [0, 58, 34, 22], cover: true },
@@ -64,8 +64,8 @@ export const ROWS: ZoneId[][] = [['ormbunkarna', 'kalytan', 'stenroset'], ['gran
 export const COLUMNS: ZoneId[][] = [0, 1, 2].map((i) => ROWS.map((r) => r[i]));
 const LINES = [...ROWS, ...COLUMNS];
 
-/** Where the hunter looks, hour by hour: a row or a column – and with a whole hunting party, a row and a column. Never the same twice running. */
-export function planHunt(h: RngHolder, maxTurn: number, hard: boolean): ZoneId[][] {
+/** Where the hunter looks, hour by hour: a row and a column at once. Never the same line twice running. */
+export function planHunt(h: RngHolder, maxTurn: number): ZoneId[][] {
   const out: ZoneId[][] = [];
   let last = -1;
   for (let i = 0; i < maxTurn; i++) {
@@ -73,7 +73,6 @@ export function planHunt(h: RngHolder, maxTurn: number, hard: boolean): ZoneId[]
     if (k === last) k = (k + 1) % LINES.length;
     last = k;
     const line = LINES[k];
-    if (!hard) { out.push(line); continue; }
     const other = k < 3 ? COLUMNS[Math.floor(random(h) * 3)] : ROWS[Math.floor(random(h) * 3)];
     out.push([...new Set([...line, ...other])]);
   }

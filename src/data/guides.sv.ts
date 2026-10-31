@@ -295,7 +295,7 @@ export const GUIDES: Record<EncounterId, Guide> = {
     title: 'Så tar vi oss genom vetet',
     goal: `Få alla från Fältkanten till Häcken – ${HARVEST.maxTurn} timmar. Genom vetet: tre steg.`,
     dangers: [
-      { icon: '▤', name: 'Skördetröskan', effect: 'dödar', text: `Från andra timmen skär den ${STRIPS_PER_HOUR} delar av vetet i timmen, runt kanten – det syns i förväg var. Den som står där när timmen går blir överkörd (sista stunden). Bara de som flyger kommer undan.` },
+      { icon: '▤', name: 'Skördetröskan', effect: 'dödar', text: `Från första timmen skär den ${STRIPS_PER_HOUR} delar av vetet i timmen, runt kanten – det syns i förväg var. Den som står där när timmen går blir överkörd (sista stunden). Bara de som flyger kommer undan.` },
       { icon: '◒', name: 'Vråken', effect: 'dödar', text: 'Den följer skördetröskan och jagar i stubben. Skuggan visar var den slår ner: den tar den minsta där – en liten bärs bort (sista stunden), en mellanstor får klorna i sig. De stora tar den inte.' },
     ],
     shelter: [
@@ -494,10 +494,10 @@ export const GUIDES: Record<EncounterId, Guide> = {
   },
   hunt: {
     title: 'Så tar vi oss förbi jägaren',
-    hard: 'Ibland är det ett helt jaktlag: två hundar, och jägarna spanar över både en rad och en kolumn varje timme.',
+    hard: 'Ibland är det ett helt jaktlag: två hundar i stället för en.',
     goal: `Få alla från Vägkanten in i Skogen – ${HUNT.maxTurn} timmar. Över hygget: tre steg.`,
     dangers: [
-      { icon: '⌖', name: 'Jägaren', effect: 'dödar', text: 'Varje timme spanar jägaren över en rad eller en kolumn – det syns var, och var nästa timme. Den som står i det öppna där när timmen går blir skjuten. Sista stunden. Den som flyger syns också.' },
+      { icon: '⌖', name: 'Jägaren', effect: 'dödar', text: 'Varje timme spanar jägaren över en rad och en kolumn – det syns var, och var nästa timme. Den som står i det öppna där när timmen går blir skjuten. Sista stunden. Den som flyger syns också.' },
       { icon: '◉', name: 'Hunden', text: 'Hunden följer vår doft, två steg i timmen. Hittar den någon av oss skäller den – och nästa timme spanar jägaren just där, även in i skyddet.' },
     ],
     shelter: [
