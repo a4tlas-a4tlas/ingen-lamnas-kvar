@@ -5,7 +5,7 @@ import { roarZones } from '../engine/encounters/machines';
 import { sheltered } from '../engine/encounters/raptor';
 import { mistAfter, rowZones, tractorRow } from '../engine/encounters/sprayer';
 import { GATE_PUSH, levelAfter, onTheWire, sweptIn } from '../engine/encounters/fence';
-import { cutting, inWheat, stubblePrey } from '../engine/encounters/harvest';
+import { WHEAT, cutting, inWheat, stubblePrey } from '../engine/encounters/harvest';
 import { bitten, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown, underfoot } from '../engine/encounters/street';
@@ -13,7 +13,8 @@ import { TUNNELS, bittenByRats, depthIn, isFound, sweptHere } from '../engine/en
 import { STUCK_AT, UNDER_AT, isPool, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from '../engine/encounters/bog';
 import { DITCH_FULL, ditchLevel, machineRow } from '../engine/encounters/peat';
 import { huntDogDestination, watched } from '../engine/encounters/hunt';
-import { FIREWORKS, burstsNow, crowdNow, holdsWith, reaches } from '../engine/encounters/fireworks';
+import { FIREWORKS, PARK, burstsNow, crowdNow, holdsWith, possibleBursts, reaches } from '../engine/encounters/fireworks';
+import { feintNext, feintNow, maybeZones } from '../engine/encounters/feint';
 import { SWEEPS_SMALL } from '../engine/encounters/fence';
 import { encounterOf, zoneDef } from '../engine/encounters';
 import { HEN_HOUSE, alarmMax, dogDestination } from '../engine/encounters/farm';
@@ -137,13 +138,18 @@ function raptorStatuses(s: GameState, a: Animal): Status[] {
 function machinesStatuses(s: GameState, a: Animal): Status[] {
   const out: Status[] = [];
   if (a.flying) return out;
-  if (s.fellPlan[s.turn - 1] === a.zone) {
+  const fell = s.fellPlan[s.turn - 1];
+  const maybe = fell ? maybeZones(s, [fell]) : [];
+  if (maybe.length > 1 && maybe.includes(a.zone)) {
+    const other = maybe.find((z) => z !== a.zone)!;
+    out.push({ key: 'fell', icon: '⚒', label: 'träden kan falla', tone: 'bad', explain: `Fällaren går in här eller i ${zoneDef(s, other).name} – vi ser inte vilken. Faller träden här, faller de över ${a.name}.` });
+  } else if (fell === a.zone) {
     out.push({ key: 'fell', icon: '⚒', label: 'träden faller', tone: 'bad', explain: `Fällaren tar träden här när timmen går. Led ${a.name} härifrån, annars faller de över ${a.name}.` });
   }
   if (s.dozePlan[s.turn - 1] === a.zone) {
     out.push({ key: 'doze', icon: '▰', label: 'schaktaren', tone: 'bad', explain: `Schaktaren tar marken här när timmen går. ${a.name} måste vidare.` });
   }
-  if (roarZones(s).includes(a.zone) && !a.injuries.includes('shock')) {
+  if (maybe.flatMap((z) => roarZones(s, z)).includes(a.zone) && !maybe.includes(a.zone) && !a.injuries.includes('shock')) {
     out.push({ key: 'roar', icon: '≋', label: 'bruset', tone: 'warn', explain: `Träden faller alldeles bredvid. ${a.name} står i det öppna och får chock när timmen går.` });
   }
   return out;
@@ -501,10 +507,12 @@ function streetForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine
 /** New Year's Eve: in the bang's way, holding on to one we're close to, or under cover. */
 function fireworksStatuses(s: GameState, a: Animal): Status[] {
   if (a.status !== 'active') return [];
-  const hit = burstsNow(s).some((b) => reaches(b, a.zone));
+  const sure = burstsNow(s).some((b) => reaches(b, a.zone));
+  const hit = possibleBursts(s).some((b) => reaches(b, a.zone));
   const friend = holdsWith(s, a);
   if (hit && friend) return [{ key: 'hold', icon: '♥', label: 'håller i varandra', tone: 'good', explain: `${a.name} och ${friend.name} står varandra nära. När det smäller står de kvar.` }];
-  if (hit) return [{ key: 'burst', icon: '✸', label: 'i smällens väg', tone: 'bad', explain: `En raket smäller här när timmen går. ${a.name} far iväg en zon bort från smällen och tappar 1 tro.` }];
+  if (hit && feintNow(s).length) return [{ key: 'burst', icon: '✸', label: 'kanske i smällens väg', tone: 'bad', explain: `En raket kan smälla här när timmen går – eller på andra stället. Vi ser inte vilket. Smäller den här far ${a.name} iväg en zon och tappar 1 tro.` }];
+  if (sure) return [{ key: 'burst', icon: '✸', label: 'i smällens väg', tone: 'bad', explain: `En raket smäller här när timmen går. ${a.name} far iväg en zon bort från smällen och tappar 1 tro.` }];
   if (FIREWORKS.zones.find((z) => z.id === a.zone)?.cover && burstsNow(s).some((b) => b.strength === 2)) return [{ key: 'cover', icon: '♣', label: 'i skydd', tone: 'good', explain: `Här dämpas smällarna. Bara en raket rakt ovanför når ${a.name}.` }];
   return [];
 }
@@ -515,7 +523,20 @@ function fireworksForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastL
   const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
   if (s.turn === s.maxTurn) out.push({ text: 'Midnatt: tre stora smällar på en gång.', tone: 'bad' });
   else if (s.turn === s.maxTurn - 1) out.push({ text: 'Nästa timme är det midnatt – tre stora smällar på en gång.', tone: 'warn' });
-  for (const b of burstsNow(s)) {
+  const decoys = feintNow(s);
+  burstsNow(s).forEach((b, i) => {
+    if (!decoys[i]) return;
+    const pair = [b.zone, decoys[i]].sort((x, y) => PARK.indexOf(x) - PARK.indexOf(y));
+    const near = s.animals.filter((a) => isActive(a) && [b, { ...b, zone: decoys[i] }].some((x) => reaches(x, where(a))));
+    const held = near.filter((a) => holdsWith(s, a, where));
+    const here = near.filter((a) => !held.includes(a));
+    const what = `${b.strength === 2 ? 'En stor smäll' : 'En smäll'} över ${pair.map((z) => zoneDef(s, z).name).join(' eller ')}`;
+    const hold = held.length ? `${held.map((a) => a.name).join(' och ')} håller i varandra` : '';
+    out.push(here.length
+      ? { text: `${what} kan driva iväg ${here.map((a) => a.name).join(' och ')} (−1 tro)${hold ? `; ${hold}` : ''}.`, tone: 'warn' }
+      : { text: `${what}${hold ? ` – ${hold}` : ' – ingen av oss i vägen'}.`, tone: 'good' });
+  });
+  for (const b of burstsNow(s).filter((_, i) => !decoys[i])) {
     const here = s.animals.filter((a) => isActive(a) && reaches(b, where(a)));
     const held = here.filter((a) => holdsWith(s, a, where));
     const driven = here.filter((a) => !held.includes(a));
@@ -581,11 +602,14 @@ function cranesForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine
 }
 
 /** Would the hunter's shot reach one of us standing here this hour? */
-const inSights = (s: GameState, a: Animal, z: ZoneId) => watched(s).includes(z) && !a.hidden && (!zoneDef(s, z).cover || s.hunt.barked.includes(z));
+const inSights = (s: GameState, a: Animal, z: ZoneId, look: ZoneId[] = watched(s)) => look.includes(z) && !a.hidden && (!zoneDef(s, z).cover || s.hunt.barked.includes(z));
+/** Where the hunter may look, as far as we can tell: both ways he might turn, until we know. */
+const huntMaybe = (s: GameState) => maybeZones(s, watched(s));
 
 /** The hunt: in the hunter's sights, or found by the dog. */
 function huntStatuses(s: GameState, a: Animal): Status[] {
   if (a.status !== 'active') return [];
+  if (feintNow(s).length && !s.hunt.barked.includes(a.zone) && inSights(s, a, a.zone, huntMaybe(s))) return [{ key: 'hunt', icon: '⌖', label: 'kanske i jägarens sikte', tone: 'bad', explain: `Jägaren spanar kanske hit när timmen går – vi ser inte åt vilket håll han vänder sig. Gör han det blir ${a.name} skjuten.` }];
   if (inSights(s, a, a.zone)) return [{ key: 'hunt', icon: '⌖', label: 'i jägarens sikte', tone: 'bad', explain: `Jägaren spanar hit när timmen går${zoneDef(s, a.zone).cover ? ' – hunden har skällt här, så skyddet hjälper inte' : ''}. Står ${a.name} kvar blir ${a.name} skjuten.` }];
   return [];
 }
@@ -593,11 +617,15 @@ function huntStatuses(s: GameState, a: Animal): Status[] {
 /** The hunt: whom the hunter shoots, and where the dog is heading. */
 function huntForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
   const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
-  const out: ForecastLine[] = s.animals.filter((a) => isActive(a) && inSights(s, a, where(a))).map((a) => ({ text: `Jägaren skjuter ${a.name} i ${zoneDef(s, where(a)).name}: dödar.`, tone: 'bad' as const }));
+  const unsure = feintNow(s).length > 0;
+  const sure = (a: Animal) => !unsure || s.hunt.barked.includes(where(a));
+  const out: ForecastLine[] = s.animals.filter((a) => isActive(a) && inSights(s, a, where(a), huntMaybe(s))).map((a) => (sure(a)
+    ? { text: `Jägaren skjuter ${a.name} i ${zoneDef(s, where(a)).name}: dödar.`, tone: 'bad' as const }
+    : { text: `Jägaren kanske spanar över ${zoneDef(s, where(a)).name}: ${a.name} kan bli skjuten.`, tone: 'bad' as const }));
   for (const d of s.turn > 1 ? s.dogs : []) {
     const to = huntDogDestination(d);
     const found = s.animals.filter((a) => isActive(a) && where(a) === to && !a.hidden && !a.flying);
-    if (found.length) out.push({ text: `${d.name} hittar ${found.map((a) => a.name).join(' och ')} i ${zoneDef(s, to).name}: jägaren spanar dit nästa timme.`, tone: 'warn' });
+    if (found.length) out.push({ text: `${d.name} hittar ${found.map((a) => a.name).join(' och ')} i ${zoneDef(s, to).name}: jägaren ser dit nästa timme.`, tone: 'warn' });
   }
   return out;
 }
@@ -681,7 +709,10 @@ function sewerForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[
 /** The harvest: in the harvester's way, in the buzzard's shadow, or hidden in the wheat. */
 function harvestStatuses(s: GameState, a: Animal): Status[] {
   if (a.status !== 'active') return [];
-  if (!a.flying && cutting(s).includes(a.zone)) return [{ key: 'harvest', icon: '▤', label: 'i skördetröskans väg', tone: 'bad', explain: `Skördetröskan skär här när timmen går. Står ${a.name} kvar blir ${a.name} överkörd.` }];
+  const unsure = feintNow(s).length > 0;
+  if (!a.flying && maybeZones(s, cutting(s)).includes(a.zone)) return [unsure
+    ? { key: 'harvest', icon: '▤', label: 'kanske i skördetröskans väg', tone: 'bad', explain: `Skördetröskan kan ta vägen hit när timmen går – eller åt andra hållet. Vi ser inte vilket. Kommer den hit blir ${a.name} överkörd.` }
+    : { key: 'harvest', icon: '▤', label: 'i skördetröskans väg', tone: 'bad', explain: `Skördetröskan skär här när timmen går. Står ${a.name} kvar blir ${a.name} överkörd.` }];
   if (s.harvest.shadow === a.zone && stubblePrey(s, a.zone) === a) return [{ key: 'raptor', icon: '◒', label: 'i skuggan', tone: a.size === 'small' ? 'bad' : 'warn', explain: `Vråken slår ner här i stubben när timmen går och tar ${a.name}.` }];
   if (inWheat(s, a.zone)) return [{ key: 'wheat', icon: '♣', label: 'i vetet', tone: 'good', explain: `${a.name} är gömd i vetet. Vråken ser inte ${a.name} här – men skördetröskan kommer.` }];
   return [];
@@ -693,9 +724,16 @@ function harvestForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLin
   const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
   const names = (xs: Animal[]) => xs.map((a) => a.name).join(' och ');
   const strip = cutting(s);
+  const decoy = feintNow(s);
   const run = s.animals.filter((a) => isActive(a) && !a.flying && strip.includes(where(a)));
   const place = strip.map((z) => zoneDef(s, z).name).join(' och ');
-  if (strip.length) out.push(run.length ? { text: `Skördetröskan skär ${place} och kör över ${names(run)}: dödar!`, tone: 'bad' } : { text: `Skördetröskan skär ${place} – ingen av oss där.`, tone: 'good' });
+  if (strip.length && decoy.length) {
+    const ways = [strip, decoy].sort((x, y) => WHEAT.indexOf(x[0]) - WHEAT.indexOf(y[0])).map((w) => w.map((z) => zoneDef(s, z).name).join(' och '));
+    const risk = s.animals.filter((a) => isActive(a) && !a.flying && [...strip, ...decoy].includes(where(a)));
+    out.push(risk.length
+      ? { text: `Skördetröskan skär ${ways[0]} – eller ${ways[1]}: ${names(risk)} kan bli överkörda!`, tone: 'bad' }
+      : { text: `Skördetröskan skär ${ways[0]} – eller ${ways[1]}. Ingen av oss där.`, tone: 'good' });
+  } else if (strip.length) out.push(run.length ? { text: `Skördetröskan skär ${place} och kör över ${names(run)}: dödar!`, tone: 'bad' } : { text: `Skördetröskan skär ${place} – ingen av oss där.`, tone: 'good' });
   const z = s.harvest.shadow;
   if (z) {
     const v = stubblePrey(s, z, where);
@@ -703,7 +741,7 @@ function harvestForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLin
       ? { text: `Vråken slår ner i ${zoneDef(s, z).name} och ${v.size === 'small' ? `bär bort ${v.name}: dödar!` : `klöser ${v.name}: skadar (blöder).`}`, tone: v.size === 'small' ? 'bad' : 'warn' }
       : { text: `Vråken slår ner i ${zoneDef(s, z).name} – ingen av oss där.`, tone: 'good' });
   }
-  const next = s.harvest.plan[s.turn] ?? [];
+  const next = feintNext(s) ? [] : s.harvest.plan[s.turn] ?? [];
   if (s.turn < s.maxTurn && next.length) out.push({ text: `Nästa timme skär den ${next.map((x) => zoneDef(s, x).name).join(' och ')}.`, tone: 'info' });
   return out;
 }
@@ -795,7 +833,16 @@ function machinesForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLi
   const at = (z: ZoneId) => s.animals.filter((a) => isActive(a) && zoneOf.get(a.id) === z && (!a.flying || a.climbing));
   const names = (xs: Animal[]) => xs.map((a) => a.name).join(' och ');
   const fell = s.fellPlan[s.turn - 1];
-  if (fell) {
+  const maybe = fell ? maybeZones(s, [fell]) : [];
+  if (maybe.length > 1) {
+    const under = maybe.flatMap(at);
+    const places = maybe.map((z) => zoneDef(s, z).name).join(' eller ');
+    out.push(under.length
+      ? { text: `Fällaren går in i ${places}: ${names(under)} kan dö där!`, tone: 'bad' }
+      : { text: `Fällaren går in i ${places} – ingen av oss där.`, tone: 'good' });
+    const roar = [...new Set(maybe.flatMap((z) => roarZones(s, z)))].filter((z) => !maybe.includes(z)).flatMap(at).filter((a) => !a.injuries.includes('shock'));
+    if (roar.length) out.push({ text: `Bruset kan nå ${names(roar)}: chock.`, tone: 'warn' });
+  } else if (fell) {
     const under = at(fell);
     const place = zoneDef(s, fell).name;
     out.push(under.length

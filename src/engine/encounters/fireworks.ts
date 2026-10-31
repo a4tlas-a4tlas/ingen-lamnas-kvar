@@ -5,6 +5,7 @@
 // who stand together. At midnight the whole sky goes up at once.
 import { random, type RngHolder } from '../rng';
 import type { Animal, GameState, ZoneId } from '../types';
+import { feintNow } from './feint';
 import type { EncounterDef } from './types';
 
 export const FIREWORKS: EncounterDef = {
@@ -88,6 +89,15 @@ export function planBursts(h: RngHolder, maxTurn: number, hard: boolean): Burst[
   });
 }
 
+/** Where each rocket might go instead, hour by hour: for every burst before midnight, another place in the park. We see them rise, not where they will burst. */
+export function planBurstFeint(h: RngHolder, plan: Burst[][]): ZoneId[][] {
+  return plan.map((bursts, i) => {
+    if (i === plan.length - 1) return [];
+    const pool = PARK.filter((z) => !bursts.some((b) => b.zone === z));
+    return bursts.map(() => pool.splice(Math.floor(random(h) * pool.length), 1)[0]);
+  });
+}
+
 /** Where the people walk each hour: one zone of the park, never the same twice running. */
 export function planCrowd(h: RngHolder, maxTurn: number): ZoneId[] {
   const out: ZoneId[] = [];
@@ -97,6 +107,12 @@ export function planCrowd(h: RngHolder, maxTurn: number): ZoneId[] {
 
 /** This hour's bursts. */
 export const burstsNow = (s: GameState): Burst[] => s.fireworks.plan[s.turn - 1] ?? [];
+/** The bursts as far as we can tell: each rocket at both places it might burst, until we know which. */
+export const possibleBursts = (s: GameState): Burst[] => {
+  const decoys = feintNow(s);
+  return burstsNow(s).flatMap((b, i) => (decoys[i] ? [b, { ...b, zone: decoys[i] }] : [b]));
+};
+
 /** Where the people walk this hour – unless it is the hour the child's family stepped aside for us. */
 export const crowdNow = (s: GameState): ZoneId | null => (s.fireworks.childHour === s.turn ? null : s.fireworks.crowdPlan[s.turn - 1] ?? null);
 

@@ -1098,6 +1098,49 @@ Skogsbrynet's end is the final boss, *Jägaren* (`src/engine/encounters/hunt.ts`
 - **What it found:** see HANDOFF. In short, a careful player nearly always reaches the forest, and the cost of the way is time, not death. Most bosses barely bite; Dimman and Torvtäkten do.
 - **Small fixes:** Dimman's first row is *Kärret* (no more "hamnar i dimman"), and the hermit's picture no longer shows a hare.
 
+### Step 2: Avvägningen – a fair bot, and bosses that half hide their blow (done)
+**What the user asked for:**
+- Blind the bot first.
+- Some deaths, mostly at the bosses: each boss should take someone about half the time, and a careful run should reach the forest with 3–4 of 6.
+- Tune the bosses that don't bite, and look at Mossen being chosen too seldom.
+- Leave Dimman, Torvtäkten and the roads as they are.
+
+**A fair bot** (`tests/playtest/player.ts`):
+- **Blind:** each choice is judged over 3 imagined futures with fresh dice (`s.rng` replaced), not the hour's real rolls. It doesn't know which of a boss's two places is real either (`swapFeint`).
+- **The clock:** it counts its Kraft against the clock. If the steps left to the goal are more than the Kraft left, someone will be left behind, and the score says so.
+- **The crossroads:** it picks a way in turn, not always the first offered. *Mossen chosen too seldom* was this bot artifact, not the game: now each middle region is walked about a third of the time.
+- **New report columns:** per danger, *Took someone*, *Dead* and *Left*.
+- **A boss harness** (`tests/playtest/bosses.test.ts`): each region's boss alone, from its last fire. Use `PLAYTEST_GROUP` (default 4, about what a run brings), `PLAYTEST_ONLY` and `PLAYTEST_HARD`.
+
+**What measuring showed:**
+- A careful reader steps out of every telegraphed blow, and with four of us, time doesn't bind either. Even 4-hour bosses took someone only 13–23 % of the time.
+- Most losses are not at bosses at all: people are left behind on the roads when time runs out, which the user chose to keep.
+
+**The feint, the user's choice** (`src/engine/encounters/feint.ts`):
+- Each hour, a boss shows two places for its blow, and only one is real. `s.feint[hour]` holds the false one, planned with the real plan.
+- **Revealed** this hour by a card that sees the hidden (`s.darkRevealed`: Spana från ovan, Lyssna i marken, Känna skakningar, Vittring …). At the machines, the tracks reveal it too.
+- **On screen:** both places are drawn alike, dashed: "Fällaren? · dödar kanske". The forecast and the chips say "X eller Y". Names come in a fixed order (`maybeZones` sorts, `eitherOf` follows the map), so order tells nothing. The next-hour hints are hidden while the next hour is still half-hidden.
+
+| Boss | The feint | The clock (old → new) |
+|---|---|---|
+| **Maskinerna** | "Fällaren vänder sig mot X eller Y": another standing tree, a spruce line when one stands, since every way up passes one | 8 → 6 hours; the bulldozer at 3, 5, 7 → 2, 4, 6 |
+| **Skördetröskan** | At each edge it may go on round or turn back, a real choice each hour; we see both ways. The first cut could have been the far side. | 8 → 5 hours; cutting from hour 2 → 1 |
+| **Jägaren** | "Han spanar över … – eller över …": two rows-and-columns. Barked zones stay certain. | 10 → 6 hours; always a row *and* a column (was only with a hunting party); *Vindfället* is no longer cover, so the last row before the forest is open |
+| **Fyrverkerinatten** | "En raket stiger … över X eller Y"; midnight is certain. Still never kills. | unchanged, 8 hours |
+
+**The result** (whole runs, 50 seeds per group; before → after):
+
+| Boss | Took someone | Dead per visit |
+|---|---|---|
+| Åsen | 14 % → 26 % | 0.10 → 0.18 |
+| Vetefältet | 1 % → 16 % | 0.01 → 0.10 |
+| Stadsparken | 1 % → 3 % | 0 → 0 |
+| Jägaren | 9 % → 17 % | 0.05 → 0.17 |
+
+- **Survivors at the forest** (blind bot, before → after): Dalens sista 3.17 → 2.77, Rovdjurens pakt 2.78 → 2.71, De små 4.39 → 3.82, Slumpad 3.48 → 3.13.
+- **Short of half:** the bosses fall short of "half the time" for this bot. Pushing them further would take survivors below 3, because the roads already take about 0.6 per crossing in Dalen. Humans read less perfectly than the bot, so in play the bosses should bite harder.
+- **Save version 40.**
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

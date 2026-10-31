@@ -11,7 +11,8 @@ import { LAMPED, lit, walkerZone } from '../engine/encounters/lamps';
 import { catSigns, guard, pounced, scarer } from '../engine/encounters/cats';
 import { bikesAt, feetAt, tramIn, tramKnown } from '../engine/encounters/street';
 import { SOUND, TUNNELS, bittenByRats, depthIn, isFound } from '../engine/encounters/sewer';
-import { burstsNow, crowdNow, reaches } from '../engine/encounters/fireworks';
+import { crowdNow, possibleBursts, reaches } from '../engine/encounters/fireworks';
+import { feintNext, feintNow, maybeZones } from '../engine/encounters/feint';
 import { isPool, isSoft } from '../engine/encounters/bog';
 import { DITCH_FULL, ditchLevel, machineRow } from '../engine/encounters/peat';
 import { watched } from '../engine/encounters/hunt';
@@ -144,7 +145,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 39 && s.phase !== 'over' ? s : null;
+    return s.version === 40 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -896,8 +897,12 @@ export class App {
     const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
     const fell = s.fellPlan[s.turn - 1];
     const next = s.knowledge.includes('machines') && s.turn < s.maxTurn ? s.fellPlan[s.turn] : undefined;
-    if (fell) out.push(`<div class="fell-mark" style="${box(fell)}"><span>Fällaren · dödar</span></div>`);
-    for (const z of roarZones(s)) out.push(`<div class="roar-mark" style="${box(z)}"><span>bruset · chock</span></div>`);
+    // Until we know which, both places look the same: the feller may go into either.
+    const maybe = fell ? maybeZones(s, [fell]) : [];
+    const unsure = maybe.length > 1;
+    for (const z of maybe) out.push(`<div class="fell-mark${unsure ? ' maybe' : ''}" style="${box(z)}"><span>${unsure ? 'Fällaren? · dödar kanske' : 'Fällaren · dödar'}</span></div>`);
+    const roar = [...new Set(maybe.flatMap((z) => roarZones(s, z)))].filter((z) => !maybe.includes(z));
+    for (const z of roar) out.push(`<div class="roar-mark" style="${box(z)}"><span>${unsure ? 'bruset? · chock' : 'bruset · chock'}</span></div>`);
     if (next && next !== fell) out.push(`<div class="next-mark" style="${box(next)}"><em>fällaren nästa timme</em></div>`);
     const doze = s.dozePlan[s.turn - 1];
     if (doze) out.push(`<div class="doze-mark" style="${box(doze)}"><span>Schaktaren · tar marken · dödar</span></div>`);
@@ -984,11 +989,13 @@ export class App {
     if (next) out.push(`<div class="next-mark" style="${box(next)}"><em>folkmassan nästa timme</em></div>`);
     const midnight = s.turn === s.maxTurn;
     const reached = new Set<string>();
-    for (const b of burstsNow(s)) {
-      out.push(`<div class="burst-mark s${b.strength}" style="${box(b.zone)}"><i></i><span>${midnight ? 'Midnatt · ' : ''}${b.strength === 2 ? 'stor smäll' : 'smäll'} · knuffar</span></div>`);
+    const bursts = possibleBursts(s);
+    const unsure = feintNow(s).length > 0;
+    for (const b of bursts) {
+      out.push(`<div class="burst-mark s${b.strength}${unsure ? ' maybe' : ''}" style="${box(b.zone)}"><i></i><span>${midnight ? 'Midnatt · ' : ''}${b.strength === 2 ? 'stor smäll' : 'smäll'}${unsure ? '?' : ''} · knuffar</span></div>`);
       for (const d of encounterOf(s).zones) if (!d.goal && d.id !== b.zone && reaches(b, d.id)) reached.add(d.id);
     }
-    for (const z of reached) out.push(`<div class="burst-reach" style="${box(z)}"><em>smällen hörs hit</em></div>`);
+    for (const z of reached) if (!bursts.some((b) => b.zone === z)) out.push(`<div class="burst-reach" style="${box(z)}"><em>${unsure ? 'smällen kan höras hit' : 'smällen hörs hit'}</em></div>`);
     return out.join('');
   }
 
@@ -996,10 +1003,16 @@ export class App {
   /** The hunt: where the hunter looks now (and where a dog barked), and where next hour. */
   private huntTelegraphHtml(s: GameState): string {
     const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
-    const now = watched(s);
-    const later = s.turn < s.maxTurn ? watched(s, s.turn + 1) : [];
+    const now = maybeZones(s, watched(s));
+    const unsure = feintNow(s).length > 0;
+    const later = s.turn < s.maxTurn && !feintNext(s) ? watched(s, s.turn + 1) : [];
+    const label = (z: ZoneId) => {
+      if (s.hunt.barked.includes(z)) return 'Hunden skällde · jägaren ser allt';
+      if (zoneDef(s, z).cover) return unsure ? 'Jägaren? · skydd hjälper' : 'Jägaren spanar · skydd hjälper';
+      return unsure ? 'Jägaren? · dödar kanske' : 'Jägaren spanar · dödar';
+    };
     return [
-      ...now.map((z) => `<div class="sight-mark ${s.hunt.barked.includes(z) ? 'barked' : ''}" style="${box(z)}"><span>${s.hunt.barked.includes(z) ? 'Hunden skällde · jägaren ser allt' : zoneDef(s, z).cover ? 'Jägaren spanar · skydd hjälper' : 'Jägaren spanar · dödar'}</span></div>`),
+      ...now.map((z) => `<div class="sight-mark ${s.hunt.barked.includes(z) ? 'barked' : unsure ? 'maybe' : ''}" style="${box(z)}"><span>${label(z)}</span></div>`),
       ...later.filter((z) => !now.includes(z)).map((z) => `<div class="next-mark" style="${box(z)}"><em>jägaren nästa timme</em></div>`),
     ].join('');
   }
@@ -1067,8 +1080,9 @@ export class App {
     const out: string[] = [];
     const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
     for (const z of s.harvest.cut) out.push(`<div class="stubble-mark" style="${box(z)}"><span>stubb</span></div>`);
-    for (const z of cutting(s)) out.push(`<div class="tractor-mark" style="${box(z)}"><span>Skördetröskan · dödar</span></div>`);
-    if (s.turn < s.maxTurn) for (const z of s.harvest.plan[s.turn] ?? []) out.push(`<div class="next-mark" style="${box(z)}"><em>skördetröskan nästa timme</em></div>`);
+    const unsure = feintNow(s).length > 0;
+    for (const z of maybeZones(s, cutting(s))) out.push(`<div class="tractor-mark${unsure ? ' maybe' : ''}" style="${box(z)}"><span>${unsure ? 'Skördetröskan? · dödar kanske' : 'Skördetröskan · dödar'}</span></div>`);
+    if (s.turn < s.maxTurn && !feintNext(s)) for (const z of s.harvest.plan[s.turn] ?? []) out.push(`<div class="next-mark" style="${box(z)}"><em>skördetröskan nästa timme</em></div>`);
     if (s.harvest.shadow) out.push(`<div class="shadow-mark" style="${box(s.harvest.shadow)}"><i></i><span>Vråken · tar de små</span></div>`);
     return out.join('');
   }
