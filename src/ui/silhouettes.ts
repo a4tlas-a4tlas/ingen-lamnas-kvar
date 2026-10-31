@@ -300,7 +300,7 @@ export function sceneArt(kind: SceneArt): string {
         <ellipse cx="32" cy="42" rx="26" ry="7" fill="#5a6a44"/>
         <path d="M32 40 L32 10 M32 14 L24 20 M32 18 L40 22" stroke="#3a2a1e" stroke-width="2"/>
         <ellipse cx="32" cy="12" rx="10" ry="6" fill="#2a3a24"/>
-        <ellipse cx="22" cy="38" rx="6" ry="4" fill="#9a9488"/><ellipse cx="18" cy="35" rx="3" ry="2.6" fill="#9a9488"/><path d="M17 33 q-1 -6 1 -7 q2 2 1 7 Z" fill="#9a9488"/>`);
+        <ellipse cx="24" cy="39" rx="5" ry="2.4" fill="#2a2420" opacity="0.6"/>`);
     case 'echo':
       return svg(`
         <rect width="64" height="48" fill="#3a4448"/>
