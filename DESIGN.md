@@ -1141,7 +1141,7 @@ Skogsbrynet's end is the final boss, *Jägaren* (`src/engine/encounters/hunt.ts`
 - **Short of half:** the bosses fall short of "half the time" for this bot. Pushing them further would take survivors below 3, because the roads already take about 0.6 per crossing in Dalen. Humans read less perfectly than the bot, so in play the bosses should bite harder.
 - **Save version 40.**
 
-## Milestone 12 – Ljud och känsla (in progress)
+## Milestone 12 – Ljud och känsla (done)
 The user's choices:
 - **Music:** the drone follows hope.
 - **Ambience:** by region and time of day.
@@ -1197,6 +1197,42 @@ It comes in two steps. Everything stays synthesised in WebAudio, with no sound f
 **Settings and debugging:**
 - **"Musik på/av"** beside "Ljud på/av" turns off the music alone. It is kept in `localStorage['ingen-lamnas-kvar/music']`.
 - **`?debug`** exposes `window.ilkSound`; its `trace` lists what played (for the browser test).
+
+### Step 2: Känslan (done)
+All in `src/ui/app.ts` and `src/style.css`, with no engine change.
+
+**Animals walk:**
+- Tokens already glided between zones. Now, when a token's zone changes, it walks: the silhouette bobs as it goes.
+- A move caused by the hour going (pushed, drifted, a will of its own) sways and slides slower.
+- Fliers arc.
+- The board remembers each animal's last zone (`lastZone`, cleared on a new board); `moveKind` comes from the action.
+
+**Blows land:**
+- `App.play()` holds the board for cars, and now for the `blow` events too: each gets a CSS overlay on its zone in `.sweeps`, 650 ms apart (`BLOW_GAP`), heard at the same moment. Then the hits, the new board and any last moment.
+
+| Blow | On the board |
+|---|---|
+| `fell` | trunks topple, then dust |
+| `doze` | a mud wave |
+| `cut` | a band mows across |
+| `burst` / `bigBurst` | rings of sparks (three for a big one) |
+| `shot` | a muzzle flash and a ring |
+| `bark` | ripples |
+| `suck` | a closing ring |
+| `crane` | wings sweep past |
+| `light` | a blue glow |
+
+**Hope and Kraft:**
+- The hope pips flash when hope rises; the meter shakes when it falls.
+- The mood's name fades in when the mood shifts.
+- Kraft diamonds dim as they are spent and pop when refilled.
+- A token's belief flashes up or down when it moves.
+
+**The fire and the map:**
+- At the fire, a breathing glow and eight sparks rising on staggered delays.
+- On the map, the way we just came draws itself and the paw prints appear one by one, once per new place (`freshPath`).
+
+**Reduced motion:** under `prefers-reduced-motion`, the global rule cuts every animation short. The blows become a brief still highlight of their zone, the sparks are hidden and the path is simply drawn.
 
 ## Milestone 7 – the animals rethought (done)
 Your direction:
