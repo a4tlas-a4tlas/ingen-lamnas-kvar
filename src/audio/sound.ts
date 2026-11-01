@@ -303,6 +303,12 @@ export class Sound {
         if (!night && chance(0.006)) this.craneCall(t, 0.025);
         if (night && chance(0.03)) this.tone(bus, 1400 + Math.random() * 600, t, 0.02, 0.005, 0.08, 'sine', 700);
         break;
+      case 'hoglandet':
+        // High cold wind rising and falling; a raven by day, a far fox's bark at night.
+        if (chance(0.02)) this.hiss(bus, t, 3.5, 'bandpass', 900, 0.05, 0.8, 1600, 1.4);
+        if (!night && chance(0.008)) for (let k = 0; k < 2; k++) this.tone(bus, 260, t + k * 0.32, 0.04, 0.02, 0.22, 'sawtooth', 200);
+        if (night && chance(0.005)) for (let k = 0; k < 3; k++) this.tone(bus, 700, t + k * 0.25, 0.02, 0.01, 0.12, 'sawtooth', 520);
+        break;
       case 'skogsbrynet':
         if (chance(0.01)) this.hiss(bus, t, 3, 'bandpass', 500, 0.04, 0.6, 900, 1.2);
         if (night && chance(0.01)) this.hoot(t);
@@ -424,6 +430,11 @@ export class Sound {
       case 'light':
         [1175, 1480, 1760].forEach((f, i) => this.tone(fx, f, t + i * 0.08, 0.015, 0.2, 1.4));
         break;
+      case 'gust':
+        // A rush of wind that swells and passes.
+        this.hiss(fx, t, 1.6, 'bandpass', 500, 0.35, 0.6, 1400, 0.6);
+        this.hiss(fx, t + 0.2, 1.2, 'highpass', 2500, 0.08, 0.7, undefined, 0.5);
+        break;
     }
     this.mark(`blow:${what}`);
   }
@@ -517,5 +528,6 @@ const BEDS: Record<string, [{ f: number; g: number }, { f: number; g: number }]>
   akrarna: [{ f: 900, g: 0.02 }, { f: 2600, g: 0.006 }],
   staden: [{ f: 160, g: 0.06 }, { f: 120, g: 0.04 }],
   mossen: [{ f: 400, g: 0.012 }, { f: 250, g: 0.008 }],
+  hoglandet: [{ f: 1100, g: 0.03 }, { f: 800, g: 0.035 }],
   skogsbrynet: [{ f: 700, g: 0.03 }, { f: 450, g: 0.025 }],
 };

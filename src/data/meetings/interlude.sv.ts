@@ -67,6 +67,20 @@ export const LOOK_BACK: Partial<Record<RegionId, Partial<Record<Species, string>
     beaver: '”Ingen damm, ingen å, men vatten överallt. Jag kommer att sakna det.”',
     fawn: '”Jag ropade på mamma där. Ingen svarade. Inte ens ett eko.”',
   },
+  hoglandet: {
+    badger: '”Inte en näve jord att gräva i. Bara sten, hela vägen ner.”',
+    toad: '”Så torrt, och så kallt. Jag trodde jag skulle stelna där uppe.”',
+    fox: '”Jag såg så långt. Ända till havet, tror jag. Och ingen såg mig.”',
+    owl: '”Vinden tog tag i mina vingar och ville bära mig dit den ville.”',
+    adder: '”Stenarna var varma i solen, men bara en stund. Sedan kom vinden.”',
+    mice: '”Vi låg i en hög bakom stenen och värmde varandra. Det var bra, nästan.”',
+    hare: '”Där uppe är man vit om vintern, sa min mor. Nu förstår jag varför.”',
+    hedgehog: '”Ljungen stack, men den gömde. Jag tackar den.”',
+    squirrel: '”Inte ett träd ovanför björkarna. Inte ett enda. Jag kommer aldrig tillbaka.”',
+    mole: '”Jorden var så tunn att jag slog i berget med nosen.”',
+    beaver: '”Bäckarna där uppe dämmer ingen. De är för arga.”',
+    fawn: '”Det var vackert. Jag vet inte varför det gjorde ont att se på.”',
+  },
 };
 const GENERIC = '”Jag kommer att minnas {region}.”';
 

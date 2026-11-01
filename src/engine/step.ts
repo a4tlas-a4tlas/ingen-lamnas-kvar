@@ -24,6 +24,7 @@ import { eyesFor, guard, nextHide, placeCats, pounced, scarer } from './encounte
 import { STUCK_AT, UNDER_AT, isPool, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from './encounters/bog';
 import { planWisps } from './encounters/wisps';
 import { planFlocks } from './encounters/cranes';
+import { STORM_ROWS, gustZones, inTheWind, nextGustKnown, planStorm } from './encounters/storm';
 import { DITCH_FULL, cutZones, machineRow, planPeat } from './encounters/peat';
 import { planFogKinds } from './encounters/fog';
 import { huntDogDestination, huntDogTargets, huntDogs, planHunt, planHuntFeint, watched } from './encounters/hunt';
@@ -417,6 +418,8 @@ function startEncounter(c: Ctx, id: keyof typeof ENCOUNTERS) {
   s.wisps = id === 'wisps' ? planWisps(s, s.maxTurn, hard) : { plan: [], trueAt: 0, trueZone: '', known: false };
   // The cranes' dawn: where each flock dances, hour by hour.
   s.cranes = { flocks: id === 'cranes' ? planFlocks(s, s.maxTurn, hard) : [], called: false };
+  // The storm on the heath: which rows the gusts sweep, hour by hour.
+  s.storm = { rows: id === 'storm' ? planStorm(s, s.maxTurn, hard) : [] };
   // The peat cutting: the machine's rows, and no ditches yet.
   s.peat = { rows: id === 'peat' ? planPeat(s, s.maxTurn, hard) : [], ditch: {} };
   // The hunt: where the hunter looks, hour by hour, and his dogs behind us at the road.
@@ -1356,6 +1359,7 @@ function startTurn(c: Ctx) {
   if (sinks(s)) telegraphBog(c);
   if (s.encounterId === 'wisps') telegraphWisps(c);
   if (s.encounterId === 'cranes') telegraphCranes(c);
+  if (s.encounterId === 'storm') telegraphStorm(c);
   if (s.encounterId === 'peat') telegraphPeat(c);
   if (s.encounterId === 'fog') telegraphFog(c);
   if (s.encounterId === 'hunt') telegraphHunt(c);
@@ -2141,6 +2145,32 @@ function peatHazards(c: Ctx) {
     s.hitQueue.push({ victim: a.id, severity: 'kill', sudden: false, zone: a.zone, source: 'torvmaskinen' });
   }
   for (const z of cutZones(s.peat.rows[s.turn - 1] ?? null)) if (s.peat.ditch[z] === undefined) s.peat.ditch[z] = 0;
+}
+
+// ---------------------------------------------------------------- the storm
+
+/** Start of the hour: where the gusts will sweep – and, unless the wind comes in squalls, where next. */
+function telegraphStorm(c: Ctx) {
+  const s = c.s;
+  const rows = (turn: number) => (s.storm.rows[turn - 1] ?? []).map((r) => STORM_ROW_NAMES[r]);
+  if (s.turn === 1) narrate(c, s.variant === 'hard'
+    ? 'Ovanför trädgränsen slår vinden emot oss i byar. Den kommer från ingenstans och är borta lika fort.'
+    : 'Ovanför trädgränsen tar vinden tag i oss. Den drar fram över heden i stråk – vi ser var ljungen lägger sig.');
+  narrate(c, `Vinden drar fram över ${rows(s.turn).join(' och ')}.`);
+  if (nextGustKnown(s) && s.turn < s.maxTurn) narrate(c, `Nästa timme vänder den mot ${rows(s.turn + 1).join(' och ')}.`);
+}
+
+/** End of the hour: whoever stands in the open where the gusts sweep is chilled through – the small shaken too. */
+function stormHazards(c: Ctx) {
+  const s = c.s;
+  for (const r of s.storm.rows[s.turn - 1] ?? []) blow(c, 'gust', STORM_ROWS[r][1]);
+  const hit = s.animals.filter((a) => isActive(a) && inTheWind(s, a));
+  if (!hit.length) narrate(c, `Byn sveper över ${gustZones(s).length > 3 ? 'heden' : 'raden'}. Ingen av oss står i den.`);
+  for (const a of hit) {
+    changeBelief(c, a, -1);
+    if (a.size === 'small' && !hasInjury(a, 'shock')) injure(c, a, 'shock', 'Vinden går rakt igenom {name}. Kylan stannar kvar.');
+    else line(c, a.id, `Vinden går rakt igenom ${a.name}.`);
+  }
 }
 
 // ---------------------------------------------------------------- the cranes
@@ -3011,6 +3041,7 @@ function endTurn(c: Ctx) {
   if (s.encounterId === 'wisps' || s.encounterId === 'fog') poolHazards(c);
   if (s.encounterId === 'wisps') wispsHazards(c);
   if (s.encounterId === 'cranes') cranesHazards(c);
+  if (s.encounterId === 'storm') stormHazards(c);
   if (s.encounterId === 'peat') peatHazards(c);
   processHits(c);
 }
@@ -3068,6 +3099,8 @@ function resolveIntents(c: Ctx) {
 
 /** A blow lands: the sound and the board play it out. */
 const blow = (c: Ctx, what: BlowKind, zone: ZoneId) => c.ev.push({ kind: 'blow', what, zone });
+/** The heath's rows, as we name them in a gust. */
+const STORM_ROW_NAMES = ['ljungen', 'svackan och kalheden', 'krönet'];
 
 function processHits(c: Ctx) {
   const s = c.s;

@@ -13,6 +13,7 @@ import { TUNNELS, bittenByRats, depthIn, isFound, sweptHere } from '../engine/en
 import { STUCK_AT, UNDER_AT, isPool, isSoft, isStuck, puller, sinkRate, sinkSteps, sinks } from '../engine/encounters/bog';
 import { DITCH_FULL, ditchLevel, machineRow } from '../engine/encounters/peat';
 import { huntDogDestination, watched } from '../engine/encounters/hunt';
+import { inTheWind } from '../engine/encounters/storm';
 import { FIREWORKS, PARK, burstsNow, crowdNow, holdsWith, possibleBursts, reaches } from '../engine/encounters/fireworks';
 import { feintNext, feintNow, maybeZones } from '../engine/encounters/feint';
 import { SWEEPS_SMALL } from '../engine/encounters/fence';
@@ -110,6 +111,7 @@ export function animalStatuses(s: GameState, a: Animal): Status[] {
   if (s.encounterId === 'fog') out.push(...fogStatuses(s, a));
   if (s.encounterId === 'hunt') out.push(...huntStatuses(s, a));
   if (s.encounterId === 'cranes') out.push(...cranesStatuses(s, a));
+  if (s.encounterId === 'storm') out.push(...stormStatuses(s, a));
   if (s.encounterId === 'peat') out.push(...peatStatuses(s, a));
   out.push(...lasting(s, a));
   if (a.predator && a.intent.kind !== 'hunt' && a.belief <= huntsAt(s, a) + 1) {
@@ -282,6 +284,7 @@ export function forecast(s: GameState): ForecastLine[] {
   if (s.encounterId === 'fog') out.push(...fogForecast(s));
   if (s.encounterId === 'hunt') out.push(...huntForecast(s, zoneOf));
   if (s.encounterId === 'cranes') out.push(...cranesForecast(s, zoneOf));
+  if (s.encounterId === 'storm') out.push(...stormForecast(s, zoneOf));
   if (s.encounterId === 'peat') out.push(...peatForecast(s, zoneOf));
   if (s.rescue) {
     const name = s.rescue.name;
@@ -577,6 +580,21 @@ function peatForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[]
   const full = Object.keys(s.peat.ditch).filter((z) => ditchLevel(s, z) >= DITCH_FULL);
   if (full.length) out.push({ text: `Fulla diken: ${full.map((z) => zoneDef(s, z).name).join(', ')}. De små som inte simmar kommer inte dit.`, tone: 'info' });
   return out;
+}
+
+/** The storm: standing in the wind, where the gust sweeps. */
+function stormStatuses(s: GameState, a: Animal): Status[] {
+  if (!inTheWind(s, a)) return [];
+  return [{ key: 'storm', icon: '≋', label: 'i vinden', tone: a.size === 'small' ? 'bad' : 'warn', explain: `Byn drar fram här när timmen går. ${a.name} blir genomkyld och tappar 1 tro${a.size === 'small' && !a.injuries.includes('shock') ? ' – och får chock' : ''}. I lä bakom en sten når vinden ingen.` }];
+}
+
+/** The storm: whom the gust chills this hour. */
+function stormForecast(s: GameState, zoneOf: Map<string, ZoneId>): ForecastLine[] {
+  const where = (a: Animal) => zoneOf.get(a.id) ?? a.zone;
+  const hit = s.animals.filter((a) => isActive(a) && inTheWind(s, a, where(a)));
+  if (!hit.length) return [{ text: 'Byn sveper förbi – ingen av oss står i den.', tone: 'good' }];
+  const shaken = hit.filter((a) => a.size === 'small' && !a.injuries.includes('shock'));
+  return [{ text: `Byn kyler ${hit.map((a) => a.name).join(' och ')} (−1 tro)${shaken.length ? `; ${shaken.map((a) => a.name).join(' och ')} får chock` : ''}.`, tone: shaken.length ? 'bad' : 'warn' }];
 }
 
 /** Where the cranes dance this hour, or the next. */

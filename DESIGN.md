@@ -1234,6 +1234,55 @@ All in `src/ui/app.ts` and `src/style.css`, with no engine change.
 
 **Reduced motion:** under `prefers-reduced-motion`, the global rule cuts every animation short. The blows become a brief still highlight of their zone, the sparks are hidden and the path is simply drawn.
 
+## Milestone 13 – Höglandet (in progress)
+**The user's choices:**
+- **The fourth middle region:** cold and exposed. Bare heath and rock above the tree line, wind and nowhere to hide.
+- **Dangers:** Stormen, Rasbranten, Kungsörnen, Vargarna.
+- **Boss:** Snöstormen, the first snow.
+- **Run length:** a run still walks two middle regions. After Dalen we are offered two of the four and pass one by; after that region, the two left, and one is passed by.
+- **The cold** belongs to the boss alone, not the whole region.
+
+**The steps:**
+
+| Step | Content |
+|---|---|
+| 13.1 | the region and Stormen |
+| 13.2 | Rasbranten |
+| 13.3 | Kungsörnen |
+| 13.4 | Vargarna |
+| 13.5 | the story parts |
+| 13.6 | Snöstormen |
+
+### Step 1: the region and Stormen (done)
+**The region** (`src/data/regions/hoglandet.ts`):
+- **The map:** start *Trädgränsen*, first *Stormen*. Then a second storm (*Det höga fjället*) and old dangers in new places: *Fjällbäcken* (the river), *Kalfjället* (the field birds), *Vägen över fjället* (the gravel road).
+- **Fires:** *Den gamla fjällstugan* and *Under klippan*.
+- **Borrowed:** Dalen's shared meetings and finds, until 13.5.
+- **The end:** until Snöstormen (13.6), the region ends at *Passet*, a storm.
+- **Arrivals:** every other middle region and Skogsbrynet gained an `arriveFrom.hoglandet` line, and Höglandet has one from each.
+- **Around it:**
+  - the interlude's look-back lines for every species
+  - voices for and against: the hare and the fox for; the toad, the mice and the squirrel against
+  - per-danger leanings for the storm: the mice and the owl against, the mole for
+  - a sound bed (high cold wind; a raven by day, a far fox at night)
+  - a heath backdrop and a map icon
+
+**Stormen** (`src/engine/encounters/storm.ts`):
+- **The map:** three rows of heath between *Trädgränsen* and *Lä bakom krönet*. Each row has one shelter, in a different column each time (*Stenblocket*, *Svackan*, *Röset*), so a sheltered way up zigzags.
+- **The gusts:** each hour they sweep a row, planned up front (`planStorm`, never the same row twice running), and we see this hour's row and the next.
+- **What a gust does:** whoever stands in the open there when the hour goes is chilled through. They lose 1 belief, and the small also get shock.
+  - Shelter and the hidden are spared; flying doesn't help.
+  - Nothing is pushed and no one dies: the cold gets into the will.
+- **Any time of day,** 8 hours.
+- **Hard (*byar*):** two rows an hour, and the next gust isn't shown.
+- **Feel:** a `gust` blow (a wind rush; white streaks across the row).
+- **The state:** `s.storm.rows`. **Save version 41.**
+
+**Measured** (blind careful player, 20 seeds per group):
+- Höglandet was walked in 42 of 80 runs.
+- Stormen took someone in 5 % of visits, all by time; Passet in 0 %. Gentle, like Gungflyet. It costs belief, not lives.
+- Passet is only a placeholder until Snöstormen.
+
 ## Milestone 7 – the animals rethought (done)
 Your direction:
 - **Animals are species, not named characters.** No one has special cards for being who they are.

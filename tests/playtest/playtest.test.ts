@@ -38,7 +38,7 @@ function report(runs: RunRecord[]): string {
     e.left.push(d.left);
     byDanger.set(k, e);
   }
-  const order = ['dalen', 'akrarna', 'staden', 'mossen', 'skogsbrynet'];
+  const order = ['dalen', 'akrarna', 'staden', 'mossen', 'hoglandet', 'skogsbrynet'];
   for (const e of [...byDanger.values()].sort((a, b) => order.indexOf(a.region) - order.indexOf(b.region) || Number(a.boss) - Number(b.boss))) {
     const kept = e.outs.reduce((a, b) => a + b, 0) / e.ins.reduce((a, b) => a + b, 0);
     const name = e.boss ? `**${e.name}**` : e.name;
@@ -47,7 +47,7 @@ function report(runs: RunRecord[]): string {
   }
 
   out.push('', '## Which middle regions were walked', '', '| Region | Runs |', '|---|---|');
-  for (const id of ['akrarna', 'staden', 'mossen']) out.push(`| ${REGIONS[id as keyof typeof REGIONS].name} | ${runs.filter((r) => r.state.run.regions.includes(id as never)).length} |`);
+  for (const id of ['akrarna', 'staden', 'mossen', 'hoglandet']) out.push(`| ${REGIONS[id as keyof typeof REGIONS].name} | ${runs.filter((r) => r.state.run.regions.includes(id as never)).length} |`);
 
   out.push('', '## How we were lost', '', '| Cause | Count | Per run |', '|---|---|---|');
   const causes = new Map<string, number>();

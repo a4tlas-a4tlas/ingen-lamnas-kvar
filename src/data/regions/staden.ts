@@ -47,6 +47,7 @@ export const STADEN: RegionDef = {
   beyond: 'Bortom staden',
   arriveFrom: {
     akrarna: 'Åkrarna tar slut vid en skylt. Bortom den börjar staden: asfalt, ljus, och ett ljud som aldrig tystnar.',
+    hoglandet: 'Vi går ner från höglandet. Nedanför bergen ligger staden, och redan härifrån hör vi den.',
   },
   start: { key: 'stadsgransen', kind: 'start', name: 'Stadsgränsen', fogName: 'Stadsgränsen', arrive: 'Dalen ligger bakom oss. Framför oss börjar staden: asfalt, ljus, och ett ljud som aldrig tystnar. Det var härifrån maskinerna kom.' },
   first: lamps,

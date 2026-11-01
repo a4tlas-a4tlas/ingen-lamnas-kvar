@@ -2,14 +2,14 @@
 
 This file is updated with every step (every PR). It is enough, together with `DESIGN.md`, to pick the work up without the chat history.
 
-## Status (after step 12.2)
+## Status (after step 13.1)
 
 | | |
 |---|---|
 | **Live** | GitHub Pages: the repo's project site (normally https://a4tlas-a4tlas.github.io/ingen-lamnas-kvar/), deployed from `main` by the "Test & deploy" workflow in `.github/workflows/` |
-| **Latest PR** | Milestone 12.2: Känslan, branch `kanslan`, open for review. Everything through 12.1 (#53) is in `main` and live. |
-| **Save version** | 40 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
-| **Tests** | 470 Vitest (plus the playtest report, skipped unless `PLAYTEST=1`) (`npm test`), 10 Playwright (`npx playwright test`: the smoke runs, the sound test and the feel tests, × desktop + phone) – all green |
+| **Latest PR** | Milestone 13.1: Höglandet och Stormen, branch `hoglandet`, open for review. Everything through 12.2 (#54) is in `main` and live. |
+| **Save version** | 41 (`version` in `src/engine/setup.ts`, checked in `loadSave` in `src/ui/app.ts`; bump both when the state shape changes) |
+| **Tests** | 482 Vitest (plus the playtest report, skipped unless `PLAYTEST=1`) (`npm test`), 10 Playwright (`npx playwright test`: the smoke runs, the sound test and the feel tests, × desktop + phone) – all green |
 
 ## The game in brief
 A Swedish roguelite card game about animals fleeing a glen that is being destroyed, inspired by *De vilda djurens flykt* (all names are original).
@@ -31,6 +31,7 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
 |---|---|---|
 | **Dalen** | road, farm, river, country road; 10 story parts | Maskinerna |
 | **Åkrarna** | the birds of prey (Rovfåglarna), the sprayer (Sprutan), the ditch and the gate (Diket och grinden), the gravel road (Grusvägen) + old dangers in new places; six story parts of its own (`src/data/meetings/akrarna.sv.ts`) | Skördetröskan |
+| **Höglandet** (13.1–) | Stormen, the wind over the heath (`storm`) + old dangers (Fjällbäcken, Kalfjället, Vägen över fjället); borrowed story parts for now | Passet (a storm) until Snöstormen (13.6) |
 | **Mossen** (9.1–) | Gungflyet, the quaking bog (`bog`); Irrbloss, the lit bog (`wisps`); Tranorna, the cranes' dance (`cranes`); Torvtäkten, the peat cutting (`peat`) + old dangers (Myrbäcken, Det öppna kärret); seven story parts of its own (`src/data/meetings/mossen.sv.ts`) | Dimman (`fog`) |
 | **Skogsbrynet** (10.1) | a short last stretch (`middleRows: 1`): Skogsvägen (the road), the last farm, the forest brook; two story parts (`src/data/meetings/skogsbrynet.sv.ts`) | Jägaren (`hunt`), the final boss |
 | **Stadens utkant** | the street lights (Gatlyktorna), the cats in the courtyard (Bakgården), the shopping street (Affärsgatan), the sewer (Avloppet) + old dangers; six story parts of its own (`src/data/meetings/staden.sv.ts`) | Fyrverkerinatten |
@@ -82,12 +83,13 @@ A Swedish roguelite card game about animals fleeing a glen that is being destroy
     4. Delete the temporary files afterwards.
 - **Tests** use ids by species (`get(s, 'badger')`). `classicGame`/`calmGame` in `tests/engine/helpers.ts` give the old names (Gamla Ljung, Kvarn …) and a fixed little map.
 
-## Next step (ask first)
-Milestone 12 (sound and feel) is done. **Ask what's next.** Candidates:
-- **Höglandet,** a fourth middle region.
-- **The roads,** the biggest source of loss.
-- **Playtest polish:** what a human player meets first – the first road, the guides, the forecasts.
-- **A settings screen,** e.g. volume sliders and animation speed.
+## Next step: 13.2 Rasbranten (ask first)
+Milestone 13 (`DESIGN.md`) is under way. **Interview the user on Rasbranten** (the scree) before planning:
+- What a slide does.
+- Who starts one and who is carried.
+- When it comes, and what the hard variant is.
+
+The rest of the milestone: 13.3 Kungsörnen, 13.4 Vargarna, 13.5 the story parts, 13.6 Snöstormen (the cold lives there).
 
 **Measuring:**
 - **Whole runs:** `PLAYTEST=1 npx vitest run tests/playtest/playtest.test.ts` (about 9 minutes for 50 seeds × 4 groups). It writes `playtest-report.md`.
@@ -95,6 +97,7 @@ Milestone 12 (sound and feel) is done. **Ask what's next.** Candidates:
 - **Noise:** a "Timeout calling onTaskUpdate" error at the end of long runs is Vitest's, not the game's.
 
 ## Open questions and known quirks
+- **Höglandet (13.1), 20 seeds per group:** walked in 42 of 80 runs. Stormen took someone in 5 % of visits (by time); Passet, the placeholder end, 0 %. Stormen is gentle, like Gungflyet: it costs belief.
 - **After 11.2, from the blind careful player, 50 seeds per group:**
   - **Survivors at the forest:** Dalens sista 2.77, Rovdjurens pakt 2.71, De små 3.82, Slumpad 3.13. 90–100 % of runs reach the forest.
   - **Losses:** still mostly time (about 2.6 left behind per run, most on roads); deaths are up at the bosses.

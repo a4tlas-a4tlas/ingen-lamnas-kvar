@@ -17,6 +17,7 @@ import { isPool, isSoft } from '../engine/encounters/bog';
 import { DITCH_FULL, ditchLevel, machineRow } from '../engine/encounters/peat';
 import { watched } from '../engine/encounters/hunt';
 import { ENCOUNTERS, byTime, encounterOf, otherTime, zoneDef } from '../engine/encounters';
+import { gustZones, nextGustKnown } from '../engine/encounters/storm';
 import { TRAITS } from '../data/traits';
 import { VERSES, VERSE_IDS } from '../data/verses';
 import { Sound } from '../audio/sound';
@@ -150,7 +151,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 40 && s.phase !== 'over' ? s : null;
+    return s.version === 41 && s.phase !== 'over' ? s : null;
   } catch {
     return null;
   }
@@ -1115,6 +1116,17 @@ export class App {
     ].join('');
   }
 
+  /** The storm: the gust row now, and – unless the wind comes in squalls – next hour's; the shelters. */
+  private stormTelegraphHtml(s: GameState): string {
+    const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
+    const now = gustZones(s);
+    const later = nextGustKnown(s) && s.turn < s.maxTurn ? gustZones(s, s.turn + 1) : [];
+    return [
+      ...now.map((z) => `<div class="gust-mark${zoneDef(s, z).cover ? ' lee' : ''}" style="${box(z)}"><span>${zoneDef(s, z).cover ? 'Byn · lä här' : 'Byn · kyler'}</span></div>`),
+      ...later.filter((z) => !now.includes(z)).map((z) => `<div class="next-mark" style="${box(z)}"><em>byn nästa timme</em></div>`),
+    ].join('');
+  }
+
   /** The cranes: where they dance now, and where next hour. */
   private cranesTelegraphHtml(s: GameState): string {
     const box = (z: string) => { const [x, y, w, h] = zoneDef(s, z).rect; return `left:${x}%;top:${y}%;width:${w}%;height:${h}%`; };
@@ -1244,6 +1256,7 @@ export class App {
     if (s.encounterId === 'farm') return s.phase === 'over' ? '' : this.farmTelegraphHtml(s);
     if (s.encounterId === 'river') return s.phase === 'over' ? '' : this.riverTelegraphHtml(s);
     if (s.encounterId === 'machines') return s.phase === 'over' ? '' : this.machinesTelegraphHtml(s);
+    if (s.encounterId === 'storm') return s.phase === 'over' ? '' : this.stormTelegraphHtml(s);
     if (s.encounterId === 'raptor') return s.phase === 'over' ? '' : this.raptorTelegraphHtml(s);
     if (s.encounterId === 'sprayer') return s.phase === 'over' ? '' : this.sprayerTelegraphHtml(s);
     if (s.encounterId === 'fence') return s.phase === 'over' ? '' : this.fenceTelegraphHtml(s);

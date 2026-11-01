@@ -23,6 +23,7 @@ export const MOSSEN: RegionDef = {
   beyond: 'Bortom mossen',
   arriveFrom: {
     akrarna: 'Fälten tar slut i ett dike, och bortom diket börjar mossen. Ingen väg, inget ljud. Bara vatten, och himmel.',
+    hoglandet: 'Vi går ner från höglandet, och nedanför bergen breder mossen ut sig, grå och stilla. Ingen väg, inget ljud.',
     staden: 'Stadens ljus försvinner bakom oss. Framför oss ligger mossen, och så tyst har det inte varit sedan dalen.',
   },
   start: { key: 'myrkanten', kind: 'start', name: 'Myrkanten', fogName: 'Myrkanten', arrive: 'Dalen ligger långt bakom oss. Framför oss börjar mossen: vida, tyst och grå. Här finns inga människor. Här finns ingen alls.' },

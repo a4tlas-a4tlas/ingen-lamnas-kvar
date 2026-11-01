@@ -39,7 +39,7 @@ function flower(x: number, y: number): string {
 
 /** The static backdrop of an encounter. viewBox 400×500 maps 1:1 to the zone rects (x×4, y×5). */
 export function sceneSvg(id: EncounterId): string {
-  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : id === 'wisps' ? wispsSvg() : id === 'cranes' ? cranesSvg() : id === 'peat' ? peatSvg() : id === 'fog' ? fogSvg() : id === 'hunt' ? huntSvg() : roadSvg();
+  return id === 'farm' ? farmSvg() : id === 'river' ? riverSvg() : id === 'machines' ? machinesSvg() : id === 'raptor' ? fieldSvg() : id === 'sprayer' ? sprayerSvg() : id === 'fence' ? fenceSvg() : id === 'harvest' ? harvestSvg() : id === 'lamps' ? lampsSvg() : id === 'cats' ? catsSvg() : id === 'street' ? streetSvg() : id === 'sewer' ? sewerSvg() : id === 'fireworks' ? fireworksSvg() : id === 'bog' ? bogSvg() : id === 'wisps' ? wispsSvg() : id === 'cranes' ? cranesSvg() : id === 'peat' ? peatSvg() : id === 'fog' ? fogSvg() : id === 'hunt' ? huntSvg() : id === 'storm' ? stormSvg() : roadSvg();
 }
 
 const DEFS = `
@@ -505,6 +505,31 @@ function peatSvg(): string {
   ${stack(17, 68)}${stack(83, 46)}${stack(50, 24)}
   <rect x="${x(80)}" y="${y(14)}" width="44" height="22" fill="#b8902a"/><rect x="${x(86)}" y="${y(11)}" width="18" height="14" fill="#8a6a1e"/>
   <rect y="${y(80)}" width="400" height="${y(20)}" fill="#7a6a4a"/>
+</svg>`;
+}
+
+/** Stormen: the bare heath above the tree line under a grey sky – heather, three shelters, and wind streaks. */
+function stormSvg(): string {
+  const y = (p: number) => p * 5;
+  const x = (p: number) => p * 4;
+  const heather: string[] = [];
+  for (let i = 0; i < 70; i++) heather.push(`<circle cx="${(i * 47) % 400}" cy="${y(16) + ((i * 67) % 320)}" r="${2 + (i % 3)}"/>`);
+  const streaks: string[] = [];
+  for (let i = 0; i < 14; i++) streaks.push(`<path d="M${(i * 71) % 400 - 60} ${y(4) + ((i * 37) % 440)} q60 -6 120 0"/>`);
+  const birches = [6, 18, 30, 44, 58, 72, 86].map((px, i) => `<rect x="${x(px)}" y="${y(84 + (i % 2))}" width="3" height="${y(14)}" fill="#ddd6c6"/><ellipse cx="${x(px) + 1}" cy="${y(84)}" rx="10" ry="7" fill="#6c7a4c" opacity="0.8"/>`).join('');
+  return `
+<svg class="scene-bg storm" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+  <defs>${DEFS}</defs>
+  <rect width="400" height="500" fill="#7d7a62"/>
+  <rect width="400" height="${y(14)}" fill="#9aa0a4"/>
+  <path d="M0 ${y(14)} L60 ${y(6)} L120 ${y(12)} L190 ${y(3)} L260 ${y(11)} L330 ${y(5)} L400 ${y(13)} V${y(14)} Z" fill="#6e7270"/>
+  <g fill="#7a5a6a" opacity="0.45">${heather.join('')}</g>
+  <ellipse cx="${x(50)}" cy="${y(70)}" rx="40" ry="26" fill="#6a6c66"/>
+  <ellipse cx="${x(17)}" cy="${y(50)}" rx="58" ry="20" fill="#6c6a52"/>
+  <path d="M${x(76)} ${y(30)} l18 -26 l14 10 l16 -6 l10 22 Z" fill="#70726c"/>
+  <g stroke="#eef0ee" stroke-width="1.6" fill="none" opacity="0.28" stroke-linecap="round">${streaks.join('')}</g>
+  ${birches}
+  <rect y="${y(80)}" width="400" height="${y(20)}" fill="#5e6a44" opacity="0.6"/>
 </svg>`;
 }
 

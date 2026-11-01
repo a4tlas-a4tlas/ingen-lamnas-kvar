@@ -29,6 +29,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     cranes: { pull: -1, line: 'Så stora fötter. De ser oss inte ens när de trampar.' },
     peat: { pull: -1, line: 'Diken som fylls med vatten. Vi kommer aldrig över.' },
     fog: { pull: -1, line: 'I dimman tappar vi varandra. Vi är för små för att synas.' },
+    storm: { pull: -1, line: 'Vinden går rakt igenom oss. Vi är för små för att hålla värmen.' },
   },
   fox: {
     farm: { pull: -1, line: 'Jag har sprungit från hundar förut. Aldrig mer en gård.' },
@@ -45,6 +46,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
     lamps: { pull: 1, line: 'Mellan lyktorna är natten min. Jag ser var ljuset inte når.' },
     wisps: { pull: 1, line: 'Ljusen lurar inte mig. Från ovan ser jag vad som finns under dem.' },
     street: { pull: 1, line: 'Över gatan flyger jag på ett ögonblick. Jag kan se vagnen komma.' },
+    storm: { pull: -1, line: 'I en sådan vind kan jag inte flyga. Den tar mig dit den vill.' },
   },
   hare: {
     cranes: { pull: 1, line: 'Fast mark, och vida! Där kan jag springa runt dem.' },
@@ -57,6 +59,7 @@ export const LEANINGS: Partial<Record<Species, Partial<Record<EncounterId, Leani
   hedgehog: { farm: { pull: 1, line: 'Gårdar har sniglar och mjölk. Hundarna biter inte i taggar.' } },
   squirrel: { raptor: { pull: -1, line: 'Inga träd på fälten. Ingenstans att klättra. Inte där.' } },
   mole: {
+    storm: { pull: 1, line: 'Vind? Jag gräver ner mig. Där nere blåser det aldrig.' },
     river: { pull: -1, line: 'Jag ser inte vattnet. Jag hör det bara. Inte ån.' },
     sprayer: { pull: 1, line: 'Dimman ligger ovanpå jorden. Under den är det rent.' },
     fence: { pull: 1, line: 'Ett stängsel? Jag gräver under det. Följ mig.' },
@@ -93,16 +96,29 @@ export const REGION_LEANINGS: Partial<Record<Species, Partial<Record<RegionId, L
     mossen: { pull: -1, line: 'Mossen bär inte en som jag. Inte dit.' },
   },
   toad: {
+    hoglandet: { pull: -1, line: 'Så högt, och så kallt. Där uppe stelnar jag.' },
     mossen: { pull: 1, line: 'Mossen! Där finns vatten överallt, och ingen människa.' },
     akrarna: { pull: 1, line: 'Det går diken mellan fälten. Vatten, hela vägen.' },
   },
-  fox: { staden: { pull: 1, line: 'I staden finns mat i varje tunna. Det har jag hört.' } },
+  fox: {
+    staden: { pull: 1, line: 'I staden finns mat i varje tunna. Det har jag hört.' },
+    hoglandet: { pull: 1, line: 'Fjällräven bor där uppe, säger de. Om hon klarar det, klarar jag det.' },
+  },
   owl: { staden: { pull: 1, line: 'Staden har tak och torn att se ifrån. Fälten har bara himmel – och vråkar.' } },
   adder: { akrarna: { pull: 1, line: 'Fälten är varma av sol, och fulla av sork.' } },
-  mice: { staden: { pull: -1, line: 'Katter, råttor, hundar. Inte staden, snälla.' } },
-  hare: { akrarna: { pull: 1, line: 'Fälten! Där kan jag springa så långt jag vill.' } },
+  mice: {
+    staden: { pull: -1, line: 'Katter, råttor, hundar. Inte staden, snälla.' },
+    hoglandet: { pull: -1, line: 'Vinden där uppe. Den blåser bort sådana som vi.' },
+  },
+  hare: {
+    akrarna: { pull: 1, line: 'Fälten! Där kan jag springa så långt jag vill.' },
+    hoglandet: { pull: 1, line: 'Fjället! Mina fäder var vita om vintern. Där uppe är jag hemma.' },
+  },
   hedgehog: { staden: { pull: 1, line: 'Trädgårdar. Sniglar i varje rabatt.' } },
-  squirrel: { staden: { pull: 1, line: 'Fälten har inga träd. Staden har parker.' } },
+  squirrel: {
+    staden: { pull: 1, line: 'Fälten har inga träd. Staden har parker.' },
+    hoglandet: { pull: -1, line: 'Ovanför trädgränsen? Där finns ju inga träd. Det säger namnet.' },
+  },
   mole: { staden: { pull: -1, line: 'Asfalt. Man kan inte gräva i asfalt.' } },
   beaver: {
     mossen: { pull: 1, line: 'Mossen är bara en damm som ingen har byggt. Där trivs jag.' },
