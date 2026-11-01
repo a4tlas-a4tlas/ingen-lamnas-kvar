@@ -5,12 +5,13 @@ import { AKRARNA } from './akrarna';
 import { DALEN, type RegionDef } from './dalen';
 import { STADEN } from './staden';
 import { MOSSEN } from './mossen';
+import { HOGLANDET } from './hoglandet';
 import { SKOGSBRYNET } from './skogsbrynet';
 
-export const REGIONS: Record<RegionId, RegionDef> = { dalen: DALEN, akrarna: AKRARNA, staden: STADEN, mossen: MOSSEN, skogsbrynet: SKOGSBRYNET };
+export const REGIONS: Record<RegionId, RegionDef> = { dalen: DALEN, akrarna: AKRARNA, staden: STADEN, mossen: MOSSEN, hoglandet: HOGLANDET, skogsbrynet: SKOGSBRYNET };
 
 /** The regions that may come after the glen, in any order. */
-export const MIDDLE_REGIONS: RegionId[] = ['akrarna', 'staden', 'mossen'];
+export const MIDDLE_REGIONS: RegionId[] = ['akrarna', 'staden', 'mossen', 'hoglandet'];
 
 /** Where the way ends, once no middle region is left: the forest edge. */
 export const FINAL_REGION: RegionId = 'skogsbrynet';

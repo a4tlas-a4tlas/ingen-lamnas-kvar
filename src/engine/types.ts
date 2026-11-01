@@ -1,7 +1,7 @@
 /** Zones are defined per encounter (see encounters/); ids are plain strings. */
 export type ZoneId = string;
 export type LaneId = 'lane1' | 'lane2';
-export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps' | 'cats' | 'street' | 'sewer' | 'fireworks' | 'bog' | 'wisps' | 'cranes' | 'peat' | 'fog' | 'hunt';
+export type EncounterId = 'road' | 'farm' | 'river' | 'machines' | 'raptor' | 'sprayer' | 'fence' | 'harvest' | 'lamps' | 'cats' | 'street' | 'sewer' | 'fireworks' | 'bog' | 'wisps' | 'cranes' | 'peat' | 'fog' | 'hunt' | 'storm';
 /** Which way the wind carries the mist over the sprayed field. */
 /** Asphalt with cars, or gravel with tractors. */
 export type RoadKind = 'asphalt' | 'gravel';
@@ -208,7 +208,7 @@ export interface Dog {
 export type PromiseRule = 'light' | 'current' | 'noneAlone' | 'together' | 'water' | 'farm' | 'night' | 'stay' | 'noCity';
 
 /** The regions of the way: the glen first, the forest's edge last, the others in between in any order. */
-export type RegionId = 'dalen' | 'akrarna' | 'staden' | 'mossen' | 'skogsbrynet';
+export type RegionId = 'dalen' | 'akrarna' | 'staden' | 'mossen' | 'hoglandet' | 'skogsbrynet';
 
 /** A promise an animal asked of us: who asked, what it binds us to, and – for two – who else it is about. */
 export interface Proposal {
@@ -269,7 +269,7 @@ export type HopeReason = 'death' | 'flip' | 'hunt' | 'leave' | 'dawn' | 'memory'
 export type TimeOfDay = 'day' | 'night';
 
 /** A boss's or a danger's blow landing, for the sound and the board to play out. */
-export type BlowKind = 'fell' | 'doze' | 'cut' | 'burst' | 'bigBurst' | 'shot' | 'bark' | 'suck' | 'crane' | 'light';
+export type BlowKind = 'gust' | 'fell' | 'doze' | 'cut' | 'burst' | 'bigBurst' | 'shot' | 'bark' | 'suck' | 'crane' | 'light';
 
 /** Side effects the UI and audio react to; the log keeps the readable text. */
 export type GameEvent =
@@ -440,7 +440,7 @@ export interface Outcome {
 }
 
 export interface GameState {
-  version: 40;
+  version: 41;
   /** The road we cross: asphalt, or Åkrarna's gravel. */
   roadKind: RoadKind;
   /** Which group left the glen. */
@@ -527,6 +527,8 @@ export interface GameState {
   wisps: { plan: ZoneId[][]; trueAt: number; trueZone: ZoneId; known: boolean };
   /** The cranes' dance: each flock's zone, hour by hour, and whether their call has carried to us. */
   cranes: { flocks: ZoneId[][]; called: boolean };
+  /** The storm on the heath: which rows the gusts sweep, hour by hour (0 the lowest). */
+  storm: { rows: number[][] };
   /** The peat cutting: the machine's row each hour (null when it rests), and how full each cut ditch is. */
   peat: { rows: (number | null)[]; ditch: Record<ZoneId, number> };
   /** The fog: what lies under it, and the zones we have come close enough to know. */

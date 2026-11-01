@@ -16,6 +16,7 @@ export const SKOGSBRYNET: RegionDef = {
     akrarna: 'Fälten tar slut. Bortom det sista diket står en mörk rand av granar: skogen.',
     staden: 'Staden ligger bakom oss. Framför oss, äntligen: en mörk rand av granar. Skogen.',
     mossen: 'Mossen tar slut i en skogsbacke. Det luktar kåda och mylla. Skogen.',
+    hoglandet: 'Vi går ner från höglandet. Björkarna kommer tillbaka, och sedan granarna. Skogen.',
   },
   start: { key: 'hygget', kind: 'start', name: 'Hygget', fogName: 'Hygget', arrive: 'Ett kalhygge, och bortom det en mörk rand av granar. Skogen. Vi är nästan framme.' },
   first: {

@@ -34,7 +34,7 @@ run('the bosses', () => {
   const hard = !!process.env.PLAYTEST_HARD;
   const lines = [`| Boss | ${hard ? 'hard' : 'normal'} | Took someone | Dead | Left | Kept |`, '|---|---|---|---|---|---|'];
   const only = process.env.PLAYTEST_ONLY?.split(',');
-  for (const id of (['dalen', 'akrarna', 'staden', 'mossen', 'skogsbrynet'] as RegionId[]).filter((r) => !only || only.includes(r))) {
+  for (const id of (['dalen', 'akrarna', 'staden', 'mossen', 'hoglandet', 'skogsbrynet'] as RegionId[]).filter((r) => !only || only.includes(r))) {
     let took = 0, dead = 0, left = 0, kept = 0;
     for (let seed = 1; seed <= SEEDS; seed++) {
       let s = atBoss(REGIONS[id], seed, hard);

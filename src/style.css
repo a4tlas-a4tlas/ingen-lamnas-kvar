@@ -1139,3 +1139,15 @@ h2 .skills-btn { margin: 0 0 0 8px; vertical-align: middle; }
   .map-svg .trail path.walked.fresh { stroke-dasharray: none; }
   .trail .paws.fresh ellipse { opacity: 1; }
 }
+
+/* ---------------------------------------------------------------- the storm (13.1) */
+.gust-mark { position: absolute; pointer-events: none; background: repeating-linear-gradient(170deg, rgba(240,244,246,0.2) 0 3px, transparent 3px 14px); animation: gust-drift 2.4s linear infinite; }
+.gust-mark.lee { background: none; box-shadow: inset 0 0 0 2px rgba(150,190,140,0.65); animation: none; }
+.gust-mark span { position: absolute; left: 5px; top: 4px; font-size: 0.66em; padding: 1px 6px; border-radius: 2px; background: rgba(60,70,80,0.82); color: var(--paper); }
+.gust-mark.lee span { background: rgba(70,100,60,0.85); }
+@keyframes gust-drift { from { background-position: 0 0; } to { background-position: 60px 0; } }
+.blow-gust { width: 100% !important; left: 0 !important; }
+.blow-gust i { top: 10%; height: 3px; width: 40%; border-radius: 2px; background: linear-gradient(90deg, transparent, rgba(245,248,250,0.9), transparent); animation: gust-streak 0.9s ease-in forwards; opacity: 0; }
+.blow-gust i:nth-child(2) { top: 45%; animation-delay: 0.1s; } .blow-gust i:nth-child(3) { top: 80%; animation-delay: 0.2s; }
+@keyframes gust-streak { 0% { left: -40%; opacity: 0; } 20% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .gust-mark { animation: none; } }

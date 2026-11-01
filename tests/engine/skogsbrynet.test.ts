@@ -38,7 +38,7 @@ describe('Skogsbrynet, the last stretch', () => {
 
   it('once the middle regions are walked, the only way on is the forest edge; past the hunter, the run ends in the forest', () => {
     let s = run(plain(createGame(4)), { type: 'swear', verses: ['manen'] });
-    s.run = { regions: ['dalen', 'akrarna'], offered: [], skipped: ['staden'], between: false };
+    s.run = { regions: ['dalen', 'akrarna'], offered: [], skipped: ['staden', 'hoglandet'], between: false };
     s.journey = regionJourney(SKOGSBRYNET, 4);
     // Pretend the region we stand at the end of is the last middle one.
     s.journey.region = 'mossen';

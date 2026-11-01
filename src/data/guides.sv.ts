@@ -5,6 +5,7 @@ import { SEWER } from '../engine/encounters/sewer';
 import { BOG } from '../engine/encounters/bog';
 import { WISPS } from '../engine/encounters/wisps';
 import { CRANES } from '../engine/encounters/cranes';
+import { STORM } from '../engine/encounters/storm';
 import { PEAT } from '../engine/encounters/peat';
 import { FOG } from '../engine/encounters/fog';
 import { HUNT } from '../engine/encounters/hunt';
@@ -38,6 +39,10 @@ export interface Guide {
 
 /** What the time of day changes in each area: shown on the map and in the guide. */
 export const TIME_NOTES: Record<EncounterId, Record<TimeOfDay, string>> = {
+  storm: {
+    day: 'Vi ser var vinden lägger ljungen – den här timmen och nästa.',
+    night: 'I mörkret hör vi var vinden drar fram – den här timmen och nästa.',
+  },
   road: {
     night: 'Färre bilar – men mörka bilar utan ljus, och månen.',
     day: 'Fler bilar, ofta i båda körfälten – men vi ser dem alla. Ingen måne.',
@@ -439,6 +444,23 @@ export const GUIDES: Record<EncounterId, Guide> = {
     tips: [
       'Trösta den som står bredvid ett ljus innan timmen går.',
       'Led de tvivlande längs stenen och kavelbron, bort från gölarna.',
+    ],
+  },
+  storm: {
+    title: 'Så tar vi oss över heden i stormen',
+    hard: 'Ibland kommer vinden i byar: två rader i timmen, och vi ser inte nästa by förrän den är här.',
+    goal: `Få alla från Trädgränsen i lä bakom krönet – ${STORM.maxTurn} timmar. Över heden: tre steg.`,
+    dangers: [
+      { icon: '≋', name: 'Byn', text: 'Varje timme drar vinden fram över en rad av heden – det syns vilken, och vilken nästa timme. Den som står i det öppna där när timmen går blir genomkyld och tappar 1 tro. Att flyga hjälper inte. Ingen dör av vinden, men kylan går in i viljan.' },
+      { icon: '≀', name: 'Genomkyld', effect: 'skadar', text: 'De små som står i byn får chock, som läker vid elden.' },
+    ],
+    shelter: [
+      { icon: '♣', name: 'Stenblocket, svackan och röset', text: 'En plats i varje rad ger lä. Där når vinden ingen. Men de ligger inte på rad – vägen i lä går i sicksack.' },
+      { icon: '◐', name: 'Gömd', text: 'Den som har gömt sig eller grävt ner sig når vinden inte heller.' },
+    ],
+    tips: [
+      'Se var byn drar fram nästa timme, och stå i lä eller utanför den.',
+      'Trösta den som har frusit: kylan tar tro, och tron är det som håller ihop oss.',
     ],
   },
   cranes: {

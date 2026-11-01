@@ -14,6 +14,7 @@ export const AKRARNA: RegionDef = {
   beyond: 'Bortom åkrarna',
   arriveFrom: {
     staden: 'Staden tar slut, och ljuset med den. Framför oss: fält, och himmel, och tystnad.',
+    hoglandet: 'Vi går ner från höglandet. Nedanför bergen breder fälten ut sig, gula och platta.',
   },
   start: { key: 'akerkanten', kind: 'start', name: 'Åkerkanten', fogName: 'Åkerkanten', arrive: 'Nedanför åsen börjar åkrarna. Så långt vi ser: fält, och himmel.' },
   first: {
